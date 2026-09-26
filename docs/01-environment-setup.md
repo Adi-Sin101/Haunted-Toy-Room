@@ -49,6 +49,16 @@ it links cleanly. The Release configuration uses `/MD`, therefore it tells the l
 `MSVCRTD.lib` (`IgnoreSpecificDefaultLibraries`) so only the release runtime is linked.
 `/ignore:4099` silences the harmless warning that `glfw3.pdb` (debug symbols for GLFW) is not shipped.
 
+### Preprocessor definitions
+
+| Define | Why |
+|---|---|
+| `GLFW_INCLUDE_NONE` | stops `GLFW/glfw3.h` from including the system `<GL/gl.h>`. GLAD must provide all GL declarations; if another GL header comes first GLAD stops with *"OpenGL header already included"*. With this define the include order of `glad.h` and `glfw3.h` no longer matters. |
+| `GLM_FORCE_SILENT_WARNINGS` | keeps GLM's own headers quiet at warning level 4 |
+| `_DEBUG` / `NDEBUG`, `_CONSOLE` | standard configuration defines (console window shows the program's messages) |
+
+The project compiles with **warning level 4 and zero warnings** in both configurations.
+
 ## 4. Renaming the template
 
 | Before | After |
@@ -80,6 +90,7 @@ src/
   render/                      raster renderer, GPU ray tracer, textures (procedural + BMP)
 shaders/                       GLSL shaders (copied next to the .exe after each build)
 assets/textures/               BMP images (copied next to the .exe after each build)
+tools/                         make_poster.py - generates the poster BMP
 docs/                          this documentation
 bin/<Config>/                  build output (ignored by git)
 build/<Config>/                intermediate object files (ignored by git)
@@ -104,6 +115,11 @@ bin\Release\HauntedToyRoom.exe
 
 The executable also searches for `shaders/` next to itself and in the parent folders, so it can be
 started from the project root as well.
+
+### Regenerating the poster image
+
+`assets/textures/poster.bmp` is produced by `python tools/make_poster.py` (pure Python, no packages).
+It is committed, so this is only needed if you change the script.
 
 ## 7. Program start-up sequence (what `main` does, in order)
 
