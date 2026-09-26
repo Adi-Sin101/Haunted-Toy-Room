@@ -1,0 +1,17 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.VC.db
+*.opendb
+ipch/
+
+# Build output
+bin/
+build/
+x64/
+Debug/
+Release/
+
+# Runtime output
+screenshots/
