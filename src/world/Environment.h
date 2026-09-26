@@ -14,7 +14,7 @@
 class Environment {
 public:
 	void Init(const RoomRig& rig);
-	void Update(float dt, float time, bool lampSelected, bool ballSelected);
+	void Update(float dt, float time, bool lampSelected, bool ballSelected, bool ghostSelected);
 
 	// ---- clock ----
 	float hour = 20.5f;             // 0..24
@@ -58,7 +58,7 @@ private:
 	void UpdateSky();
 	void UpdateLamp(float dt, float time, bool selected);
 	void UpdateBall(float dt, float time, bool selected);
-	void UpdateGhost(float dt, float time);
+	void UpdateGhost(float dt, float time, bool selected);
 
 	RoomRig rig;
 	float daylight = 0.0f;

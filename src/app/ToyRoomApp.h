@@ -36,7 +36,7 @@ enum class EditOp : int { Translate = 0, Rotate, Scale, Shear };
 
 // Command-line options for scripted runs (used to produce the screenshots in the docs):
 //   --hour 21.5  --select 2  --focus  --mount  --raytrace  --shading 0..3  --wireframe
-//   --normals  --cam x,y,z,tx,ty,tz  --capture out.bmp  --frames 90
+//   --normals  --pause  --story  --cam x,y,z,tx,ty,tz  --orbit yaw,pitch,dist  --capture out.bmp  --frames 90
 struct LaunchOptions {
 	float hour = -1.0f;
 	int select = -1;
@@ -47,6 +47,7 @@ struct LaunchOptions {
 	bool wireframe = false;
 	bool normals = false;
 	bool pauseClock = false;
+	bool story = false;     // keep the story running during a capture
 	bool hasCamera = false;
 	glm::vec3 cameraPos{ 0.0f }, cameraTarget{ 0.0f };
 	float orbitYaw = 1e9f, orbitPitch = 1e9f, orbitDistance = -1.0f;
@@ -113,7 +114,7 @@ private:
 
 	std::vector<Selectable> selectables;
 	int selectedId = -1;
-	int ballId = -1, lampId = -1;
+	int ballId = -1, lampId = -1, ghostId = -1;
 
 	bool editMode = false;
 	EditOp editOp = EditOp::Translate;

@@ -49,14 +49,14 @@ glm::vec3 Environment::ClearColor() const
 	return glm::mix(glm::vec3(0.02f, 0.02f, 0.05f), glm::vec3(0.35f, 0.45f, 0.6f), daylight);
 }
 
-void Environment::Update(float dt, float time, bool lampSelected, bool ballSelected)
+void Environment::Update(float dt, float time, bool lampSelected, bool ballSelected, bool ghostSelected)
 {
 	if (!paused)
 		Scrub(dt * timeScale * 24.0f / dayLengthSeconds);
 	UpdateSky();
 	UpdateLamp(dt, time, lampSelected);
 	UpdateBall(dt, time, ballSelected);
-	UpdateGhost(dt, time);
+	UpdateGhost(dt, time, ghostSelected);
 }
 
 // The sun follows a half ellipse behind the window: angle a = 0 at 06:00 (rising), PI at 18:00.
@@ -165,12 +165,15 @@ void Environment::UpdateBall(float dt, float time, bool selected)
 	}
 }
 
-void Environment::UpdateGhost(float dt, float time)
+void Environment::UpdateGhost(float dt, float time, bool selected)
 {
 	const float target = hauntingEnabled ? Night() : 0.0f;
 	ghostVisibility += (target - ghostVisibility) * std::min(1.0f, dt * 1.5f);
-	rig.ghost->visible = ghostVisibility > 0.02f;
-	rig.ghostMaterial->opacity = 0.55f * ghostVisibility;
+	rig.ghost->visible = ghostVisibility > 0.02f || selected;
+	rig.ghostMaterial->opacity = 0.55f * (selected ? 1.0f : ghostVisibility);
+
+	if (selected)
+		return; // hold still while being inspected / edited
 
 	// Circles the room with a bobbing motion and faces its direction of travel.
 	const float a = time * 0.25f;

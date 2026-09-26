@@ -95,6 +95,7 @@ void ToyRoomApp::BuildScene()
 	AddSelectable("Ball", rig.ball, nullptr, 6, 0.0f, 3.0f);
 	lampId = static_cast<int>(selectables.size());
 	AddSelectable("Desk Lamp", rig.lamp, nullptr, 7, 1.0f, 4.0f);
+	ghostId = static_cast<int>(selectables.size());
 	AddSelectable("Ghost", rig.ghost, nullptr, 8, 0.3f, 5.0f);
 
 	characters.push_back(std::move(woodyPtr));
@@ -106,9 +107,9 @@ void ToyRoomApp::BuildScene()
 	// Night-time patrol loops (inside the free floor area)
 	story.Add(woody, { { -3.5f, 0, 2.5f }, { -1.0f, 0, 4.0f }, { 1.5f, 0, 2.5f }, { -1.5f, 0, 0.0f } });
 	story.Add(jessie, { { 0.5f, 0, 3.5f }, { 3.0f, 0, 4.0f }, { 1.0f, 0, 1.0f }, { -2.0f, 0, 3.0f } });
-	story.Add(bullseye, { { 4.5f, 0, -1.5f }, { 5.5f, 0, 2.0f }, { 2.0f, 0, 3.8f }, { -0.5f, 0, 0.5f }, { 1.5f, 0, -2.5f } });
+	story.Add(bullseye, { { 4.5f, 0, -1.5f }, { 5.0f, 0, 1.2f }, { 2.0f, 0, 3.8f }, { -0.5f, 0, 0.5f }, { 1.5f, 0, -2.5f } });
 	story.Add(buzz, { { 3.0f, 0, -3.0f }, { -2.0f, 0, -3.0f }, { -4.0f, 0, 1.0f }, { 0.5f, 0, 0.5f } }, true);
-	story.Add(car, { { 5.5f, 0, 4.5f }, { -5.5f, 0, 4.5f }, { -5.5f, 0, -1.5f }, { 5.5f, 0, -2.5f } });
+	story.Add(car, { { 3.8f, 0, 4.8f }, { -5.5f, 0, 4.8f }, { -5.5f, 0, -1.5f }, { 4.0f, 0, -2.5f } }); // loop stays clear of the toy blocks
 
 	// Light list (fixed slots, positions/directions refreshed every frame from the scene nodes)
 	lights.resize(LightSlotCount);
@@ -165,7 +166,7 @@ void ToyRoomApp::OnUpdate(float dt)
 
 	const Selectable* sel = Selected();
 	story.enabled = environment.hauntingEnabled;
-	environment.Update(dt, static_cast<float>(time), selectedId == lampId, selectedId == ballId);
+	environment.Update(dt, static_cast<float>(time), selectedId == lampId, selectedId == ballId, selectedId == ghostId);
 	const Character* selectedCharacter = sel ? sel->character : nullptr;
 	if (jessieMounted && selectedCharacter == jessie)
 		selectedCharacter = bullseye;
@@ -245,8 +246,10 @@ void ToyRoomApp::HandleGlobalKeys()
 		environment.timeScale = std::min(32.0f, environment.timeScale * 2.0f);
 		std::cout << "Time speed x" << environment.timeScale << "\n";
 	}
-	if (input.Down(GLFW_KEY_COMMA)) environment.Scrub(-0.05f);
-	if (input.Down(GLFW_KEY_PERIOD)) environment.Scrub(0.05f);
+	if (selectedId != lampId) { // with the lamp selected , and . change its brightness instead
+		if (input.Down(GLFW_KEY_COMMA)) environment.Scrub(-0.05f);
+		if (input.Down(GLFW_KEY_PERIOD)) environment.Scrub(0.05f);
+	}
 
 	if (input.Pressed(GLFW_KEY_TAB)) {
 		editMode = !editMode;
@@ -754,6 +757,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		else if (a == "--wireframe") o.wireframe = true;
 		else if (a == "--normals") o.normals = true;
 		else if (a == "--pause") o.pauseClock = true;
+		else if (a == "--story") o.story = true;
 		else if (a == "--capture" && hasValue) o.capture = argv[++i];
 		else if (a == "--frames" && hasValue) o.frames = std::stoi(argv[++i]);
 		else if (a == "--cam" && hasValue) {
@@ -776,7 +780,7 @@ void ToyRoomApp::ApplyLaunchOptions()
 {
 	if (launch.hour >= 0.0f) environment.hour = launch.hour;
 	if (launch.pauseClock || !launch.capture.empty()) environment.paused = true;
-	if (!launch.capture.empty()) environment.hauntingEnabled = false; // deterministic poses
+	if (!launch.capture.empty() && !launch.story) environment.hauntingEnabled = false; // deterministic poses
 	if (launch.rayTrace) settings.rayTracing = true;
 	if (launch.shading >= 0 && launch.shading <= 3) settings.shading = static_cast<ShadingMode>(launch.shading);
 	settings.wireframe = launch.wireframe;
