@@ -1,14 +1,14 @@
-#include <iostream>
+﻿#include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "shaderClass.h"
-#include "VBO.h"
-#include "EBO.h"
-#include "VAO.h"
+#include "gl/Shader.h"
+#include "gl/VBO.h"
+#include "gl/EBO.h"
+#include "gl/VAO.h"
 
 using namespace std;
 using namespace glm;
@@ -74,7 +74,7 @@ int main() {
 		0, 3, 2
 	};
 
-	GLFWwindow* window = glfwCreateWindow(width, height, "Window 1", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(width, height, "Haunted Toy Room", NULL, NULL);
 	if (window == NULL) {
 		cout << "Failed to create window!" << endl;
 		return -1;
@@ -85,7 +85,7 @@ int main() {
 
 	glViewport(0, 0, width, height);
 
-	Shader shaderProgram("default.vert", "default.frag");
+	Shader shaderProgram("shaders/default.vert", "shaders/default.frag");
 
 	VAO VAO1;
 	VAO1.Bind();

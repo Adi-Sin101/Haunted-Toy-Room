@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{365d6023-639e-4ed0-9b02-4791cb3868c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\**\*.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gl\glad.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClInclude Include="src\**\*.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <None Include="shaders\*.*">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="docs\*.md">
+      <Filter>docs</Filter>
+    </None>
+  </ItemGroup>
+</Project>
