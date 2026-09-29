@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include <string>
+#include <vector>
+#include <utility>
+#include "scene/Transform.h"
 
 #include <glm/glm.hpp>
 
@@ -51,10 +54,12 @@ public:
 
 	// Autopilot: turn toward `target` (xz) and walk to it. Returns true when arrived.
 	bool SteerTowards(const glm::vec3& target, float dt, float speedFactor = 0.6f);
+	bool FollowWaypoint(const glm::vec3& target, float dt, float metresPerSecond = 1.8f);
 	bool TurnTowardsHeading(float targetHeadingDeg, float dt);
 
 	// Home = where the toy stands during the day.
 	void SaveHome();
+	void RestoreRestPose();
 	const glm::vec3& HomePosition() const { return homePosition; }
 	float HomeHeading() const { return homeHeading; }
 
@@ -94,6 +99,8 @@ private:
 
 	glm::vec3 homePosition{ 0.0f };
 	float homeHeading = 0.0f;
+	std::vector<std::pair<SceneNode*, Transform>> restPose;
+	Transform homeTransform;
 };
 
 // Wraps an angle difference to [-180, 180) degrees.

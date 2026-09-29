@@ -46,6 +46,7 @@ struct FrameInfo {
 class Renderer {
 public:
 	void Init(const Assets& assets);
+	~Renderer();
 
 	// Flattens the scene graph (world matrices must be up to date).
 	void Collect(const SceneNode& root, const glm::vec3& cameraPos);
@@ -62,11 +63,15 @@ public:
 private:
 	void CollectNode(const SceneNode& node, const glm::vec3& cameraPos);
 	void ApplyMaterial(const Shader& shader, const Material& m, const RenderSettings& settings) const;
+	void RenderLampShadow(const FrameInfo& frame);
 
 	const Assets* assets = nullptr;
 	Shader litShader;
 	Shader gouraudShader;
 	Shader debugShader;
+	Shader shadowShader;
+	GLuint shadowFbo = 0, shadowDepth = 0;
+	glm::mat4 lampViewProjection{1.0f};
 	DebugLines lines;
 
 	std::vector<DrawItem> items;

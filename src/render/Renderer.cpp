@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 #include <glad/glad.h>
 
@@ -18,6 +19,20 @@ void Renderer::Init(const Assets& library)
 	litShader = Shader("shaders/lit.vert", "shaders/lit.frag");
 	gouraudShader = Shader("shaders/gouraud.vert", "shaders/gouraud.frag");
 	debugShader = Shader("shaders/debug.vert", "shaders/debug.frag");
+	shadowShader = Shader("shaders/shadow.vert", "shaders/shadow.frag");
+	glGenFramebuffers(1, &shadowFbo); glGenTextures(1, &shadowDepth);
+	glBindTexture(GL_TEXTURE_2D, shadowDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 2048, 2048, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	const float border[] = {1, 1, 1, 1}; glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowDepth, 0);
+	glDrawBuffer(GL_NONE); glReadBuffer(GL_NONE);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw std::runtime_error("Lamp shadow framebuffer is incomplete");
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	for (int i = 0; i < MaxLights; ++i) {
 		const std::string p = "uLights[" + std::to_string(i) + "].";
@@ -26,6 +41,30 @@ void Renderer::Init(const Assets& library)
 	}
 	items.reserve(512);
 	transparent.reserve(64);
+}
+
+Renderer::~Renderer()
+{
+	if (shadowDepth) glDeleteTextures(1, &shadowDepth);
+	if (shadowFbo) glDeleteFramebuffers(1, &shadowFbo);
+}
+
+void Renderer::RenderLampShadow(const FrameInfo& frame)
+{
+	const Light& lamp = (*frame.lights)[2];
+	const glm::vec3 up = std::abs(lamp.direction.y) > 0.95f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
+	lampViewProjection = t3d::perspective(std::acos(std::clamp(lamp.outerCutoff, -1.0f, 1.0f)) * 2.0f, 1, 0.08f, 36.0f)
+		* t3d::lookAt(lamp.position, lamp.position + lamp.direction, up);
+	GLint viewport[4]; glGetIntegerv(GL_VIEWPORT, viewport);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo); glViewport(0, 0, 2048, 2048);
+	glEnable(GL_DEPTH_TEST); glDepthMask(GL_TRUE); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); glClear(GL_DEPTH_BUFFER_BIT);
+	shadowShader.Activate(); shadowShader.SetMat4("uLightVP", lampViewProjection);
+	for (const DrawItem& item : items) {
+		if (item.material->unlit || item.material->opacity < 0.9f) continue;
+		shadowShader.SetMat4("uModel", item.model); item.mesh->Draw();
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 }
 
 void Renderer::Collect(const SceneNode& root, const glm::vec3& cameraPos)
@@ -73,15 +112,18 @@ void Renderer::UploadLights(const Shader& shader, const FrameInfo& frame, const 
 		shader.SetFloat(n.outer, l.outerCutoff);
 	}
 	shader.SetVec3("uAmbientLight", frame.ambientLight);
+	shader.SetInt("uLightingEnabled", settings.lighting ? 1 : 0);
+	shader.SetInt("uShadingEnabled", settings.shadingEnabled ? 1 : 0);
 	shader.SetInt("uUseAmbient", settings.ambient ? 1 : 0);
 	shader.SetInt("uUseDiffuse", settings.diffuse ? 1 : 0);
 	shader.SetInt("uUseSpecular", settings.specular ? 1 : 0);
 	shader.SetInt("uBlinn", settings.shading == ShadingMode::Blinn ? 1 : 0);
+	shader.SetInt("uRasterShadows", 0); // analytic visibility is used by the ray tracer
 }
 
 void Renderer::ApplyMaterial(const Shader& shader, const Material& m, const RenderSettings& settings) const
 {
-	shader.SetVec3("uMaterial.color", m.color);
+	shader.SetVec3("uMaterial.color", m.DisplayColor(settings.textures));
 	shader.SetFloat("uMaterial.ka", m.ka);
 	shader.SetFloat("uMaterial.kd", m.kd);
 	shader.SetFloat("uMaterial.ks", m.ks);
@@ -97,6 +139,7 @@ void Renderer::ApplyMaterial(const Shader& shader, const Material& m, const Rend
 
 void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 {
+	if (settings.lighting && settings.shadingEnabled) RenderLampShadow(frame);
 	const Camera& camera = *frame.camera;
 	const glm::mat4 view = camera.View();
 	const glm::mat4 proj = camera.Projection(frame.aspect);
@@ -109,15 +152,18 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	glFrontFace(GL_CCW);
 	glPolygonMode(GL_FRONT_AND_BACK, settings.wireframe ? GL_LINE : GL_FILL);
 
-	const Shader& shader = settings.shading == ShadingMode::Gouraud ? gouraudShader : litShader;
+	const Shader& shader = settings.shadingEnabled && settings.shading == ShadingMode::Gouraud ? gouraudShader : litShader;
 	shader.Activate();
 	shader.SetMat4("uView", view);
 	shader.SetMat4("uProj", proj);
 	shader.SetVec3("uCameraPos", camera.position);
 	shader.SetInt("uShadingMode", static_cast<int>(settings.shading));
 	shader.SetInt("uTexture", 0);
-	shader.SetInt("uUseTexture", 1); // untextured materials sample a 1x1 white texture
+	shader.SetInt("uUseTexture", settings.textures ? 1 : 0);
 	UploadLights(shader, frame, settings);
+	glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, shadowDepth);
+	shader.SetInt("uShadowMap", 1); shader.SetInt("uRasterShadows", settings.lighting && settings.shadingEnabled ? 1 : 0);
+	shader.SetMat4("uLightVP", lampViewProjection);
 
 	const float pulse = 0.55f + 0.45f * std::sin(frame.time * 5.0f);
 	const Material* current = nullptr;

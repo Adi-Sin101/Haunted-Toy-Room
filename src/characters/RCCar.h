@@ -28,6 +28,7 @@ public:
 	const char* SpecialName() const override { return "headlights"; }
 
 	bool HeadlightsOn() const { return headlightsOn; }
+	void SetHeadlights(bool on) { headlightsOn = on; }
 	SceneNode* HeadlightAnchor(int i) const { return headlights[static_cast<size_t>(i)]; }
 	float Steering() const { return steering; }
 

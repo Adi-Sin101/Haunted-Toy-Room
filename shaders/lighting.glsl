@@ -46,7 +46,28 @@ uniform Material uMaterial;
 uniform int uUseAmbient;
 uniform int uUseDiffuse;
 uniform int uUseSpecular;
+uniform int uLightingEnabled;
+uniform int uShadingEnabled;
 uniform int uBlinn;           // 1 = Blinn-Phong half vector, 0 = Phong reflection vector
+uniform int uRasterShadows;
+uniform mat4 uLightVP;
+uniform sampler2D uShadowMap;
+
+float lampVisibility(vec3 P, vec3 N)
+{
+	if (uRasterShadows == 0) return 1.0;
+	vec4 clip = uLightVP * vec4(P, 1.0);
+	if (clip.w <= 0.0) return 1.0;
+	vec3 coord = clip.xyz / clip.w * 0.5 + 0.5;
+	if (coord.z > 1.0 || coord.z < 0.0 || any(lessThan(coord.xy, vec2(0.0))) || any(greaterThan(coord.xy, vec2(1.0)))) return 1.0;
+	vec3 L = normalize(uLights[2].position - P);
+	float bias = max(0.0009 * (1.0 - max(dot(N, L), 0.0)), 0.00012);
+	vec2 texel = 1.0 / vec2(textureSize(uShadowMap, 0));
+	float visibility = 0.0;
+	for (int x = -1; x <= 1; ++x) for (int y = -1; y <= 1; ++y)
+		visibility += coord.z - bias <= texture(uShadowMap, coord.xy + vec2(x, y) * texel).r ? 1.0 : 0.0;
+	return visibility / 9.0;
+}
 
 // Direction TO the light (L), distance-based attenuation and spot-cone factor for light i at point P.
 void lightVector(int i, vec3 P, out vec3 L, out float attenuation, out float distanceToLight)
@@ -106,6 +127,20 @@ vec3 ambientTerm()
 	return ambientTerm(uMaterial.ka);
 }
 
+// Lighting without surface shading: light colour, distance and spotlight coverage only.
+// No face normals, specular highlights or shadows are evaluated in this preview mode.
+vec3 basicIllumination(vec3 P, float ka, float kd)
+{
+	vec3 result = ambientTerm(ka);
+	if (uUseDiffuse == 1) for (int i = 0; i < uLightCount; ++i) {
+		if (uLights[i].enabled == 0) continue;
+		vec3 L; float attenuation; float distance;
+		lightVector(i, P, L, attenuation, distance);
+		result += kd * uLights[i].color * uLights[i].intensity * attenuation;
+	}
+	return result;
+}
+
 // Diffuse + specular of all enabled lights (no shadows).
 void computeLighting(vec3 P, vec3 N, vec3 V, out vec3 diffuse, out vec3 specular)
 {
@@ -113,6 +148,6 @@ void computeLighting(vec3 P, vec3 N, vec3 V, out vec3 diffuse, out vec3 specular
 	specular = vec3(0.0);
 	for (int i = 0; i < uLightCount; ++i) {
 		if (uLights[i].enabled == 1)
-			addLight(i, P, N, V, 1.0, uMaterial.kd, uMaterial.ks, uMaterial.shininess, diffuse, specular);
+			addLight(i, P, N, V, i == 2 ? lampVisibility(P, N) : 1.0, uMaterial.kd, uMaterial.ks, uMaterial.shininess, diffuse, specular);
 	}
 }

@@ -16,6 +16,7 @@ class Input {
 public:
 	void Attach(GLFWwindow* window);
 	void EndFrame(); // call after the frame's logic: current state becomes previous state
+	void ResetMouseMotion() { firstMouse=true; mouseDelta=glm::vec2(0); }
 
 	bool Down(int key) const { return valid(key) && keys[key]; }
 	bool Pressed(int key) const { return valid(key) && keys[key] && !prevKeys[key]; }
@@ -36,6 +37,7 @@ private:
 	static void MouseButtonCallback(GLFWwindow* w, int button, int action, int mods);
 	static void CursorCallback(GLFWwindow* w, double x, double y);
 	static void ScrollCallback(GLFWwindow* w, double dx, double dy);
+	static void FocusCallback(GLFWwindow* w, int focused);
 
 	std::array<bool, GLFW_KEY_LAST + 1> keys{};
 	std::array<bool, GLFW_KEY_LAST + 1> prevKeys{};

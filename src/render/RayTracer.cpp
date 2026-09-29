@@ -96,7 +96,7 @@ void RayTracer::Render(const std::vector<DrawItem>& items, const FrameInfo& fram
 			// Rows 0..2 of the inverse matrix (row r = (inv[0][r], inv[1][r], inv[2][r], inv[3][r])).
 			for (int r = 0; r < 3; ++r)
 				packed.emplace_back(inv[0][r], inv[1][r], inv[2][r], inv[3][r]);
-			packed.emplace_back(m.color, static_cast<float>(item.mesh->Type()));
+			packed.emplace_back(m.DisplayColor(settings.textures), static_cast<float>(item.mesh->Type()));
 			packed.emplace_back(m.ka, m.kd, m.ks, m.shininess);
 			packed.emplace_back(m.emissive, m.opacity);
 			packed.emplace_back(m.reflectivity, static_cast<float>(m.rtTextureSlot), m.uvScale.x, m.uvScale.y);

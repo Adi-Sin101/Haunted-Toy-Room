@@ -28,7 +28,8 @@ void main()
 	vec3 V = normalize(uCameraPos - world.xyz);
 
 	vec3 diffuse, specular;
-	computeLighting(world.xyz, N, V, diffuse, specular);
+	diffuse = vec3(0.0); specular = vec3(0.0);
+	if (uLightingEnabled == 1 && uShadingEnabled == 1) computeLighting(world.xyz, N, V, diffuse, specular);
 	vLight = ambientTerm() + diffuse;
 	vSpecular = specular;
 	vUV = aUV;

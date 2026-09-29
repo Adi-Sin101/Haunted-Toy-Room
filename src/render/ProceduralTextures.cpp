@@ -56,6 +56,58 @@ Image White()
 	return Image(1, 1);
 }
 
+Image Fabric(int pattern, int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const float grain = ValueNoise(u * 120.0f, v * 120.0f);
+		const float weave = 0.5f + 0.5f * std::sin(u * 256.0f * glm::pi<float>()) * std::sin(v * 256.0f * glm::pi<float>());
+		float shade = 0.78f + 0.15f * grain + 0.07f * weave;
+		if (pattern == 1) shade *= 0.8f + 0.2f * std::abs(std::sin((u + v) * 160.0f));
+		if (pattern == 2) shade = 0.65f + 0.3f * Fbm(u * 45.0f, v * 45.0f) + 0.1f * grain;
+		if (pattern == 3) {
+			const float x = std::abs(std::sin(u * 8.0f * glm::pi<float>()));
+			const float y = std::abs(std::sin(v * 8.0f * glm::pi<float>()));
+			return glm::mix(glm::vec3(0.5f, 0.3f, 0.15f), glm::vec3(shade), (x > 0.18f && y > 0.18f) ? 1.0f : 0.0f);
+		}
+		if (pattern == 4) {
+			float spots = Fbm(u * 9.0f, v * 9.0f);
+			return glm::vec3(spots > 0.51f ? 0.10f : shade);
+		}
+		return glm::vec3(shade);
+	});
+}
+
+Image Moon(int width, int height)
+{
+	struct Crater { glm::vec3 center; float inverseRadius, rangeSquare; };
+	std::vector<Crater> craters;
+	for (int i = 0; i < 110; ++i) {
+		const float seed = static_cast<float>(i);
+		const float y = Hash(seed, 11.0f) * 2.0f - 1.0f, angle = Hash(seed, 29.0f) * glm::two_pi<float>();
+		const float ring = std::sqrt(1.0f - y * y);
+		const float radius = 0.018f + std::pow(Hash(seed, 53.0f), 2.0f) * 0.17f;
+		craters.push_back({{ring * std::cos(angle), y, ring * std::sin(angle)}, 1.0f / radius, 2.25f * radius * radius});
+	}
+	return Generate(width, height, [&](float u, float v) {
+		const float longitude = u * glm::two_pi<float>(), latitude = (v - 0.5f) * glm::pi<float>();
+		const glm::vec3 n(std::cos(latitude) * std::sin(longitude), std::sin(latitude), std::cos(latitude) * std::cos(longitude));
+		const float land = Fbm(n.x * 5.0f + n.z * 3.0f + 12.0f, n.y * 7.0f + 4.0f);
+		float shade = 0.40f + land * 0.60f;
+		shade += (ValueNoise(n.x * 180.0f + n.z * 40.0f, n.y * 180.0f) - 0.5f) * 0.10f;
+		for (const Crater& crater : craters) {
+			const float square = 2.0f - 2.0f * (n.x * crater.center.x + n.y * crater.center.y + n.z * crater.center.z);
+			if (square > crater.rangeSquare) continue;
+			const float d = std::sqrt(std::max(0.0f, square)) * crater.inverseRadius;
+			shade -= 0.18f * std::exp(-d * d * 3.0f);
+			shade += 0.20f * std::exp(-(d - 1.0f) * (d - 1.0f) * 70.0f);
+			shade += (n.y - crater.center.y) * crater.inverseRadius * 0.16f * std::exp(-d * d * 2.0f);
+		}
+		// Baked sunlight exposes the relief, including a slight terminator on the eastern limb.
+		const float lit = 0.32f + 0.68f * std::max(0.0f, glm::dot(n, glm::normalize(glm::vec3(-0.15f, 0.25f, 1.0f))));
+		return glm::vec3(0.94f, 0.95f, 1.0f) * shade * lit;
+	});
+}
+
 // Planks run along v. The texture holds 4 planks side by side (u) and each plank is split into
 // 2 boards along v with an offset so the joints are staggered.
 Image WoodFloor(int size)

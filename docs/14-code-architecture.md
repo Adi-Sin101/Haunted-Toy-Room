@@ -42,7 +42,7 @@ characters, characters nothing about the application.
 | `characters/Character` | movement, walk phase, autopilot, transitions | `Drive`, `Stop`, `SteerTowards`, `StartTransition` |
 | `world/Room` | building the room and props | `BuildRoom` → `RoomRig` handles |
 | `world/Environment` | clock, sky, lamp, ball, ghost | `Update`, `Scrub`, `PushBall`, `DriveLamp` |
-| `world/StoryDirector` | night patrols / morning return | `Add`, `Update` |
+| `world/StoryDirector` | coordinated seven-scene Midnight Mission and car autopilot | `Init`, `Restart`, `Update`, `Pause` |
 
 ## 3. Ownership and lifetime
 

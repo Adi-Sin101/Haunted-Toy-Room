@@ -9,6 +9,9 @@
 #include "render/RayTracer.h"
 #include "render/RenderSettings.h"
 #include "render/Renderer.h"
+#include "render/Hud.h"
+#include "world/PhysicsWorld.h"
+#include "math/Ray.h"
 #include "scene/Camera.h"
 #include "scene/Light.h"
 #include "scene/SceneNode.h"
@@ -43,9 +46,14 @@ struct LaunchOptions {
 	bool focus = false;
 	bool mount = false;
 	bool rayTrace = false;
+	bool lighting = false, textures = false, renderSettings = false;
 	int shading = -1;
 	bool wireframe = false;
 	bool normals = false;
+	bool noHud = false;
+	bool laserDemo = false;
+	bool guide = false;
+	int windowWidth = 1600, windowHeight = 900;
 	bool pauseClock = false;
 	bool story = false;     // keep the story running during a capture
 	bool hasCamera = false;
@@ -53,6 +61,8 @@ struct LaunchOptions {
 	float orbitYaw = 1e9f, orbitPitch = 1e9f, orbitDistance = -1.0f;
 	std::string capture;   // save a screenshot here after 'frames' frames, then quit
 	int frames = 90;
+	float storyStep = 0.0f;
+	int storySteps = 1;
 
 	static LaunchOptions Parse(int argc, char* argv[]);
 };
@@ -68,12 +78,14 @@ protected:
 
 private:
 	void BuildScene();
+	void StepScene(float dt);
 	void AddSelectable(const std::string& name, SceneNode* node, Character* character, int key, float focusHeight, float focusDistance);
 
 	// Input handling
 	void HandleGlobalKeys();
 	void HandleSelection();
 	void HandleCamera(float dt);
+	void SetCursorCaptured(bool capture);
 	void HandleObjectControl(float dt);
 	void HandleEditMode(float dt);
 
@@ -93,6 +105,8 @@ private:
 	void DumpSelectedGeometry(bool full) const;
 	void SaveScreenshot(const std::string& path = {});
 	void ApplyLaunchOptions();
+	void DrawHud();
+	Ray ViewRay(const glm::vec2& mouse) const;
 
 	Assets assets;
 	Renderer renderer;
@@ -103,6 +117,16 @@ private:
 	std::vector<Light> lights;
 	Environment environment;
 	StoryDirector story;
+	PhysicsWorld physics;
+	Hud hud;
+	std::vector<SceneNode*> contactShadows;
+	glm::vec3 cameraPan{0.0f};
+	bool helpVisible = false, hudVisible = true, storyCamera = true;
+	bool missionRestarted = false;
+	bool renderSettingsOpen = false;
+	bool mouseLook = false, cursorCaptured = false, releaseMouseUntilButtonUp = false;
+	std::string statusText;
+	float statusTimer = 0.0f;
 
 	std::vector<std::unique_ptr<Character>> characters;
 	Humanoid* woody = nullptr;

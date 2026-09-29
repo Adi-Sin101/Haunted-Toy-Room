@@ -55,7 +55,7 @@ void Character::Drive(const ControlInput& in, float dt)
 
 	if (clampToRoom) {
 		const float margin = 0.6f;
-		root->local.position.x = std::clamp(root->local.position.x, -RoomSize::HalfWidth + margin, RoomSize::HalfWidth - margin);
+		root->local.position.x = std::clamp(root->local.position.x, -RoomSize::HalfWidth + margin, RoomSize::HallEnd - margin);
 		root->local.position.z = std::clamp(root->local.position.z, -RoomSize::HalfDepth + margin, RoomSize::HalfDepth - margin);
 	}
 }
@@ -115,10 +115,37 @@ bool Character::TurnTowardsHeading(float targetHeadingDeg, float dt)
 	return false;
 }
 
+bool Character::FollowWaypoint(const glm::vec3& target, float dt, float metresPerSecond)
+{
+	if (InTransition()) return false;
+	glm::vec3 delta = target - root->local.position;
+	if (!canFly) delta.y = 0;
+	const float distance = glm::length(delta);
+	if (distance < 0.06f) { Stop(); return true; }
+	const float step = std::min(distance, metresPerSecond * dt);
+	const float desired = glm::degrees(std::atan2(delta.x, delta.z));
+	const float turn = WrapDegrees(desired - Heading());
+	root->local.rotation.y = WrapDegrees(Heading() + std::clamp(turn, -turnRate * dt, turnRate * dt));
+	OnDrive({1, std::clamp(turn / 30.0f, -1.0f, 1.0f), 0, false});
+	root->local.position += delta * (step / distance);
+	speed = dt > 0 ? step / dt : 0;
+	return false;
+}
+
 void Character::SaveHome()
 {
 	homePosition = root->local.position;
 	homeHeading = root->local.rotation.y;
+	homeTransform=root->local;
+	restPose.clear();
+	root->ForEach([&](SceneNode& node) { if (&node != root) restPose.emplace_back(&node,node.local); });
+}
+
+void Character::RestoreRestPose()
+{
+	Stop(); walkPhase=0; moveBlend=0;
+	root->local=homeTransform;
+	for (const auto& entry:restPose) entry.first->local=entry.second;
 }
 
 void Character::StartTransition(const glm::vec3& toPos, float toYaw, float duration)

@@ -64,6 +64,8 @@ protected:
 	bool seated = false;
 	float seatBlend = 0.0f;
 	float rightArmOverride = 0.0f; // Buzz raises his arm to fire the laser (blend 0..1)
+	float laserPitch = 0.0f;
+	float groundMotion = 1.0f; // suppress gait and footstep bob during flight
 };
 
 // Buzz Lightyear: humanoid + wings that open while flying + wrist laser.
@@ -77,6 +79,11 @@ public:
 
 	bool LaserOn() const { return laserOn; }
 	glm::vec3 LaserTip() const;
+	glm::vec3 LaserDirection() const;
+	bool LaserReady() const { return laserOn && rightArmOverride > 0.90f; }
+	void SetLaserLength(float length);
+	void AimAt(const glm::vec3& point);
+	void TiltLaser(float degrees);
 
 private:
 	SceneNode* wings = nullptr;
@@ -84,6 +91,10 @@ private:
 	SceneNode* laserTip = nullptr;
 	bool laserOn = false;
 	float wingOpen = 0.0f;
+	float flightBlend = 0.0f, cruiseBlend = 0.0f;
+	float flightPitch = 0.0f, flightBank = 0.0f;
+	glm::vec3 previousFlightPosition{0.0f};
+	float previousFlightHeading = 0.0f;
 };
 
 HumanoidStyle WoodyStyle();

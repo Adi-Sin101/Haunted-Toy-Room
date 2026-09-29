@@ -18,6 +18,8 @@ Image BeachBall(int width = 256, int height = 128);  // coloured gores meeting a
 Image ToyBlock(int size, const glm::vec3& color);   // bevelled face with a star emblem
 Image Rug(int size = 256);            // concentric bands
 Image PosterFallback(int width = 256, int height = 384);
+Image Moon(int width = 1024, int height = 512);
+Image Fabric(int pattern, int size = 256); // cotton, denim, leather, plaid, cow print
 
 // Hash-based value noise in [0, 1], smoothly interpolated (used for wood grain, flicker, stars).
 float ValueNoise(float x, float y);

@@ -16,6 +16,8 @@ class Texture;
 struct Material {
 	std::string name;
 	glm::vec3 color{ 0.8f };
+	glm::vec3 plainColor{-1.0f}; // optional flat preview colour when textures are disabled
+	glm::vec3 DisplayColor(bool textures) const { return !textures && plainColor.x >= 0 ? plainColor : color; }
 	float ka = 1.0f;
 	float kd = 1.0f;
 	float ks = 0.3f;

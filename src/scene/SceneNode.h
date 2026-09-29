@@ -31,6 +31,7 @@ public:
 	const Mesh* mesh = nullptr;
 	const Material* material = nullptr;
 	bool visible = true;
+	bool solid = false; // physical furniture; thin decoration and light effects stay non-solid
 	int ownerId = -1; // id of the selectable object this node belongs to (-1 = static scenery)
 
 	SceneNode* Parent() const { return parent; }

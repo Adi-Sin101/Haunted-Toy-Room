@@ -7,20 +7,20 @@ delta time `dt`, so speeds are in units per **second**, independent of the frame
 
 ![Night story](images/night-story.png)
 
-*23:00 with the story on: Woody and Jessie patrol, Buzz flies, the ball rolls, the ghost floats, the lamp shines on the rug.*
+*Environment animation reference. Default playback now follows The Midnight Mission described in section 6.*
 
 ## 1. The clock and the day/night cycle
 
 * `hour` runs 0 … 24. One full day lasts `dayLengthSeconds = 150` real seconds × `timeScale`.
 * Keys: **P** pause, **[** / **]** halve / double the speed (0.25× … 32×), **,** / **.** scrub backward /
   forward.
-* The program starts at 20:30 (dusk turning into night).
+* The mission starts at midnight and advances to 08:00 during its Morning scene.
 
 **Sun and moon.** Angle `a = (hour − 6) / 12 · π` (0 at 06:00, π at 18:00). Both bodies move on a half
 ellipse behind the window:
 
 ```
-position(angle) = skyCentre + ( −cos(angle)·16,  sin(angle)·9,  0 )
+position(angle) = skyCentre + ( −cos(angle)·3.2,  sin(angle)·3.1,  0 )
 sun  = position(a)          moon = position(a + π)
 ```
 
@@ -75,18 +75,20 @@ position   += (sin heading, 0, cos heading) · speed · dt
 * **Transitions** (mount / dismount) interpolate position and heading over 0.6–0.7 s with smoothstep
   easing and a small hop arc `sin(πt)·0.4`, so nothing teleports.
 
-## 6. The story (StoryDirector) — "toys come alive at night"
+## 6. The Midnight Mission (StoryDirector)
 
-**N** toggles the story on/off (default on). While on:
+Default playback follows seven coordinated scenes: Discovery, Moving Outside, Clearing the Path,
+Reaching the Car, Activating the Car, Returning Home and Morning. The right-side doorway connects
+with a bounded hallway, where the lost car waits. Buzz must hit the obstruction with a real laser
+impulse; arrival state gates each route. Jessie mounts Bullseye through the existing saddle hierarchy.
+The activated car drives a predefined path with rotating wheels. Finally the toys return to their
+saved positions and poses, the lamp turns off, dawn fades in and the camera pulls back.
 
-* **Night:** every toy that is *not selected by the user* walks its own patrol loop (a list of waypoints).
-  Steering: turn toward the next waypoint (`turn = clamp(Δheading / 25°)`), walk forward when roughly facing
-  it, switch to the next waypoint within 0.35 units. Buzz climbs to 1.6 units and flies his loop; the car
-  drives laps; Bullseye trots (carrying Jessie if she is mounted).
-* **Morning:** each toy walks back to its **home** position (where the child left it), turns to its original
-  heading and freezes — "as morning arrives the toys return to their original positions and become still
-  again".
-* The selected character is always under manual control. Select **0** to hand everyone back to the story.
+Selecting a toy pauses the film for manual control. **N** resumes it; **Shift+N** restores the setup
+and restarts Discovery. **P** pauses the mission. **Enter** activates the car during Scene 5;
+unattended playback performs the interaction after three seconds. Camera input overrides cinematic
+shots without stopping the story. **H** expands the compact corner guide; **G** hides all text.
 
-A complete short movie: start the program, press **]** a couple of times, and watch dusk → haunted night
-(lamp flickers, ghost appears, toys wander, ball rolls) → sunrise (everyone returns home) → day.
+See [the complete mission and its implementation](16-midnight-mission.md). The optional haunting
+prop animations described above remain in Environment, while mission playback keeps the ball and
+ghost still. The film owns the midnight-to-morning clock; clock speed and scrubbing are manual controls.

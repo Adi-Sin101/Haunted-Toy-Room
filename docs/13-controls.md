@@ -16,10 +16,10 @@ the selected object, edit mode, camera mode, render mode and FPS. The console re
 | 6 | Beach ball |
 | 7 | Desk lamp |
 | 8 | Ghost |
-| 0 | nothing (camera only; all toys follow the story) |
+| 0 | clear selection (N resumes the paused mission) |
 | Left click | the object under the mouse (ray picking) |
 
-The selected object pulses with a golden rim light and shows its local axes (X red, Y green, Z blue).
+The selected object pulses with a golden rim light. F11 toggles its local axes. The on-screen toolbar also selects toys; Ctrl+B or the Blocks button cycles block selection even when the blocks are outside the current view. H opens the guide and G hides the interface.
 
 ## Driving the selected character
 
@@ -35,6 +35,8 @@ The selected object pulses with a golden rim light and shows its local axes (X r
 
 While Jessie is mounted, W/S/A/D/SPACE drive Bullseye and Jessie rides along.
 
+Buzz's laser applies impulses to wooden blocks. Use Z/X to lower/raise his aim or Alt+left-click/drag to aim at a visible surface. B rebuilds the block tower. With a block selected, W/A/S/D push relative to the camera and Space brakes it.
+
 ## Props
 
 | Object | Keys |
@@ -44,16 +46,29 @@ While Jessie is mounted, W/S/A/D/SPACE drive Bullseye and Jessie rides along.
 
 ## Camera
 
+Press **M** outside edit mode for GTA-style mouse-look: moving the mouse turns the view continuously
+with no button held and no screen-edge limit. **Escape** releases the cursor without changing the view;
+pressing Escape again with the cursor released quits. Holding right-click also captures the mouse until
+released. Opening render settings with the backtick key releases the cursor for clicking. Losing window
+focus releases capture and clears held movement keys.
+
+With **no toy selected** (press 0) and **Free** camera mode, **W/A/S/D** walks the camera relative to its
+view; **PgUp/PgDn** changes height and **Shift** moves faster. Selected toys retain their movement keys.
+Use **C** to cycle camera modes: mouse-look also orbits the target in Orbit and Follow modes. The camera
+remains constrained to the room and solid objects. Mouse input takes over the cinematic view without
+pausing the mission. **G** hides the interface and center aiming marker.
+
 | Key / mouse | Free mode | Orbit mode | Follow mode |
 |---|---|---|---|
 | C | cycle Free → Orbit → Follow | | |
 | F | focus: orbit around the selected object | | |
 | Home | reset camera | | |
-| Arrow keys | move forward/back/strafe | rotate around target | — |
-| PgUp / PgDn | move up / down | closer / further | — |
-| Right-drag | look around | rotate around target | — |
-| Middle-drag | pan | pan the target | — |
+| Arrow keys | move forward/back/strafe | rotate around target | change viewing angle |
+| PgUp / PgDn | move up / down | closer / further | closer / further |
+| Right-drag | look around | rotate around target | change viewing angle |
+| Middle-drag | pan | pan the target | pan the target |
 | Scroll | zoom (field of view) | closer / further (dolly) | closer / further |
+| Ctrl + Scroll | lens zoom | lens zoom | lens zoom |
 | Shift | 3× faster | | |
 | Numpad 1 / 3 / 7 or Ctrl+1 / 3 / 7 | front / side / top view (switches to Orbit) | | |
 
@@ -90,15 +105,28 @@ While Jessie is mounted, W/S/A/D/SPACE drive Bullseye and Jessie rides along.
 | V | list the selected object's parts (primitive, local position/size, world position, counts) |
 | Shift+V | also print every vertex and triangle of the primitives it uses |
 
+## Rendering settings
+
+The small Settings button at the top right opens four independent switches: Lighting, Shading,
+Ray tracing and Textures. All four start off. The backtick key opens or closes the menu; G hides or restores
+the entire interface, including its settings button. Toggling rendering does not pause the mission.
+Shift+F2 toggles surface shading; F2 enables it or cycles the retained shading model. F3 and F4 still
+toggle textures and ray tracing. Lighting off shows plain material colours. Shading off skips face
+lighting, specular highlights and shadows, while enabled lighting can still supply light colour and
+distance attenuation. Textures off uses flat preview colours so room surfaces remain distinguishable.
+
 ## World
 
 | Key | Action |
 |---|---|
-| P | pause / resume the clock |
+| P | pause / resume the mission and clock |
 | [ / ] | time speed ×½ / ×2 |
 | , / . | scrub time backward / forward (brightness instead when the lamp is selected) |
-| N | story + haunting on/off (toys wander at night, return home in the morning) |
-| H | print help |
+| N | switch manual control / coordinated Midnight Mission playback |
+| Shift+N | replay all seven scenes from the beginning |
+| Enter | activate the car in Scene 5; its return route runs automatically |
+| H | expand / close the compact corner guide |
+| G | hide / show all interface text |
 | Esc | quit |
 
 ## Command-line options (scripted runs / screenshots for the report)

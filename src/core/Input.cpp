@@ -14,6 +14,7 @@ void Input::Attach(GLFWwindow* window)
 	glfwSetMouseButtonCallback(window, MouseButtonCallback);
 	glfwSetCursorPosCallback(window, CursorCallback);
 	glfwSetScrollCallback(window, ScrollCallback);
+	glfwSetWindowFocusCallback(window, FocusCallback);
 }
 
 void Input::EndFrame()
@@ -61,4 +62,16 @@ void Input::ScrollCallback(GLFWwindow* w, double /*dx*/, double dy)
 {
 	if (Input* in = inputFrom(w))
 		in->scroll += static_cast<float>(dy);
+}
+
+void Input::FocusCallback(GLFWwindow* w, int focused)
+{
+	if (Input* in=inputFrom(w)) {
+		in->ResetMouseMotion();
+		if (!focused) {
+			in->keys.fill(false); in->prevKeys.fill(false);
+			in->buttons.fill(false); in->prevButtons.fill(false);
+			in->scroll=0;
+		}
+	}
 }

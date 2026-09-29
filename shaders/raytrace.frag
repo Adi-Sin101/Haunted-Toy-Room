@@ -44,6 +44,12 @@ uniform sampler2D uTex3;
 uniform sampler2D uTex4;
 uniform sampler2D uTex5;
 uniform sampler2D uTex6;
+uniform sampler2D uTex7;
+uniform sampler2D uTex8;
+uniform sampler2D uTex9;
+uniform sampler2D uTex10;
+uniform sampler2D uTex11;
+uniform sampler2D uTex12;
 
 const float INF = 1e20;
 const float EPS = 1e-4;
@@ -247,6 +253,12 @@ vec3 sampleSlot(int slot, vec2 uv)
 	if (slot == 4) return texture(uTex4, uv).rgb;
 	if (slot == 5) return texture(uTex5, uv).rgb;
 	if (slot == 6) return texture(uTex6, uv).rgb;
+	if (slot == 7) return texture(uTex7, uv).rgb;
+	if (slot == 8) return texture(uTex8, uv).rgb;
+	if (slot == 9) return texture(uTex9, uv).rgb;
+	if (slot == 10) return texture(uTex10, uv).rgb;
+	if (slot == 11) return texture(uTex11, uv).rgb;
+	if (slot == 12) return texture(uTex12, uv).rgb;
 	return vec3(1.0);
 }
 
@@ -281,6 +293,8 @@ void main()
 		vec3 shaded;
 		if (t7.x > 0.5) {
 			shaded = t5.rgb + albedo;                          // unlit (sky, bulb, sun)
+		} else if (uLightingEnabled == 0 || uShadingEnabled == 0) {
+			shaded = albedo * (uLightingEnabled == 1 ? basicIllumination(P, t4.x, t4.y) : vec3(1.0)) + t5.rgb;
 		} else {
 			vec3 V = -rd;
 			vec3 diffuse = vec3(0.0), specular = vec3(0.0);

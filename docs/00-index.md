@@ -36,6 +36,8 @@ tracer. Only GLFW (window), GLAD (GL function loading) and GLM (vector/matrix ty
 | 13 | [Controls reference](13-controls.md) — every key | usage |
 | 14 | [Code architecture](14-code-architecture.md) — modules, ownership, efficiency | design |
 
+New: [Physics, scene detail and on-screen controls](15-physics-and-interface.md).
+
 Also: [project-context.md](project-context.md) (original idea and requirements) and
 [implementation-plan.md](implementation-plan.md) (the plan this implementation follows).
 
@@ -69,3 +71,5 @@ Also: [project-context.md](project-context.md) (original idea and requirements) 
 | Ray tracing | [12](12-ray-tracing.md) |
 | Full camera control, zoom, close inspection of any object | [05](05-camera.md) |
 | Environment with its own motion; toys come alive at night, return in the morning | [11](11-environment-animation.md) |
+
+- [16 - The Midnight Mission](16-midnight-mission.md): seven coordinated scenes, manual takeover, car activation and the compact interface.

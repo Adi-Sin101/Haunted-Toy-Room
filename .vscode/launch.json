@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Haunted Toy Room (Debug)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}\\bin\\Debug\\HauntedToyRoom.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}\\bin\\Debug",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "Build Haunted Toy Room (Debug)"
+        },
+        {
+            "name": "Run Haunted Toy Room (Release)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}\\bin\\Release\\HauntedToyRoom.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}\\bin\\Release",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "Build Haunted Toy Room (Release)"
+        }
+    ]
+}

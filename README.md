@@ -1,27 +1,50 @@
-# Haunted Toy Room
+# Toy Story: The Midnight Mission
 
-A computer graphics lab project in C++ and OpenGL 3.3. At night a child's toy room comes alive: Woody,
-Jessie, Buzz, Bullseye and an RC car wander around, the desk lamp flickers and looks around, a beach ball
-rolls by itself and a ghost drifts through the room. When morning comes, every toy walks back to its place
-and stands still again.
+A computer graphics lab project in C++ and OpenGL 3.3: **Toy Story: The Midnight Mission**.
+Woody discovers a lost car beyond the doorway, Jessie mounts Bullseye, and Buzz clears the obstacle
+with his laser. The friends reach the car, activate it, escort its automatic return and head home.
+Morning light fades in, the lamp switches off, the toys return to their original poses, and the camera
+pulls back. The complete seven-scene story plays automatically until you take manual control.
 
 Every toy is built from hand-written primitives (plane, cube, sphere, cylinder, cone). The project also
 implements its own transformations, scene hierarchy, Phong illumination, Flat/Gouraud/Phong/Blinn shading,
 procedural textures, a BMP loader and a real-time GPU ray tracer. The only libraries are GLFW, GLAD and
 GLM.
 
-## Build and run
+## Build and run in VS Code
 
-Requirements: Windows, Visual Studio 2026 with the C++ desktop workload, and a GPU that supports OpenGL 3.3.
+Requirements: Windows, Visual Studio 2026 or its Build Tools with the **Desktop development with C++** workload and **Windows 11 SDK 10.0.26100**, the VS Code **C/C++** extension, and a GPU that supports OpenGL 3.3. VS Code supplies the editor and debugger integration; the MSVC compiler and MSBuild come from Visual Studio/Build Tools.
 
-1. Open `HauntedToyRoom.slnx`.
-2. Choose `Release | x64` (or `Debug | x64`).
-3. Press **F5**.
+1. Open this project folder in VS Code.
+2. Press **F5** and choose **Run Haunted Toy Room (Debug)**. VS Code builds the x64 Debug configuration and starts the app with the correct working directory. Choose the Release launch configuration to run Release instead.
+3. Use **Ctrl+Shift+B** to build Debug, or select **Build Haunted Toy Room (Release)** from **Terminal → Run Build Task**.
 
-All library paths are relative to the project folder, so no setup is needed. See
-[docs/01-environment-setup.md](docs/01-environment-setup.md).
+The build task finds MSBuild through Visual Studio's `vswhere` tool, or uses MSBuild already on `PATH`. Library paths are relative to the project folder. See [docs/01-environment-setup.md](docs/01-environment-setup.md) for environment details.
+
+You can also open `HauntedToyRoom.slnx` in Visual Studio and press **F5**.
 
 ## First things to try
+
+Lighting, surface shading, ray tracing and textures currently start **off** for a plain preview.
+Click the small **Settings** button at the top right, or press the **backtick (`)** key, to toggle each
+feature independently. **G** hides the button, menu and the rest of the interface; press G again to show
+them. All rendering implementations remain available. With lighting on and shading off, basic light
+colour and distance attenuation remain, while normal-based shading, highlights and shadows are skipped.
+
+Let the mission play, or select a toy to pause it and take manual control. **N** switches manual/story
+mode, **Shift+N** restarts the film, and **P** pauses it. **Enter** activates the car in Scene 5; unattended
+playback activates it after three seconds. Its wheels rotate as it drives its predefined route home.
+The interface is one compact corner panel: **H** expands its guide; **G** hides all interface text.
+Camera inputs take over the cinematic view without interrupting the mission.
+Press **M** for continuous mouse-look, **Escape** to release the cursor, or hold right-click to turn.
+With no toy selected in Free camera mode, **W/A/S/D** moves around the room; **PgUp/PgDn** changes height.
+See [the seven-scene mission](docs/16-midnight-mission.md).
+
+The room now has solid furniture and toys, a camera constrained to the room, a textured cratered moon,
+more detailed characters, lamp shadows and an on-screen guide. Press **H** for the guide or **G** to hide
+the interface. Select Buzz with **4**, toggle his laser with **L**, aim using **Z/X** or **Alt+click**,
+and knock over the wooden blocks. **B** rebuilds the tower. You can also click a block and push it with
+**W/A/S/D**. See [physics and interface details](docs/15-physics-and-interface.md).
 
 | Keys | What happens |
 |---|---|
@@ -34,8 +57,9 @@ All library paths are relative to the project folder, so no setup is needed. See
 | **Tab**, **T**, J/L U/O I/K | edit mode: translate, rotate, scale or shear any object |
 | **F1 / F2 / F3** | wireframe, shading model, textures |
 | **F4** | real-time ray tracing (shadows, reflections, transparency) |
-| **[ ]  , .  P  N** | time speed, scrub time, pause, story on/off |
-| **H** | full help |
+| **N / Shift+N / P / Enter** | manual/story, replay, pause, activate car |
+| **[ ] / , .** | clock speed / scrub in manual mode |
+| **H / G** | expand corner guide / hide all text |
 
 Full key list: [docs/13-controls.md](docs/13-controls.md).
 

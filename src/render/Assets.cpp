@@ -11,7 +11,7 @@ void Assets::Load()
 {
 	plane = std::make_unique<Mesh>("Plane", PrimitiveType::Plane, Primitives::Plane());
 	cube = std::make_unique<Mesh>("Cube", PrimitiveType::Cube, Primitives::Cube());
-	sphere = std::make_unique<Mesh>("Sphere", PrimitiveType::Sphere, Primitives::Sphere());
+	sphere = std::make_unique<Mesh>("Sphere", PrimitiveType::Sphere, Primitives::Sphere(32, 48));
 	cylinder = std::make_unique<Mesh>("Cylinder", PrimitiveType::Cylinder, Primitives::Cylinder());
 	cone = std::make_unique<Mesh>("Cone", PrimitiveType::Cone, Primitives::Cone());
 
@@ -23,6 +23,12 @@ void Assets::Load()
 	AddTexture("beach-ball", PT::BeachBall(), BallSlot);
 	AddTexture("toy-block", PT::ToyBlock(128, glm::vec3(1.0f)), BlockSlot);
 	AddTexture("night-sky", PT::NightSky(), StarsSlot);
+	AddTexture("lunar-surface", PT::Moon(), MoonSlot);
+	AddTexture("woven-cotton", PT::Fabric(0), FabricSlot);
+	AddTexture("denim", PT::Fabric(1), DenimSlot);
+	AddTexture("worn-leather", PT::Fabric(2), LeatherSlot);
+	AddTexture("shirt-plaid", PT::Fabric(3), PlaidSlot);
+	AddTexture("cow-print", PT::Fabric(4), CowSlot);
 
 	// The poster is a real image file read by our own BMP loader.
 	const std::string posterPath = Paths::resolve("assets/textures/poster.bmp").string();

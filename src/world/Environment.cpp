@@ -41,7 +41,7 @@ std::string Environment::ClockText() const
 
 glm::vec3 Environment::AmbientLight() const
 {
-	return glm::mix(glm::vec3(0.11f, 0.12f, 0.20f), glm::vec3(0.30f, 0.30f, 0.33f), daylight);
+	return glm::mix(glm::vec3(0.18f, 0.19f, 0.26f), glm::vec3(0.48f, 0.46f, 0.43f), daylight);
 }
 
 glm::vec3 Environment::ClearColor() const
@@ -66,7 +66,7 @@ void Environment::UpdateSky()
 	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
 	const float sunHeight = std::sin(a);
 	auto orbit = [&](float angle) {
-		return rig.skyCenter + glm::vec3(-std::cos(angle) * 16.0f, std::sin(angle) * 9.0f, 0.0f);
+		return rig.skyCenter + glm::vec3(-std::cos(angle) * 3.2f, std::sin(angle) * 3.1f, 0.0f);
 	};
 	const glm::vec3 sunPos = orbit(a);
 	const glm::vec3 moonPos = orbit(a + glm::pi<float>());
@@ -86,7 +86,7 @@ void Environment::UpdateSky()
 	else {
 		skyLightDirection = glm::normalize(roomCenter - moonPos);
 		skyLightColor = glm::vec3(0.55f, 0.65f, 1.0f);
-		skyLightIntensity = 0.45f * Smooth(-0.05f, 0.3f, -sunHeight);
+		skyLightIntensity = 0.8f * Smooth(-0.05f, 0.3f, -sunHeight);
 	}
 
 	// Sky backdrop: emissive = sky colour, colour = star brightness (stars fade out by day).

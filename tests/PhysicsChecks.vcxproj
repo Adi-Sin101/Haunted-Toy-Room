@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{51C039D1-3DA5-4E1E-BAC3-301BD6A413E1}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType><PlatformToolset>v145</PlatformToolset><UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)..\bin\Checks\</OutDir><IntDir>$(ProjectDir)..\build\Checks\</IntDir>
+    <TargetName>PhysicsChecks</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\src;$(ProjectDir)..\Libraries\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard><WarningLevel>Level4</WarningLevel><MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>GLFW_INCLUDE_NONE;GLM_FORCE_SILENT_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\Libraries\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Console</SubSystem><AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="PhysicsChecks.cpp" />
+    <ClCompile Include="..\src\world\PhysicsWorld.cpp" />
+    <ClCompile Include="..\src\scene\SceneNode.cpp" />
+    <ClCompile Include="..\src\math\Ray.cpp" />
+    <ClCompile Include="..\src\math\Transform3D.cpp" />
+    <ClCompile Include="..\src\geometry\Mesh.cpp" />
+    <ClCompile Include="..\src\geometry\Primitives.cpp" />
+    <ClCompile Include="..\src\gl\VBO.cpp" />
+    <ClCompile Include="..\src\gl\EBO.cpp" />
+    <ClCompile Include="..\src\gl\VAO.cpp" />
+    <ClCompile Include="..\src\gl\glad.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

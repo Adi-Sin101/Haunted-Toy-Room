@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.frag": "glsl",
+        "*.vert": "glsl",
+        "*.glsl": "glsl"
+    },
+    "cmake.sourceDirectory": "E:/4-1/Lab/graphics/Haunted-Toy-Room/Libraries/include/glm"
+}

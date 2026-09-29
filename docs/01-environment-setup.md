@@ -9,6 +9,7 @@ how Visual Studio finds them, and how to build and run the program on any Window
 |---|---|
 | IDE | Visual Studio 2026 (v18), "Desktop development with C++" workload |
 | Platform toolset | `v145` |
+| Windows SDK | `10.0.26100.0` |
 | Language standard | C++20 (`/std:c++20`) |
 | Target | `x64` only (the bundled `glfw3.lib` is a 64-bit library) |
 | OpenGL | 3.3 Core Profile |
@@ -100,6 +101,8 @@ The project uses wildcards (`src\**\*.cpp`, `src\**\*.h`), so a new file placed 
 automatically without editing the project file.
 
 ## 6. Build and run
+
+**VS Code:** open the project folder, then press **F5** and select a Haunted Toy Room launch configuration. The workspace tasks build the matching x64 configuration first. Use **Ctrl+Shift+B** to build Debug.
 
 **Visual Studio:** open `HauntedToyRoom.slnx`, pick `Debug | x64` or `Release | x64`, press **F5**.
 The debugger's working directory is the output folder, where the post-build step has copied `shaders/`

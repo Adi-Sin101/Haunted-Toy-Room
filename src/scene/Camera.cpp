@@ -43,6 +43,7 @@ void Camera::ApplyOrbit()
 
 void Camera::LookAt(const glm::vec3& point)
 {
+	if (glm::distance(point, position) < 1e-5f) return;
 	const glm::vec3 d = glm::normalize(point - position);
 	pitch = glm::degrees(std::asin(std::clamp(d.y, -1.0f, 1.0f)));
 	yaw = glm::degrees(std::atan2(d.x, -d.z));
@@ -51,7 +52,7 @@ void Camera::LookAt(const glm::vec3& point)
 void Camera::Reset()
 {
 	mode = CameraMode::Free;
-	position = { 0.0f, 5.5f, 13.0f };
-	fov = 55.0f;
-	LookAt({ 0.0f, 1.5f, 0.0f });
+	position = { 0.0f, 5.0f, 8.2f };
+	fov = 65.0f;
+	LookAt({ 0.0f, 1.0f, 0.0f });
 }

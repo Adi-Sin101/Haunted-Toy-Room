@@ -22,7 +22,7 @@
 namespace {
 
 // Fixed slots in the light list.
-enum LightSlot : int { SkyLight = 0, LampBulb, LampSpot, HeadlightL, HeadlightR, LaserGlow, GhostGlow, LightSlotCount };
+enum LightSlot : int { SkyLight = 0, LampBulb, LampSpot, HallGlow, HeadlightL, HeadlightR, LaserGlow, GhostGlow, LightSlotCount };
 
 const char* EditOpName(EditOp op)
 {
@@ -53,11 +53,12 @@ glm::vec3 AxisOf(const SceneNode* node, int axis, float sign)
 
 } // namespace
 
-ToyRoomApp::ToyRoomApp(const LaunchOptions& options) : Application(1600, 900, "Haunted Toy Room"), launch(options)
+ToyRoomApp::ToyRoomApp(const LaunchOptions& options) : Application(options.windowWidth, options.windowHeight, "Toy Story: The Midnight Mission"), launch(options)
 {
 	assets.Load();
 	renderer.Init(assets);
 	rayTracer.Init(assets);
+	hud.Init();
 	BuildScene();
 	camera.Reset();
 	PrintHelp();
@@ -79,7 +80,7 @@ void ToyRoomApp::BuildScene()
 	auto jessiePtr = std::make_unique<Humanoid>(*scene, assets, JessieStyle(), glm::vec3(-0.8f, 0.0f, 2.0f), 0.0f);
 	auto bullseyePtr = std::make_unique<Bullseye>(*scene, assets, glm::vec3(2.2f, 0.0f, 0.3f), -30.0f);
 	auto buzzPtr = std::make_unique<Buzz>(*scene, assets, glm::vec3(0.4f, 0.0f, -1.8f), 10.0f);
-	auto carPtr = std::make_unique<RCCar>(*scene, assets, glm::vec3(4.5f, 0.0f, 3.0f), -90.0f);
+	auto carPtr = std::make_unique<RCCar>(*scene, assets, glm::vec3(5.5f, 0.0f, -1.8f), -90.0f);
 	woody = woodyPtr.get();
 	jessie = jessiePtr.get();
 	bullseye = bullseyePtr.get();
@@ -97,19 +98,14 @@ void ToyRoomApp::BuildScene()
 	AddSelectable("Desk Lamp", rig.lamp, nullptr, 7, 1.0f, 4.0f);
 	ghostId = static_cast<int>(selectables.size());
 	AddSelectable("Ghost", rig.ghost, nullptr, 8, 0.3f, 5.0f);
+	for (size_t i = 0; i < rig.blocks.size(); ++i)
+		AddSelectable(rig.blocks[i]==rig.missionObstacle ? "Doorway crate" : "Wooden block " + std::to_string(i), rig.blocks[i], nullptr, 0, 0.0f, 2.4f);
 
 	characters.push_back(std::move(woodyPtr));
 	characters.push_back(std::move(jessiePtr));
 	characters.push_back(std::move(bullseyePtr));
 	characters.push_back(std::move(buzzPtr));
 	characters.push_back(std::move(carPtr));
-
-	// Night-time patrol loops (inside the free floor area)
-	story.Add(woody, { { -3.5f, 0, 2.5f }, { -1.0f, 0, 4.0f }, { 1.5f, 0, 2.5f }, { -1.5f, 0, 0.0f } });
-	story.Add(jessie, { { 0.5f, 0, 3.5f }, { 3.0f, 0, 4.0f }, { 1.0f, 0, 1.0f }, { -2.0f, 0, 3.0f } });
-	story.Add(bullseye, { { 4.5f, 0, -1.5f }, { 5.0f, 0, 1.2f }, { 2.0f, 0, 3.8f }, { -0.5f, 0, 0.5f }, { 1.5f, 0, -2.5f } });
-	story.Add(buzz, { { 3.0f, 0, -3.0f }, { -2.0f, 0, -3.0f }, { -4.0f, 0, 1.0f }, { 0.5f, 0, 0.5f } }, true);
-	story.Add(car, { { 3.8f, 0, 4.8f }, { -5.5f, 0, 4.8f }, { -5.5f, 0, -1.5f }, { 4.0f, 0, -2.5f } }); // loop stays clear of the toy blocks
 
 	// Light list (fixed slots, positions/directions refreshed every frame from the scene nodes)
 	lights.resize(LightSlotCount);
@@ -136,12 +132,35 @@ void ToyRoomApp::BuildScene()
 	lights[LaserGlow].color = { 1.0f, 0.1f, 0.1f };
 	lights[LaserGlow].linear = 0.35f;
 	lights[LaserGlow].quadratic = 0.4f;
-	lights[GhostGlow] = { "Ghost glow", LightType::Point, true, false };
+	lights[HallGlow] = { "Hall night light", LightType::Point, true, false };
+ lights[HallGlow].position={13.5f,3.7f,4}; lights[HallGlow].color={0.75f,0.80f,1.0f};
+ lights[HallGlow].intensity=0.85f; lights[HallGlow].linear=0.10f; lights[HallGlow].quadratic=0.03f;
+ lights[GhostGlow] = { "Ghost glow", LightType::Point, true, false };
 	lights[GhostGlow].color = { 0.5f, 0.7f, 1.0f };
 	lights[GhostGlow].linear = 0.3f;
 	lights[GhostGlow].quadratic = 0.15f;
 
 	scene->UpdateWorld(glm::mat4(1.0f));
+	physics.Init(*scene, rig.blocks);
+	physics.EnableHallway(true);
+	for (const auto& c : characters) {
+		glm::vec3 half(0.40f, 1.08f, 0.60f), offset(0, 1.08f, 0);
+		if (c.get() == bullseye) { half = {0.52f, 1.30f, 1.45f}; offset = {0, 1.30f, 0.12f}; }
+		if (c.get() == car) { half = {0.64f, 0.65f, 0.85f}; offset = {0, 0.65f, 0}; }
+		physics.AddActor(c->Root(), half, offset);
+		Material& shadow = assets.Mat("contact-shadow", {0.012f, 0.018f, 0.03f}, 0.0f);
+		shadow.unlit = true; shadow.opacity = 0.20f;
+		contactShadows.push_back(scene->AddShape("ContactShadow", &assets.Sphere(), &shadow,
+			c->Root()->local.position + glm::vec3(0, 0.012f, 0), {half.x * 2.6f, 0.012f, half.z * 2.6f}));
+	}
+	physics.AddActor(rig.ball, glm::vec3(rig.ballRadius), glm::vec3(0));
+	physics.AddActor(rig.ghost, {0.60f, 0.85f, 0.60f}, glm::vec3(0));
+	physics.AddActor(rig.lamp, {0.55f, 0.90f, 0.75f}, {0, 0.90f, 0});
+ story.Init(woody,jessie,bullseye,buzz,car,rig.missionObstacle,&environment,&physics,
+  [this]() { scene->UpdateWorld(glm::mat4(1)); Mount(); },
+  [this]() { scene->UpdateWorld(glm::mat4(1)); Dismount(); });
+ environment.hauntingEnabled=false;
+ scene->UpdateWorld(glm::mat4(1));
 }
 
 void ToyRoomApp::AddSelectable(const std::string& name, SceneNode* node, Character* character, int key, float focusHeight, float focusDistance)
@@ -156,27 +175,99 @@ void ToyRoomApp::AddSelectable(const std::string& name, SceneNode* node, Charact
 // =============================================================================================
 void ToyRoomApp::OnUpdate(float dt)
 {
+ const int steps=launch.story && !launch.capture.empty() ? launch.storySteps : 1;
+ for (int i=0;i<steps;++i) { StepScene(dt); if (i+1<steps) input.EndFrame(); }
+}
+void ToyRoomApp::StepScene(float dt)
+{
+	if (launch.storyStep > 0 && !launch.capture.empty()) dt=launch.storyStep;
+	glm::vec3 previousCamera = camera.position;
+	std::vector<glm::vec3> previous;
+	for (const auto& c : characters) previous.push_back(c->Root()->WorldPosition());
+	glm::vec3 previousBall = environment.Rig().ball->local.position;
+	glm::vec3 previousGhost = environment.Rig().ghost->local.position;
+	glm::vec3 previousLamp = environment.Rig().lamp->local.position;
+	statusTimer = std::max(0.0f, statusTimer - dt);
 	HandleGlobalKeys();
+ if (missionRestarted) {
+  previousCamera=camera.position;
+  previousBall=environment.Rig().ball->local.position;
+  previousGhost=environment.Rig().ghost->local.position;
+  previousLamp=environment.Rig().lamp->local.position;
+  for (size_t i=0;i<characters.size();++i) previous[i]=characters[i]->Root()->WorldPosition();
+  missionRestarted=false;
+ }
 	HandleSelection();
 	HandleCamera(dt);
-	if (editMode)
-		HandleEditMode(dt);
-	else
-		HandleObjectControl(dt);
+	if (!story.enabled) {
+		if (editMode) HandleEditMode(dt); else HandleObjectControl(dt);
+	}
 
-	const Selectable* sel = Selected();
-	story.enabled = environment.hauntingEnabled;
-	environment.Update(dt, static_cast<float>(time), selectedId == lampId, selectedId == ballId, selectedId == ghostId);
-	const Character* selectedCharacter = sel ? sel->character : nullptr;
-	if (jessieMounted && selectedCharacter == jessie)
-		selectedCharacter = bullseye;
-	story.Update(dt, environment.IsNight(), selectedCharacter, jessieMounted ? jessie : nullptr);
+ const bool interaction=input.Pressed(GLFW_KEY_ENTER) && (story.enabled || selectedId==4 ||
+  (DrivenCharacter() && glm::distance(DrivenCharacter()->Root()->WorldPosition(),car->Root()->WorldPosition())<3.0f));
+ story.Update(environment.paused ? 0.0f : dt,jessieMounted,interaction);
+ const bool userPaused=environment.paused;
+ if (story.enabled) environment.paused=true; // film owns its night-to-dawn clock
+ environment.Update(dt,static_cast<float>(time),selectedId==lampId,selectedId==ballId,selectedId==ghostId);
+ environment.paused=userPaused;
 
 	for (auto& c : characters)
 		c->Animate(dt, static_cast<float>(time));
+ if (story.enabled && story.CurrentScene()>=StoryDirector::Scene::Morning)
+  for (auto& c:characters) c->RestoreRestPose();
+	physics.EnableActor(jessie->Root(), !jessieMounted);
+	physics.EnableActor(environment.Rig().ghost, environment.Rig().ghost->visible);
+	const bool buzzAirborne = buzz->Root()->local.position.y > 0.06f;
+	physics.SetActorShape(buzz->Root(), {buzzAirborne ? 0.92f : 0.42f, 1.08f, buzzAirborne ? 1.0f : 0.60f}, {0, 1.08f, 0});
+	physics.SetActorShape(bullseye->Root(), {jessieMounted ? 0.64f : 0.52f, jessieMounted ? 1.75f : 1.30f, 1.45f}, {0, jessieMounted ? 1.75f : 1.30f, 0.12f});
+	for (size_t i = 0; i < characters.size(); ++i) {
+		Character* c = characters[i].get();
+		if (!c->clampToRoom) continue;
+		if (c == jessie && c->InTransition()) continue; // mounting changes parent space; preserve the hop off the saddle
+		const glm::vec3 wanted = c->Root()->local.position;
+		physics.ConstrainActor(c->Root(), previous[i]);
+		if (c == DrivenCharacter() && glm::distance(wanted, c->Root()->local.position) > 0.04f) {
+			statusText = "Solid contact / turn or choose another path"; statusTimer = 1.0f;
+		}
+	}
+	physics.ConstrainActor(environment.Rig().ball, previousBall);
+	physics.ConstrainActor(environment.Rig().ghost, previousGhost);
+	physics.ConstrainActor(environment.Rig().lamp, previousLamp);
+	physics.Update(dt);
+	for (size_t i = 0; i < contactShadows.size(); ++i) {
+		const glm::vec3 p = characters[i]->Root()->local.position;
+		contactShadows[i]->local.position = {p.x, 0.012f, p.z};
+		contactShadows[i]->visible = settings.lighting && settings.shadingEnabled && !settings.rayTracing && !(characters[i].get() == jessie && jessieMounted) && p.y < 2.0f;
+	}
 
 	// One depth-first pass computes every world matrix: world = parent.world * local.
 	scene->UpdateWorld(glm::mat4(1.0f));
+	if (buzz->LaserReady()) {
+		buzz->SetLaserLength(physics.FireLaser(buzz->LaserTip(), buzz->LaserDirection(), dt, buzz->Root()));
+		scene->UpdateWorld(glm::mat4(1.0f));
+	}
+	if (story.enabled && storyCamera) {
+  camera.mode=CameraMode::Free;
+  glm::vec3 shot(-4.5f,4.6f,7.8f), focus(4,1.4f,2.5f);
+  const auto phase=story.CurrentScene();
+  if (phase==StoryDirector::Scene::Discovery || phase==StoryDirector::Scene::ReachCar || phase==StoryDirector::Scene::ActivateCar) {
+   shot={6.3f,3.3f,3.4f}; focus={15,1.3f,4};
+  } else if (phase==StoryDirector::Scene::ClearPath) { shot={4,4,7.4f}; focus={8.2f,1.4f,4}; }
+  else if (phase==StoryDirector::Scene::Morning || phase==StoryDirector::Scene::End) { shot={-6,5.5f,8.2f}; focus={2,1,1.8f}; }
+  if (story.CarAutopilot()) {
+   const glm::vec3 p=car->Root()->WorldPosition();
+   shot={std::min(6.8f,p.x-3.0f),3.6f,std::min(7.8f,p.z+3.5f)}; focus=p+glm::vec3(0,0.55f,0);
+  }
+  const float k=std::min(1.0f,dt*(phase>=StoryDirector::Scene::Morning ? 0.25f : 1.0f));
+  camera.position=glm::mix(camera.position,shot,k);
+  camera.target=glm::mix(camera.target,focus,k); camera.LookAt(camera.target);
+ }
+ if (camera.mode != CameraMode::Free) {
+		const Selectable* selected = Selected();
+		camera.position = physics.CameraSightline(camera.target, camera.position, selected ? selected->node : nullptr);
+	}
+	camera.position = physics.MoveCamera(previousCamera, camera.position);
+	if (camera.mode != CameraMode::Free) camera.LookAt(camera.target);
 	UpdateLights();
 
 	// Console feedback only when the driven character starts / stops.
@@ -201,12 +292,34 @@ void ToyRoomApp::HandleGlobalKeys()
 		std::cout << label << (b ? ": ON" : ": OFF") << "\n";
 	};
 
-	if (input.Pressed(GLFW_KEY_ESCAPE)) Close();
-	if (input.Pressed(GLFW_KEY_H)) PrintHelp();
+	if (input.Pressed(GLFW_KEY_ESCAPE)) {
+		if (cursorCaptured || mouseLook) {
+			mouseLook=false; releaseMouseUntilButtonUp=true; SetCursorCaptured(false);
+		} else Close();
+	}
+	if (!editMode && input.Pressed(GLFW_KEY_M)) {
+		mouseLook=!mouseLook;
+		if (mouseLook) { storyCamera=false; renderSettingsOpen=false; }
+	}
+	if (input.Pressed(GLFW_KEY_H)) { helpVisible = !helpVisible; PrintHelp(); }
+	if (input.Pressed(GLFW_KEY_G)) hudVisible = !hudVisible;
+	if (input.Pressed(GLFW_KEY_GRAVE_ACCENT)) {
+		renderSettingsOpen=!renderSettingsOpen;
+		if (renderSettingsOpen) hudVisible=true;
+		if (renderSettingsOpen) { mouseLook=false; releaseMouseUntilButtonUp=true; SetCursorCaptured(false); }
+	}
+	if (input.Pressed(GLFW_KEY_B)) {
+		if (input.CtrlDown()) {
+			const int count = static_cast<int>(physics.Bodies().size());
+			if (count > 0) Select(8 + (selectedId >= 8 ? (selectedId - 8 + 1) % count : 0));
+		} else { physics.ResetBlocks(); statusText = "The block tower has been rebuilt"; statusTimer = 3.0f; }
+	}
 
 	if (input.Pressed(GLFW_KEY_F1)) flip(settings.wireframe, "Wireframe");
 	if (input.Pressed(GLFW_KEY_F2)) {
-		settings.shading = static_cast<ShadingMode>((static_cast<int>(settings.shading) + 1) % 4);
+		if (input.ShiftDown()) settings.shadingEnabled=!settings.shadingEnabled;
+		else if (!settings.shadingEnabled) settings.shadingEnabled=true;
+		else settings.shading = static_cast<ShadingMode>((static_cast<int>(settings.shading) + 1) % 4);
 		std::cout << "Shading: " << ToString(settings.shading) << "\n";
 	}
 	if (input.Pressed(GLFW_KEY_F3)) flip(settings.textures, "Textures");
@@ -236,8 +349,19 @@ void ToyRoomApp::HandleGlobalKeys()
 	}
 
 	// World clock and story
-	if (input.Pressed(GLFW_KEY_P)) flip(environment.paused, "World clock paused");
-	if (input.Pressed(GLFW_KEY_N)) flip(environment.hauntingEnabled, "Story / haunting");
+	if (input.Pressed(GLFW_KEY_P)) {
+  flip(environment.paused,"Story / clock paused"); if (environment.paused && story.enabled) story.Pause();
+ }
+	if (input.Pressed(GLFW_KEY_N)) {
+  if (input.ShiftDown()) {
+   story.Restart(jessieMounted);
+   for (int id : {ballId,lampId,ghostId}) selectables[static_cast<size_t>(id)].node->local=selectables[static_cast<size_t>(id)].initial;
+   scene->UpdateWorld(glm::mat4(1)); camera.Reset(); missionRestarted=true;
+  }
+  else { story.enabled=!story.enabled; if (!story.enabled) story.Pause(); }
+  if (story.enabled) { selectedId=-1; editMode=false; storyCamera=true; }
+  statusText=story.enabled ? "Midnight Mission / story playback" : "Manual control / N resumes the story"; statusTimer=3;
+ }
 	if (input.Pressed(GLFW_KEY_LEFT_BRACKET)) {
 		environment.timeScale = std::max(0.25f, environment.timeScale * 0.5f);
 		std::cout << "Time speed x" << environment.timeScale << "\n";
@@ -253,6 +377,7 @@ void ToyRoomApp::HandleGlobalKeys()
 
 	if (input.Pressed(GLFW_KEY_TAB)) {
 		editMode = !editMode;
+		if (editMode && story.enabled) { story.enabled=false; story.Pause(); }
 		std::cout << "Edit mode " << (editMode ? "ON" : "OFF");
 		if (editMode) std::cout << " (" << EditOpName(editOp) << ") - T operation, J/L X, U/O Y, I/K Z, M mirror, Backspace reset";
 		std::cout << "\n";
@@ -277,6 +402,25 @@ void ToyRoomApp::HandleSelection()
 	if (input.MouseDown(GLFW_MOUSE_BUTTON_LEFT))
 		mouseDragDistance += glm::length(input.MouseDelta());
 	if (input.MouseReleased(GLFW_MOUSE_BUTTON_LEFT) && mouseDragDistance < 4.0f) {
+		if (Selected() && Selected()->character == buzz && (input.Down(GLFW_KEY_LEFT_ALT) || input.Down(GLFW_KEY_RIGHT_ALT))) return;
+		int winW, winH; glfwGetWindowSize(window, &winW, &winH);
+		if (hudVisible && !cursorCaptured) {
+			const int button = hud.HitTest(input.MousePosition(), winW, winH, renderSettingsOpen);
+			if (button>=100) {
+				if (button==100) renderSettingsOpen=!renderSettingsOpen;
+				if (button==101) settings.lighting=!settings.lighting;
+				if (button==102) settings.shadingEnabled=!settings.shadingEnabled;
+				if (button==103) settings.rayTracing=!settings.rayTracing;
+				if (button==104) settings.textures=!settings.textures;
+				return;
+			}
+			if (button >= 0) {
+				const int count = static_cast<int>(physics.Bodies().size());
+				Select(button == 8 && count > 0 ? 8 + (selectedId >= 8 ? (selectedId - 8 + 1) % count : 0) : button);
+				return;
+			}
+			if (hud.Covers(input.MousePosition(), winW, winH, helpVisible, renderSettingsOpen)) return;
+		}
 		const int id = Pick(input.MousePosition());
 		if (id >= 0)
 			Select(id);
@@ -290,6 +434,8 @@ void ToyRoomApp::Select(int id)
 	if (Character* c = DrivenCharacter())
 		c->Stop();
 	selectedId = id;
+	if (id>=0 && story.enabled) { story.enabled=false; story.Pause(); }
+	cameraPan = glm::vec3(0);
 	wasMoving = false;
 	if (const Selectable* s = Selected()) {
 		std::cout << "Selected: " << s->name;
@@ -325,24 +471,30 @@ Character* ToyRoomApp::DrivenCharacter()
 	return s->character;
 }
 
-int ToyRoomApp::Pick(const glm::vec2& mouse) const
+Ray ToyRoomApp::ViewRay(const glm::vec2& mouse) const
 {
+	if (cursorCaptured) return {camera.position,camera.Forward()};
 	int winW = 0, winH = 0;
 	glfwGetWindowSize(window, &winW, &winH);
 	if (winW <= 0 || winH <= 0)
-		return -1;
+		return {camera.position, camera.Forward()};
 
 	// Pixel -> normalised device coordinates -> world-space ray through the camera.
 	const float x = 2.0f * mouse.x / static_cast<float>(winW) - 1.0f;
 	const float y = 1.0f - 2.0f * mouse.y / static_cast<float>(winH);
 	const float tanHalf = std::tan(glm::radians(camera.fov) * 0.5f);
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
-	Ray ray{ camera.position, glm::normalize(camera.Forward() + x * tanHalf * aspect * camera.Right() + y * tanHalf * camera.Up()) };
+	return { camera.position, glm::normalize(camera.Forward() + x * tanHalf * aspect * camera.Right() + y * tanHalf * camera.Up()) };
+}
+
+int ToyRoomApp::Pick(const glm::vec2& mouse) const
+{
+	const Ray ray = ViewRay(mouse);
 
 	float bestT = 1e30f;
 	int bestOwner = -1;
 	for (const DrawItem& item : renderer.Items()) {
-		if (item.ownerId < 0)
+		if (item.material->opacity < 0.5f)
 			continue;
 		const RayHit hit = RayIntersect::Object(item.mesh->Type(), glm::inverse(item.model), ray);
 		if (hit.t > 0.0f && hit.t < bestT) {
@@ -353,8 +505,29 @@ int ToyRoomApp::Pick(const glm::vec2& mouse) const
 	return bestOwner;
 }
 
+void ToyRoomApp::SetCursorCaptured(bool capture)
+{
+	if (cursorCaptured==capture) return;
+	cursorCaptured=capture;
+	if (glfwRawMouseMotionSupported()) glfwSetInputMode(window,GLFW_RAW_MOUSE_MOTION,capture ? GLFW_TRUE : GLFW_FALSE);
+	glfwSetInputMode(window,GLFW_CURSOR,capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+	input.ResetMouseMotion(); // ignore cursor warps on capture/release
+}
+
 void ToyRoomApp::HandleCamera(float dt)
 {
+ if (!glfwGetWindowAttrib(window,GLFW_FOCUSED)) mouseLook=false;
+ if (!input.MouseDown(GLFW_MOUSE_BUTTON_RIGHT)) releaseMouseUntilButtonUp=false;
+ if (editMode) mouseLook=false;
+ const bool capture=glfwGetWindowAttrib(window,GLFW_FOCUSED)
+  && (mouseLook || (input.MouseDown(GLFW_MOUSE_BUTTON_RIGHT) && !releaseMouseUntilButtonUp));
+ SetCursorCaptured(capture);
+ const bool freeWasd=camera.mode==CameraMode::Free && selectedId<0 && !editMode;
+ if (cursorCaptured || (freeWasd && (input.Down(GLFW_KEY_W) || input.Down(GLFW_KEY_A) || input.Down(GLFW_KEY_S) || input.Down(GLFW_KEY_D)))) storyCamera=false;
+ if (input.MouseDown(GLFW_MOUSE_BUTTON_RIGHT) || input.MouseDown(GLFW_MOUSE_BUTTON_MIDDLE) || input.Scroll()!=0
+  || input.Down(GLFW_KEY_LEFT) || input.Down(GLFW_KEY_RIGHT) || input.Down(GLFW_KEY_UP) || input.Down(GLFW_KEY_DOWN)
+  || input.Down(GLFW_KEY_PAGE_UP) || input.Down(GLFW_KEY_PAGE_DOWN) || input.Pressed(GLFW_KEY_C)
+  || input.Pressed(GLFW_KEY_F) || input.Pressed(GLFW_KEY_HOME)) storyCamera=false;
 	if (input.Pressed(GLFW_KEY_C)) {
 		camera.mode = static_cast<CameraMode>((static_cast<int>(camera.mode) + 1) % 3);
 		if (camera.mode == CameraMode::Orbit) {
@@ -368,6 +541,7 @@ void ToyRoomApp::HandleCamera(float dt)
 	}
 	if (input.Pressed(GLFW_KEY_HOME)) {
 		camera.Reset();
+		cameraPan = glm::vec3(0);
 		std::cout << "Camera reset\n";
 	}
 
@@ -375,6 +549,7 @@ void ToyRoomApp::HandleCamera(float dt)
 	const glm::vec3 focus = sel ? sel->node->WorldPosition() + glm::vec3(0.0f, sel->focusHeight, 0.0f) : glm::vec3(0.0f, 1.5f, 0.0f);
 
 	if (input.Pressed(GLFW_KEY_F)) {
+		cameraPan = glm::vec3(0);
 		camera.mode = CameraMode::Orbit;
 		camera.target = focus;
 		camera.orbitDistance = sel ? sel->focusDistance : 12.0f;
@@ -390,15 +565,19 @@ void ToyRoomApp::HandleCamera(float dt)
 	if (preset(GLFW_KEY_KP_7, GLFW_KEY_7)) { camera.mode = CameraMode::Orbit; camera.orbitYaw = 0; camera.orbitPitch = 85; }
 
 	const glm::vec2 md = input.MouseDelta();
-	const bool rotating = input.MouseDown(GLFW_MOUSE_BUTTON_RIGHT);
+	const bool rotating = cursorCaptured;
 	const bool panning = input.MouseDown(GLFW_MOUSE_BUTTON_MIDDLE);
-	const float moveSpeed = (input.ShiftDown() ? 18.0f : 6.0f) * dt;
+	const float zoomSpeed = std::clamp(camera.fov / 55.0f, 0.25f, 1.5f);
+	const float moveSpeed = (input.ShiftDown() ? 10.0f : 4.0f) * zoomSpeed * dt;
+	const float scroll = input.CtrlDown() ? 0.0f : input.Scroll();
+	if (input.CtrlDown()) camera.fov = std::clamp(camera.fov - input.Scroll() * 2.0f, 12.0f, 85.0f);
 
 	switch (camera.mode) {
 	case CameraMode::Free: {
 		if (rotating) {
-			camera.yaw += md.x * 0.15f;
-			camera.pitch = std::clamp(camera.pitch - md.y * 0.15f, -89.0f, 89.0f);
+			camera.yaw += md.x * 0.15f * zoomSpeed;
+			camera.yaw=WrapDegrees(camera.yaw);
+			camera.pitch = std::clamp(camera.pitch - md.y * 0.15f * zoomSpeed, -88.0f, 88.0f);
 		}
 		glm::vec3 move(0.0f);
 		if (input.Down(GLFW_KEY_UP)) move += camera.Forward();
@@ -407,21 +586,31 @@ void ToyRoomApp::HandleCamera(float dt)
 		if (input.Down(GLFW_KEY_LEFT)) move -= camera.Right();
 		if (input.Down(GLFW_KEY_PAGE_UP)) move.y += 1.0f;
 		if (input.Down(GLFW_KEY_PAGE_DOWN)) move.y -= 1.0f;
+		if (freeWasd) {
+			glm::vec3 forward=camera.Forward(); forward.y=0;
+			forward=glm::normalize(forward);
+			if (input.Down(GLFW_KEY_W)) move+=forward;
+			if (input.Down(GLFW_KEY_S)) move-=forward;
+			if (input.Down(GLFW_KEY_D)) move+=camera.Right();
+			if (input.Down(GLFW_KEY_A)) move-=camera.Right();
+		}
 		if (glm::length(move) > 0.0f)
 			camera.position += glm::normalize(move) * moveSpeed;
 		if (panning)
 			camera.position += (-camera.Right() * md.x + camera.Up() * md.y) * 0.01f;
 		// Scroll = zoom by narrowing the field of view (optical zoom).
-		camera.fov = std::clamp(camera.fov - input.Scroll() * 3.0f, 10.0f, 90.0f);
+		camera.fov = std::clamp(camera.fov - scroll * 3.0f, 12.0f, 85.0f);
 		camera.target = camera.position + camera.Forward() * 8.0f;
 		break;
 	}
 	case CameraMode::Orbit: {
-		if (!panning)
-			camera.target = glm::mix(camera.target, focus, std::min(1.0f, dt * 6.0f));
+		if (panning) cameraPan += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance * zoomSpeed;
+		camera.target = glm::mix(camera.target, focus + cameraPan, std::min(1.0f, dt * 6.0f));
+		camera.target = glm::clamp(camera.target, glm::vec3(-RoomSize::HalfWidth + 0.3f, 0.3f, -RoomSize::HalfDepth + 0.3f),
+			glm::vec3(RoomSize::HalfWidth - 0.3f, RoomSize::Height - 0.3f, RoomSize::HalfDepth - 0.3f));
 		if (rotating) {
-			camera.orbitYaw -= md.x * 0.3f;
-			camera.orbitPitch += md.y * 0.3f;
+			camera.orbitYaw -= md.x * 0.3f * zoomSpeed;
+			camera.orbitPitch += md.y * 0.3f * zoomSpeed;
 		}
 		if (input.Down(GLFW_KEY_LEFT)) camera.orbitYaw -= 90.0f * dt;
 		if (input.Down(GLFW_KEY_RIGHT)) camera.orbitYaw += 90.0f * dt;
@@ -430,9 +619,8 @@ void ToyRoomApp::HandleCamera(float dt)
 		if (input.Down(GLFW_KEY_PAGE_UP)) camera.orbitDistance *= 1.0f - 1.5f * dt;
 		if (input.Down(GLFW_KEY_PAGE_DOWN)) camera.orbitDistance *= 1.0f + 1.5f * dt;
 		// Scroll = dolly (move closer / further) - lets you inspect any object up close.
-		camera.orbitDistance *= std::pow(0.88f, input.Scroll());
-		if (panning)
-			camera.target += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance;
+		camera.orbitDistance *= std::pow(0.88f, scroll);
+		camera.orbitYaw=WrapDegrees(camera.orbitYaw);
 		camera.ApplyOrbit();
 		break;
 	}
@@ -442,12 +630,24 @@ void ToyRoomApp::HandleCamera(float dt)
 			back = -c->Forward();
 		else if (sel)
 			back = AxisOf(sel->node, 2, -1.0f);
-		camera.orbitDistance *= std::pow(0.88f, input.Scroll());
+		if (rotating) { camera.orbitYaw -= md.x * 0.3f * zoomSpeed; camera.orbitPitch += md.y * 0.3f * zoomSpeed; }
+		if (input.Down(GLFW_KEY_LEFT)) camera.orbitYaw -= 70.0f * dt;
+		if (input.Down(GLFW_KEY_RIGHT)) camera.orbitYaw += 70.0f * dt;
+		if (input.Down(GLFW_KEY_UP)) camera.orbitPitch += 45.0f * dt;
+		if (input.Down(GLFW_KEY_DOWN)) camera.orbitPitch -= 45.0f * dt;
+		if (input.Down(GLFW_KEY_PAGE_UP)) camera.orbitDistance *= 1.0f - dt;
+		if (input.Down(GLFW_KEY_PAGE_DOWN)) camera.orbitDistance *= 1.0f + dt;
+		camera.orbitPitch = std::clamp(camera.orbitPitch, -70.0f, 80.0f);
+		camera.orbitDistance *= std::pow(0.88f, scroll);
 		camera.orbitDistance = std::clamp(camera.orbitDistance, 1.5f, 20.0f);
-		const glm::vec3 desired = focus + back * camera.orbitDistance + glm::vec3(0.0f, camera.orbitDistance * 0.45f, 0.0f);
+		camera.orbitYaw=WrapDegrees(camera.orbitYaw);
+		const float angle = glm::radians(camera.orbitYaw), pitch = glm::radians(camera.orbitPitch);
+		if (panning) cameraPan += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance * zoomSpeed;
+		back = glm::vec3(back.x * std::cos(angle) + back.z * std::sin(angle), 0, back.z * std::cos(angle) - back.x * std::sin(angle));
+		const glm::vec3 desired = focus + cameraPan + back * std::cos(pitch) * camera.orbitDistance + glm::vec3(0, std::sin(pitch) * camera.orbitDistance, 0);
 		camera.position = glm::mix(camera.position, desired, std::min(1.0f, dt * 4.0f));
-		camera.target = focus;
-		camera.LookAt(focus);
+		camera.target = focus + cameraPan;
+		camera.LookAt(camera.target);
 		break;
 	}
 	}
@@ -458,6 +658,16 @@ void ToyRoomApp::HandleObjectControl(float dt)
 	Selectable* sel = Selected();
 	if (!sel)
 		return;
+	if (physics.IsBlock(sel->node)) {
+		glm::vec3 forward = camera.Forward(); forward.y = 0;
+		if (glm::length(forward) < 0.01f) forward = {0, 0, -1}; else forward = glm::normalize(forward);
+		const glm::vec3 right = camera.Right();
+		glm::vec3 direction = forward * ((input.Down(GLFW_KEY_W) ? 1.0f : 0.0f) - (input.Down(GLFW_KEY_S) ? 1.0f : 0.0f))
+			+ right * ((input.Down(GLFW_KEY_D) ? 1.0f : 0.0f) - (input.Down(GLFW_KEY_A) ? 1.0f : 0.0f));
+		physics.PushBlock(sel->node, direction * dt * 9.0f);
+		if (input.Down(GLFW_KEY_SPACE)) physics.StopBlock(sel->node);
+		return;
+	}
 
 	// ---- Props --------------------------------------------------------------------------
 	if (selectedId == lampId) {
@@ -496,7 +706,7 @@ void ToyRoomApp::HandleObjectControl(float dt)
 		ToggleMount();
 
 	Character* driven = DrivenCharacter();
-	if (!driven)
+	if (!driven || (driven==car && story.CarAutopilot()))
 		return;
 
 	ControlInput in;
@@ -519,6 +729,18 @@ void ToyRoomApp::HandleObjectControl(float dt)
 		std::cout << driven->Name() << ": " << driven->SpecialName() << " toggled\n";
 	}
 	driven->Drive(in, dt);
+	if (driven == buzz) {
+		buzz->TiltLaser(((input.Down(GLFW_KEY_Z) ? 1.0f : 0.0f) - (input.Down(GLFW_KEY_X) ? 1.0f : 0.0f)) * 45.0f * dt);
+		if ((input.Down(GLFW_KEY_LEFT_ALT) || input.Down(GLFW_KEY_RIGHT_ALT)) && input.MouseDown(GLFW_MOUSE_BUTTON_LEFT)) {
+			const Ray ray = ViewRay(input.MousePosition()); float distance = 40.0f;
+			for (const DrawItem& item : renderer.Items()) {
+				if (item.ownerId == 3 || item.material->opacity < 0.9f) continue;
+				const float hit = RayIntersect::Object(item.mesh->Type(), glm::inverse(item.model), ray).t;
+				if (hit > 0 && hit < distance) distance = hit;
+			}
+			buzz->AimAt(ray.origin + ray.direction * distance);
+		}
+	}
 }
 
 void ToyRoomApp::HandleEditMode(float dt)
@@ -618,6 +840,7 @@ void ToyRoomApp::Mount()
 	jessie->SetSeated(true);
 	jessie->StartTransition(glm::vec3(0.0f, -Humanoid::HipHeight, 0.0f), 0.0f, 0.7f);
 	jessieMounted = true;
+	physics.EnableActor(jessie->Root(), false);
 	std::cout << "Jessie mounted Bullseye.\n";
 }
 
@@ -642,6 +865,7 @@ void ToyRoomApp::Dismount()
 	jessie->clampToRoom = true;
 	jessie->StartTransition(target, bullseye->Heading(), 0.6f);
 	jessieMounted = false;
+	physics.EnableActor(jessie->Root(), true);
 	std::cout << "Jessie dismounted.\n";
 }
 
@@ -688,6 +912,59 @@ void ToyRoomApp::UpdateLights()
 // =============================================================================================
 // Render
 // =============================================================================================
+void ToyRoomApp::DrawHud()
+{
+	HudInfo info;
+	info.settingsOpen=renderSettingsOpen;
+	info.mouseLook=cursorCaptured;
+	info.lighting=settings.lighting; info.shading=settings.shadingEnabled;
+	info.rayTracing=settings.rayTracing; info.textures=settings.textures;
+	info.clock = environment.ClockText(); info.paused = environment.paused;
+	info.help = helpVisible; info.edit = editMode; info.selected = selectedId;
+	info.camera = CameraModeName(camera.mode); info.fps = fps;
+	info.rendering = settings.rayTracing ? "RAY TRACING / SHADOWS + REFLECTIONS" : std::string("RASTER + LAMP SHADOWS / ") + ToString(settings.shading);
+	info.status = statusTimer > 0 ? statusText : (buzz->LaserOn() ? "Buzz's laser is active / B rebuilds the block tower" : "");
+	info.selection = "Explore the room";
+	info.description = "The Midnight Mission is paused. Select a toy to move; N resumes the story.";
+	info.controls = "1-8 toys / Ctrl+B blocks / H full guide / G hide interface";
+	if (const Selectable* selected = Selected()) {
+		info.selection = selected->name;
+		if (selected->character) info.controls = selected->character->ControlsHelp();
+		if (selected->character == woody) info.description = "The sheriff: plaid cotton, stitched denim, a leather holster and a gold badge.";
+		else if (selected->character == jessie) {
+			info.description = jessieMounted ? "Jessie rides with Bullseye. Their transforms and movement stay connected." : "The cowgirl: a braided ponytail and embroidered clothes. Walk near Bullseye to ride.";
+			info.controls = "W/S move / A/D turn / Shift run / Space stop / R mount or dismount";
+		} else if (selected->character == bullseye) {
+			info.description = "A jointed toy horse with leather tack. Jessie can mount the saddle.";
+			info.controls += " / R mount or dismount";
+		} else if (selected->character == buzz) {
+			info.description = "The space ranger: fly, aim at the block tower and watch each impact topple it.";
+			info.controls = "W/S move / A/D turn / Q/E fly / L laser / Z/X aim / Alt+click target";
+		} else if (selected->character == car) {
+   info.description="The lost racer. Enter activates its automatic drive home when the friends arrive.";
+   info.controls="Enter activate / W-S drive / A-D steer / L lights";
+  }
+		else if (selectedId == ballId) {
+			info.description = "The beach ball rolls across the floor; furniture and the room walls stop it.";
+			info.controls = "W/A/S/D roll relative to your view / Space stop / F inspect";
+		} else if (selectedId == lampId) {
+			info.description = "The articulated desk lamp follows nightfall, flickers and scans the room.";
+			info.controls = "A/D swivel / W/S tilt / R power / , and . brightness";
+		} else if (selectedId == ghostId) {
+			info.description = "A translucent visitor appears at night. Inspect or reposition it in edit mode.";
+			info.controls = "Tab edit / F inspect / N haunting on or off";
+		} else if (physics.IsBlock(selected->node)) {
+			info.description = "A solid wooden block. Gravity, other blocks and Buzz's laser affect its motion.";
+			info.controls = "W/A/S/D push / Space brake / B rebuild / Ctrl+B next block";
+		}
+		if (editMode) info.controls = std::string("T ") + EditOpName(editOp) + " / J-L X / U-O Y / I-K Z / Shift faster / Backspace reset";
+	}
+ if (story.enabled) {
+  info.story=true; info.selection=story.Title(); info.description=story.Caption();
+ }
+ hud.Render(width,height,info);
+}
+
 void ToyRoomApp::OnRender()
 {
 	renderer.Collect(*scene, camera.position);
@@ -724,9 +1001,17 @@ void ToyRoomApp::OnRender()
 		renderer.RenderDebug(frame, settings);
 	}
 
+	if (hudVisible) DrawHud();
 	// Scripted capture (--capture): read the finished back buffer before it is swapped.
 	if (!launch.capture.empty() && ++frameCounter == launch.frames) {
-		SaveScreenshot(launch.capture);
+		if (launch.laserDemo) {
+			int moved = 0;
+			for (const auto& body : physics.Bodies()) if (glm::distance(body.node->local.position, body.initial.position) > 0.08f) ++moved;
+			std::cout << "Laser demo displaced " << moved << " / " << physics.Bodies().size() << " blocks\n";
+		}
+		std::cout << "Mission capture: " << story.Title() << " / " << environment.ClockText() << "\n";
+  for (const auto& c:characters) { const auto p=c->Root()->WorldPosition(); std::cout << c->Name() << " at " << p.x << "," << p.y << "," << p.z << "\n"; }
+  SaveScreenshot(launch.capture);
 		Close();
 	}
 }
@@ -753,13 +1038,25 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		else if (a == "--focus") o.focus = true;
 		else if (a == "--mount") o.mount = true;
 		else if (a == "--raytrace") o.rayTrace = true;
+		else if (a == "--lighting") o.lighting=true;
+		else if (a == "--textures") o.textures=true;
+		else if (a == "--render-settings") o.renderSettings=true;
 		else if (a == "--shading" && hasValue) o.shading = std::stoi(argv[++i]);
 		else if (a == "--wireframe") o.wireframe = true;
 		else if (a == "--normals") o.normals = true;
+		else if (a == "--no-hud") o.noHud = true;
+		else if (a == "--laser-demo") o.laserDemo = true;
+		else if (a == "--guide") o.guide = true;
+		else if (a == "--size" && hasValue) {
+			const auto v = floats(argv[++i]);
+			if (v.size() == 2) { o.windowWidth = std::clamp(static_cast<int>(v[0]), 900, 3840); o.windowHeight = std::clamp(static_cast<int>(v[1]), 600, 2160); }
+		}
 		else if (a == "--pause") o.pauseClock = true;
 		else if (a == "--story") o.story = true;
 		else if (a == "--capture" && hasValue) o.capture = argv[++i];
 		else if (a == "--frames" && hasValue) o.frames = std::stoi(argv[++i]);
+		else if (a == "--story-steps" && hasValue) o.storySteps=std::clamp(std::stoi(argv[++i]),1,20);
+		else if (a == "--story-step" && hasValue) o.storyStep=std::clamp(std::stof(argv[++i]),0.001f,0.05f);
 		else if (a == "--cam" && hasValue) {
 			const auto v = floats(argv[++i]);
 			if (v.size() == 6) {
@@ -779,12 +1076,23 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 void ToyRoomApp::ApplyLaunchOptions()
 {
 	if (launch.hour >= 0.0f) environment.hour = launch.hour;
-	if (launch.pauseClock || !launch.capture.empty()) environment.paused = true;
-	if (!launch.capture.empty() && !launch.story) environment.hauntingEnabled = false; // deterministic poses
+	if (launch.pauseClock || (!launch.capture.empty() && !launch.story)) environment.paused = true;
+	if (!launch.capture.empty() && !launch.story) { story.enabled=false; story.Pause(); }
+	environment.hauntingEnabled = false;
 	if (launch.rayTrace) settings.rayTracing = true;
-	if (launch.shading >= 0 && launch.shading <= 3) settings.shading = static_cast<ShadingMode>(launch.shading);
+	if (launch.shading >= 0 && launch.shading <= 3) { settings.shadingEnabled=true; settings.shading = static_cast<ShadingMode>(launch.shading); }
+	settings.lighting=launch.lighting; settings.textures=launch.textures; renderSettingsOpen=launch.renderSettings;
 	settings.wireframe = launch.wireframe;
 	settings.showNormals = launch.normals;
+	hudVisible = !launch.noHud;
+	helpVisible = launch.guide;
+	if (launch.laserDemo) {
+		buzz->Root()->local.position = {4.8f, 0, 0.6f};
+		buzz->Root()->local.rotation.y = 0;
+		buzz->Special();
+		buzz->TiltLaser(12.0f);
+		Select(3);
+	}
 	if (launch.mount) {
 		// place Jessie beside Bullseye, then mount through the normal code path
 		const float h = glm::radians(bullseye->Heading());
@@ -795,7 +1103,9 @@ void ToyRoomApp::ApplyLaunchOptions()
 	if (launch.select >= 0 && launch.select < static_cast<int>(selectables.size()))
 		Select(launch.select);
 	if (launch.hasCamera) {
+		storyCamera=false;
 		camera.position = launch.cameraPos;
+		camera.position = physics.MoveCamera(camera.position, camera.position);
 		camera.LookAt(launch.cameraTarget);
 	}
 	if (launch.focus || launch.orbitDistance > 0.0f) {
@@ -807,6 +1117,7 @@ void ToyRoomApp::ApplyLaunchOptions()
 		if (launch.orbitPitch < 1e8f) camera.orbitPitch = launch.orbitPitch;
 		camera.ApplyOrbit();
 	}
+	scene->UpdateWorld(glm::mat4(1.0f));
 }
 
 // =============================================================================================
@@ -815,7 +1126,7 @@ void ToyRoomApp::ApplyLaunchOptions()
 void ToyRoomApp::UpdateTitle()
 {
 	std::ostringstream t;
-	t << "Haunted Toy Room | " << environment.ClockText() << (environment.paused ? " (paused)" : "")
+	t << "The Midnight Mission | " << environment.ClockText() << (environment.paused ? " (paused)" : "")
 	  << " | Selected: ";
 	if (const Selectable* s = Selected()) {
 		t << s->name;
@@ -837,7 +1148,7 @@ void ToyRoomApp::UpdateTitle()
 void ToyRoomApp::PrintHelp() const
 {
 	std::cout <<
-		"\n==================== HAUNTED TOY ROOM ====================\n"
+		"\n==================== THE MIDNIGHT MISSION ====================\n"
 		"SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost\n"
 		"            0 nothing   |  left-click any object to select it\n"
 		"CHARACTER   W/S move  A/D turn  Shift run  SPACE stop\n"
@@ -856,8 +1167,8 @@ void ToyRoomApp::PrintHelp() const
 		"            F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light\n"
 		"            F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)\n"
 		"            V list parts of selected object, Shift+V dump vertex/index tables\n"
-		"WORLD       P pause clock  [ ] time speed  , . scrub time  N story/haunting on/off\n"
-		"            H help   Esc quit\n"
+		"WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/story  Shift+N replay  Enter car activation\n"
+		"            H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit\n"
 		"==========================================================\n\n";
 }
 
@@ -917,6 +1228,8 @@ void ToyRoomApp::SaveScreenshot(const std::string& path)
 		std::snprintf(buf, sizeof(buf), "screenshots/shot_%03d.bmp", screenshotCounter++);
 		name = buf;
 	}
+	const std::filesystem::path destination(name);
+	if (destination.has_parent_path()) std::filesystem::create_directories(destination.parent_path());
 	if (Bmp::Save(name, img))
 		std::cout << "Saved " << std::filesystem::absolute(name).string() << "\n";
 	else

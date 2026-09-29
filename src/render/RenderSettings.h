@@ -25,13 +25,15 @@ inline const char* ToString(ShadingMode m)
 struct RenderSettings {
 	ShadingMode shading = ShadingMode::Blinn;
 	bool wireframe = false;
-	bool textures = true;
+	bool lighting = false;
+	bool shadingEnabled = false;
+	bool textures = false;
 	bool ambient = true;
 	bool diffuse = true;
 	bool specular = true;
 	bool showNormals = false;
 	bool showVertices = false;
-	bool showGizmo = true;
+	bool showGizmo = false;
 	bool rayTracing = false;
 	float rayScale = 0.5f;  // ray tracer resolution relative to the window
 	int rayBounces = 2;     // reflection / transparency bounces

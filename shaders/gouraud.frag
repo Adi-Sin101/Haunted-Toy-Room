@@ -26,6 +26,11 @@ void main()
 		FragColor = vec4(uMaterial.emissive + albedo, uMaterial.opacity);
 		return;
 	}
+	if (uLightingEnabled == 0 || uShadingEnabled == 0) {
+		vec3 illumination = uLightingEnabled == 1 ? basicIllumination(vWorldPos, uMaterial.ka, uMaterial.kd) : vec3(1.0);
+		FragColor = vec4(albedo * illumination + uMaterial.emissive, uMaterial.opacity);
+		return;
+	}
 
 	vec3 color = albedo * vLight + vSpecular + uMaterial.emissive;
 

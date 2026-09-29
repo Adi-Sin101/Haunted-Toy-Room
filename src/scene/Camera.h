@@ -14,10 +14,10 @@ class Camera {
 public:
 	CameraMode mode = CameraMode::Free;
 
-	glm::vec3 position{ 0.0f, 4.0f, 12.0f };
+	glm::vec3 position{ 0.0f, 5.0f, 8.2f };
 	float yaw = 0.0f;     // degrees
 	float pitch = -12.0f; // degrees
-	float fov = 55.0f;    // vertical field of view in degrees (zoom)
+	float fov = 65.0f;    // vertical field of view in degrees (zoom)
 	float nearPlane = 0.05f;
 	float farPlane = 200.0f;
 

@@ -42,6 +42,13 @@ RCCar::RCCar(SceneNode& parent, Assets& a, const glm::vec3& position, float head
 	chassis->AddShape("SpoilerPostR", &cube, &trim, { -0.3f, 0.6f, -0.62f }, { 0.05f, 0.18f, 0.05f });
 	chassis->AddShape("Spoiler", &cube, &trim, { 0, 0.7f, -0.64f }, { 0.9f, 0.04f, 0.2f });
 	chassis->AddShape("Antenna", &cylinder, &trim, { 0.25f, 0.95f, -0.4f }, { 0.02f, 0.5f, 0.02f });
+	chassis->AddShape("AntennaTip", &sphere, &paint, {0.25f, 1.20f, -0.4f}, glm::vec3(0.055f));
+	for (float side : {-1.0f, 1.0f}) {
+		chassis->AddShape("RacingStripe", &cube, &hub, {side * 0.14f, 0.537f, 0.40f}, {0.08f, 0.014f, 0.55f});
+		chassis->AddShape("DoorHandle", &cube, &hub, {side * 0.409f, 0.48f, -0.17f}, {0.012f, 0.025f, 0.09f});
+	}
+	for (int grille = 0; grille < 7; ++grille) chassis->AddShape("Grille", &cube, &hub,
+		{-0.18f + grille * 0.06f, 0.39f, 0.706f}, {0.017f, 0.1f, 0.016f});
 
 	for (int i = 0; i < 2; ++i) {
 		const float x = i == 0 ? 0.25f : -0.25f;
@@ -61,6 +68,13 @@ RCCar::RCCar(SceneNode& parent, Assets& a, const glm::vec3& position, float head
 		spinJoints[i]->AddShape("Tyre", &cylinder, &tyre, { 0, 0, 0 }, { 2 * WheelRadius, 0.2f, 2 * WheelRadius }, { 0, 0, 90 });
 		spinJoints[i]->AddShape("Hub", &cylinder, &hub, { 0, 0, 0 }, { 0.2f, 0.22f, 0.2f }, { 0, 0, 90 });
 		spinJoints[i]->AddShape("Spoke", &cube, &hub, { 0, 0, 0 }, { 0.23f, 0.05f, 0.36f });
+		for (int tread = 0; tread < 18; ++tread) {
+			const float angle = glm::radians(tread * 20.0f);
+			spinJoints[i]->AddShape("Tread", &cube, &trim, {0, std::cos(angle) * (WheelRadius + 0.006f), std::sin(angle) * (WheelRadius + 0.006f)},
+				{0.205f, 0.018f, 0.055f}, {tread * 20.0f, 0, 0});
+		}
+		for (int spoke = 1; spoke < 5; ++spoke) spinJoints[i]->AddShape("RadialSpoke", &cube, &hub,
+			{0, 0, 0}, {0.23f, 0.028f, 0.31f}, {spoke * 36.0f, 0, 0});
 	}
 	SaveHome();
 }

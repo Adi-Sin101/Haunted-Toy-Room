@@ -1,28 +1,38 @@
 #pragma once
-
+#include <functional>
+#include <string>
 #include <vector>
-
 #include <glm/glm.hpp>
+class Character; class Humanoid; class Bullseye; class Buzz; class RCCar;
+class SceneNode; class Environment; class PhysicsWorld;
 
-class Character;
-
-// The "movie": at night the toys come alive and wander along their own patrol loops; when morning
-// comes they walk back to where the child left them, face the original direction and freeze.
-//
-// The character the user has selected is never driven by the story, so manual control always wins.
+// Selection pauses the film. An explicitly activated car can finish its route in manual mode.
 class StoryDirector {
 public:
-	void Add(Character* character, std::vector<glm::vec3> patrol, bool flies = false);
-	void Update(float dt, bool night, const Character* selected, const Character* excluded);
-
-	bool enabled = true;
-
+ enum class Scene { Discovery, Departure, ClearPath, ReachCar, ActivateCar, ReturnHome, Morning, End };
+ void Init(Humanoid*, Humanoid*, Bullseye*, Buzz*, RCCar*, SceneNode*, Environment*, PhysicsWorld*,
+  std::function<void()> mount, std::function<void()> dismount);
+ void Restart(bool mounted);
+ void Update(float dt, bool mounted, bool interact);
+ void Pause();
+ bool CarAutopilot() const { return activated && phase==Scene::ActivateCar; }
+ std::string Title() const;
+ std::string Caption() const;
+ Scene CurrentScene() const { return phase; }
+ float SceneTime() const { return elapsed; }
+ bool enabled = true;
 private:
-	struct Actor {
-		Character* character;
-		std::vector<glm::vec3> patrol;
-		size_t next = 0;
-		bool flies = false;
-	};
-	std::vector<Actor> actors;
+ struct Route { Character* actor; std::vector<glm::vec3> points; size_t next = 0; };
+ bool Move(Character*, float dt);
+ void Enter(Scene);
+ void Routes(std::vector<Route>);
+ Humanoid* woody=nullptr; Humanoid* jessie=nullptr;
+ Bullseye* horse=nullptr; Buzz* buzz=nullptr; RCCar* car=nullptr;
+ SceneNode* obstacle=nullptr; Environment* environment=nullptr; PhysicsWorld* physics=nullptr;
+ std::function<void()> mount, dismount;
+ std::vector<Route> routes;
+ Scene phase=Scene::Discovery;
+ float elapsed=0;
+ bool activated=false, dismountRequested=false, obstacleHit=false;
+ glm::vec3 obstacleHome{0};
 };

@@ -16,7 +16,8 @@
 class Assets {
 public:
 	// Texture slots understood by the ray tracer (it can only sample a fixed set of samplers).
-	enum TextureSlot : int { FloorSlot = 0, WallSlot, RugSlot, BallSlot, BlockSlot, PosterSlot, StarsSlot, SlotCount };
+	enum TextureSlot : int { FloorSlot = 0, WallSlot, RugSlot, BallSlot, BlockSlot, PosterSlot, StarsSlot,
+		MoonSlot, FabricSlot, DenimSlot, LeatherSlot, PlaidSlot, CowSlot, SlotCount };
 
 	void Load();
 
