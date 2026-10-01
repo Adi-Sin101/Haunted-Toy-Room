@@ -87,6 +87,12 @@ behaves better at grazing angles; it is the default. **F2** switches models ([09
 
 The specular term is only added where `N·L > 0`, so the dark side of an object never shows a highlight.
 
+**Skipping lights that cannot contribute** (`computeLighting`). For every light the shader first computes
+L and the attenuation × spot factor; if `att·intensity < 10⁻⁴` (outside the spot cone, or too far away) or
+`N·L ≤ 0` (behind the surface), the light is skipped before anything else — in particular before the
+lamp's 9-sample shadow-map lookup (§6.2), which used to run for every fragment on screen even far outside
+the lamp's cone. The image is unchanged (the skipped terms are ≤ 10⁻⁴); the per-pixel work drops.
+
 ## 3. Light types, attenuation and spot cones (`lightVector` in `lighting.glsl`)
 
 | Type | L at P | att | Used for |
@@ -181,6 +187,17 @@ every frame while the lamp is on (and lighting + shading are enabled):
    Averaging 3 × 3 neighbouring comparisons (**percentage-closer filtering**) gives a soft edge instead of
    jagged texels. Points outside the map are treated as lit.
 3. Only the lamp spot (slot 2) is multiplied by `vis`; other lights are unshadowed in raster mode.
+
+**Worked example (a point at the edge of a shadow).** Suppose P projects to `coord.z = 0.600` and N·L = 0.8,
+so `bias = max(0.0009 · 0.2, 0.00012) = 0.00018`. The 3 × 3 neighbourhood of the depth map holds 0.65 in
+six texels (nothing in front of P: 0.59982 ≤ 0.65 → lit) and 0.42 in three texels (a toy's arm is closer
+to the lamp: 0.59982 > 0.42 → shadowed). `vis = 6/9 = 0.667`, so the lamp spot's diffuse and specular at P
+are multiplied by 0.667 — a soft penumbra pixel rather than a hard step.
+
+**Skipped before the lookup.** For a point 50° away from the lamp's axis, `cos θ = 0.643 < cos 34° = 0.829`,
+so `spot = 0`, `att·spot·intensity = 0 < 10⁻⁴` and the light is skipped in `computeLighting` before
+`lampVisibility` is called — none of the 9 texture reads happens. Only the pixels inside the lamp's
+68° cone pay for the shadow lookup.
 
 **Contact shadows.** Under each toy a flattened, translucent (opacity 0.2) dark sphere is drawn on the
 floor in raster mode. It is a cheap "ambient occlusion" cue that grounds the toys when the directional

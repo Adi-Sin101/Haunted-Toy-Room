@@ -3,7 +3,8 @@
 // GPU Whitted ray tracer. One invocation per pixel:
 //
 //   1. build the primary ray through the pixel from the camera basis
-//   2. find the nearest hit among all instances (exact analytic primitives, in object space)
+//   2. find the nearest hit by descending a BOUNDING VOLUME HIERARCHY of axis-aligned boxes and
+//      testing only the instances in the leaves the ray enters (exact analytic primitives)
 //   3. shade it with the SAME Phong model as the rasteriser, plus a SHADOW RAY per light
 //   4. continue through transparent surfaces or bounce off reflective ones (uMaxBounces)
 //
@@ -13,7 +14,10 @@
 //   4     ka, kd, ks, shininess
 //   5     emissive.rgb, opacity
 //   6     reflectivity, texture slot (-1 none), uvScale.x, uvScale.y
-//   7     unlit flag
+//   7     unlit flag, cutout flag (texture alpha < 0.5 = hole)
+// BVH nodes follow the instances, from texel uNodeOffset, 2 texels each:
+//   0     box min.xyz, first (child index, or first instance of a leaf)
+//   1     box max.xyz, count (0 = inner node with children first, first + 1; > 0 = leaf)
 // ============================================================================================
 
 #include "lighting.glsl"
@@ -22,9 +26,7 @@ in vec2 vNdc;
 out vec4 FragColor;
 
 uniform samplerBuffer uInstances;
-uniform int uGroupCount;
-uniform vec4 uGroupSphere[32];  // xyz centre, w radius (< 0 = always test)
-uniform ivec2 uGroupRange[32];  // first instance, count
+uniform int uNodeOffset;
 uniform int uLightShadow[MAX_LIGHTS];
 
 uniform vec3 uCamPos;
@@ -50,11 +52,14 @@ uniform sampler2D uTex9;
 uniform sampler2D uTex10;
 uniform sampler2D uTex11;
 uniform sampler2D uTex12;
+uniform sampler2D uTex13;
+uniform sampler2D uTex14;
 
 const float INF = 1e20;
 const float EPS = 1e-4;
 
 vec4 fetch(int instance, int k) { return texelFetch(uInstances, instance * 8 + k); }
+vec4 fetchNode(int node, int k) { return texelFetch(uInstances, uNodeOffset + node * 2 + k); }
 
 // ---------------- primitive intersections (object space, mirror of src/math/Ray.cpp) -------
 
@@ -176,47 +181,85 @@ float hitInstance(int i, vec3 ro, vec3 rd, out vec3 objPoint, out vec3 objNormal
 	return t;
 }
 
-bool hitGroupSphere(int g, vec3 ro, vec3 rd, float tMax)
+vec2 primitiveUV(int type, vec3 p, vec3 n);
+float sampleSlotAlpha(int slot, vec2 uv);
+
+// Slab test against an axis-aligned box: entry distance, or INF when missed / beyond tMax.
+float hitBox(vec3 ro, vec3 invD, vec3 lo, vec3 hi, float tMax)
 {
-	vec4 s = uGroupSphere[g];
-	if (s.w < 0.0) return true;
-	vec3 oc = ro - s.xyz;
-	float b = dot(oc, rd);
-	float c = dot(oc, oc) - s.w * s.w;
-	if (c < 0.0) return true;              // ray starts inside
-	float disc = b * b - c;
-	if (disc < 0.0) return false;
-	float t = -b - sqrt(disc);
-	return t < tMax;
+	vec3 t1 = (lo - ro) * invD, t2 = (hi - ro) * invD;
+	vec3 tmin = min(t1, t2), tmax = max(t1, t2);
+	float tNear = max(max(tmin.x, tmin.y), max(tmin.z, 0.0));
+	float tFar = min(min(tmax.x, tmax.y), tmax.z);
+	return (tNear <= tFar && tNear < tMax) ? tNear : INF;
 }
 
-// Nearest hit along the ray.
+vec3 safeInverse(vec3 d)
+{
+	return 1.0 / vec3(abs(d.x) < 1e-8 ? 1e-8 : d.x, abs(d.y) < 1e-8 ? 1e-8 : d.y, abs(d.z) < 1e-8 ? 1e-8 : d.z);
+}
+
+// Cut-out materials (fence, railings): a hit where the texture is transparent does not count.
+bool cutAway(int i, vec3 p, vec3 n)
+{
+	if (fetch(i, 7).y < 0.5) return false;
+	vec4 t6 = fetch(i, 6);
+	int type = int(fetch(i, 3).w + 0.5);
+	return sampleSlotAlpha(int(floor(t6.y + 0.5)), primitiveUV(type, p, n) * t6.zw) < 0.5;
+}
+
+// Nearest hit along the ray: depth-first BVH descent, nearer child first, pruned by the best t so far.
 int traceClosest(vec3 ro, vec3 rd, out float tHit, out vec3 objPoint, out vec3 objNormal)
 {
 	int best = -1;
 	tHit = INF;
-	for (int g = 0; g < uGroupCount; ++g) {
-		if (!hitGroupSphere(g, ro, rd, tHit)) continue;
-		ivec2 range = uGroupRange[g];
-		for (int i = range.x; i < range.x + range.y; ++i) {
-			vec3 p, n;
-			float t = hitInstance(i, ro, rd, p, n);
-			if (t < tHit) { tHit = t; best = i; objPoint = p; objNormal = n; }
+	vec3 invD = safeInverse(rd);
+	int stack[32];
+	int sp = 0;
+	stack[sp++] = 0;
+	while (sp > 0) {
+		int node = stack[--sp];
+		vec4 a = fetchNode(node, 0), b = fetchNode(node, 1);
+		if (hitBox(ro, invD, a.xyz, b.xyz, tHit) == INF) continue;
+		int first = int(a.w + 0.5), count = int(b.w + 0.5);
+		if (count > 0) {
+			for (int i = first; i < first + count; ++i) {
+				vec3 p, n;
+				float t = hitInstance(i, ro, rd, p, n);
+				if (t < tHit && !cutAway(i, p, n)) { tHit = t; best = i; objPoint = p; objNormal = n; }
+			}
+		} else if (sp < 30) {
+			float tl = hitBox(ro, invD, fetchNode(first, 0).xyz, fetchNode(first, 1).xyz, tHit);
+			float tr = hitBox(ro, invD, fetchNode(first + 1, 0).xyz, fetchNode(first + 1, 1).xyz, tHit);
+			// push the farther child first so the nearer one is popped (and tightens tHit) first
+			if (tl < tr) { if (tr < INF) stack[sp++] = first + 1; if (tl < INF) stack[sp++] = first; }
+			else         { if (tl < INF) stack[sp++] = first;     if (tr < INF) stack[sp++] = first + 1; }
 		}
 	}
 	return best;
 }
 
-// Any opaque, lit occluder between the point and the light?
+// Any opaque, lit occluder between the point and the light? (any-hit: stops at the first one)
 bool occluded(vec3 ro, vec3 rd, float maxT)
 {
-	for (int g = 0; g < uGroupCount; ++g) {
-		if (!hitGroupSphere(g, ro, rd, maxT)) continue;
-		ivec2 range = uGroupRange[g];
-		for (int i = range.x; i < range.x + range.y; ++i) {
-			if (fetch(i, 7).x > 0.5 || fetch(i, 5).w < 0.5) continue; // light sources / glass cast no shadow
-			vec3 p, n;
-			if (hitInstance(i, ro, rd, p, n) < maxT) return true;
+	vec3 invD = safeInverse(rd);
+	int stack[32];
+	int sp = 0;
+	stack[sp++] = 0;
+	while (sp > 0) {
+		int node = stack[--sp];
+		vec4 a = fetchNode(node, 0), b = fetchNode(node, 1);
+		if (hitBox(ro, invD, a.xyz, b.xyz, maxT) == INF) continue;
+		int first = int(a.w + 0.5), count = int(b.w + 0.5);
+		if (count > 0) {
+			for (int i = first; i < first + count; ++i) {
+				if (fetch(i, 7).x > 0.5 || fetch(i, 5).w < 0.5) continue; // light sources / glass cast no shadow
+				vec3 p, n;
+				if (hitInstance(i, ro, rd, p, n) < maxT && !cutAway(i, p, n)) return true;
+			}
+		} else if (sp < 30) {
+			stack[sp++] = first;
+			stack[sp++] = first + 1;
 		}
 	}
 	return false;
@@ -259,7 +302,18 @@ vec3 sampleSlot(int slot, vec2 uv)
 	if (slot == 10) return texture(uTex10, uv).rgb;
 	if (slot == 11) return texture(uTex11, uv).rgb;
 	if (slot == 12) return texture(uTex12, uv).rgb;
+	if (slot == 13) return texture(uTex13, uv).rgb;
+	if (slot == 14) return texture(uTex14, uv).rgb;
 	return vec3(1.0);
+}
+
+// Only the cut-out textures (fence pickets / railings, slot 14) carry a meaningful alpha.
+float sampleSlotAlpha(int slot, vec2 uv)
+{
+	// level 0: neighbouring pixels of a ray tracer can hit unrelated surfaces, so screen-space
+	// derivatives (and the mip level chosen from them) are meaningless at a cut-out's edges
+	if (slot == 14) return textureLod(uTex14, uv, 0.0).a;
+	return 1.0;
 }
 
 void main()
@@ -304,8 +358,11 @@ void main()
 				vec3 L; float att; float dist;
 				lightVector(i, P, L, att, dist);
 				if (att <= 0.0 || dot(N, L) <= 0.0) continue;
+				// A shadow ray is a full BVH traversal: only send one where this light visibly matters.
+				float strength = att * uLights[i].intensity * dot(N, L);
+				if (strength < 0.004) continue;
 				float visibility = 1.0;
-				if (uLightShadow[i] == 1 && occluded(origin, L, dist - 4e-3)) visibility = 0.0;
+				if (uLightShadow[i] == 1 && strength > 0.02 && occluded(origin, L, dist - 4e-3)) visibility = 0.0;
 				addLight(i, P, N, V, visibility, t4.y, t4.z, t4.w, diffuse, specular);
 			}
 			shaded = albedo * (ambientTerm(t4.x) + diffuse) + specular + t5.rgb;

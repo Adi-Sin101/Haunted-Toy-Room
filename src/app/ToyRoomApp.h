@@ -48,8 +48,8 @@ struct LaunchOptions {
 	int select = -1;
 	bool focus = false;
 	bool mount = false;
-	bool rayTrace = false;
-	bool lighting = false, textures = false, renderSettings = false;
+	bool rayTrace = false, noRayTrace = false;
+	bool lighting = true, textures = true, renderSettings = false;
 	int shading = -1;
 	bool wireframe = false;
 	bool normals = false;

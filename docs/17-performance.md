@@ -125,13 +125,76 @@ A hidden node is skipped by `SceneNode::UpdateWorld` as well as by the draw list
 cost no matrix work either. This is a simple form of **occlusion culling** that uses knowledge of the
 scene (a closed door) instead of a general visibility algorithm.
 
+## 6. Round 3: everything switched on
+
+The settings now start with **lighting, shading, textures and ray tracing all on**, so the default frame
+is ray traced. Measured in one session against the previous version with the same defaults (both built
+from source; `--no-raytrace` measures the raster path):
+
+| | Before | After |
+|---|---|---|
+| Ray tracing, story, 1600 × 900 (the default) | 30.3 ms (33 FPS) | **9.5 ms (105 FPS)** |
+| Ray tracing, story, 1920 × 1080 | 46.6 ms (21 FPS) | **14.8 ms (68 FPS)** |
+| Ray tracing, Penny's arrival | 41.1 ms (24 FPS) | **6.3 ms (159 FPS)** |
+| Raster, lit, story | 6.9 ms | **4.1 ms** |
+| Raster, lit, story, 1920 × 1080 | 7.3 ms | **5.3 ms** |
+| Debug build, ray tracing, story | 46.8 ms | **22.7 – 29 ms** |
+| Debug build, raster, lit, story | 23.9 ms | **11 – 13 ms** |
+| Shapes in the story / during the arrival | 492 / 712 | **421 / 556** |
+
+(The raster frame during the arrival, ~4–5 ms, did not change: it is dominated by shading the full-screen
+lawn and sky, not by the number of shapes.)
+
+### Diagnosis
+
+Ray tracing time grew with the window's pixel count (9.7 ms at 960 × 600, 45.7 ms at 1920 × 1080) and
+with the number of shapes each ray had to test. Every shape is an exact intersection test **for every ray**
+(primary, up to three shadow rays and a reflection per pixel). In the previous design all room and house
+shapes formed one "always tested" group (97 in the story, ~230 during the arrival), and any ray near a toy
+tested all of its 60–90 shapes. So the teacher's point — too many shapes making texture-like detail —
+cost far more in ray tracing than in rasterisation.
+
+### What changed
+
+1. **Bounding volume hierarchy for the ray tracer** ([12 §4.1](12-ray-tracing.md)). A binary tree of boxes
+   over all shapes, rebuilt every frame (median split, ~420 nodes, depth ≈ 8), traversed with a stack,
+   nearer child first. A ray does about 2·log₂ n box tests and a few exact tests. Alone: 30.3 → 13.2 ms in
+   the story, 41.1 → 11.8 ms in the arrival.
+2. **Shadow rays only where a light matters.** A light whose `attenuation · intensity · N·L` is below
+   0.004 is skipped, below 0.02 it is added without a shadow ray. Together with 1: 9.5 ms and 6.3 ms.
+3. **No 4 × 4 inverse per shape.** The ray tracer's M⁻¹ rows come from the normal matrix the renderer
+   already computes: `M⁻¹ = [Nᵀ | −Nᵀt]`.
+4. **Lights skipped before the shadow-map lookup** in the raster shaders ([08 §2.3](08-illumination.md)): the
+   lamp's 9-sample shadow lookup used to run for every pixel on screen, even far outside its cone.
+5. **Front-to-back drawing** ([09 §1](09-shading.md)): near shapes first, so the depth test discards the
+   hidden fragments of everything behind them before they are lit (early-z). 4 + 5: raster 6.9 → 4.1 ms.
+6. **More texture instead of geometry** ([10](10-textures.md)):
+
+   | Was | Shapes | Now | Shapes |
+   |---|---|---|---|
+   | 24 book cubes | 24 | 4 boxes with a book-spine texture | 4 |
+   | picket fence: pickets + rails | ~55 | 2 alpha cut-out panels | 2 |
+   | porch railing: balusters + rails | ~12 | 2 cut-out panels | 2 |
+   | windows: frame, glass, 2 mullions, sill | 35 | frame + textured pane | 14 |
+   | flower box flowers | 7 | one textured flower bed | 1 |
+   | Woody's badge: 5 rotated cubes | 5 | one brass disc | 1 |
+   | 4 finger cylinders per hand | 24 | one finger block per hand | 6 |
+   | shirt buttons, pockets, eye glints | 18 | — (the clothing textures and specular highlights) | 0 |
+   | Buzz's seal rings and vent, car stripes and handles, bridle buckles | 11 | — | 0 |
+
+7. **Debug build settings** ([01](01-environment-setup.md)): `/Ob1` (inline functions marked inline) and no
+   `/RTC1` stack checks. Debug was spending most of its time calling tiny GLM helpers with run-time checks.
+
+All 19 physics checks pass and the full arrival + story still plays to the end with every toy home.
+
 ## Re-running the measurements
 
 ```
 bin\Release\HauntedToyRoom.exe --benchmark 400
 bin\Release\HauntedToyRoom.exe --benchmark 400 --lighting --shading 3 --textures
 bin\Debug\HauntedToyRoom.exe --benchmark 200
-bin\Release\HauntedToyRoom.exe --no-intro --benchmark 400 --raytrace
+bin\Release\HauntedToyRoom.exe --no-intro --benchmark 400                  (ray traced: the default)
+bin\Release\HauntedToyRoom.exe --no-intro --no-raytrace --benchmark 400    (raster)
 ```
 
 `--no-intro` measures the story only (without Penny's arrival). The benchmark also prints, for every

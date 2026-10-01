@@ -94,6 +94,7 @@ void Renderer::DrawUniforms::Resolve(const Shader& shader)
 	opacity = shader.Uniform("uMaterial.opacity");
 	unlit = shader.Uniform("uMaterial.unlit");
 	uvScale = shader.Uniform("uMaterial.uvScale");
+	cutout = shader.Uniform("uCutout");
 }
 
 void Renderer::RenderLampShadow(const FrameInfo& frame)
@@ -109,7 +110,7 @@ void Renderer::RenderLampShadow(const FrameInfo& frame)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); glClear(GL_DEPTH_BUFFER_BIT);
 	shadowShader.Activate(); shadowShader.SetMat4("uLightVP", lampViewProjection);
 	for (const DrawItem& item : items) {
-		if (item.material->unlit || item.material->opacity < 0.9f) continue;
+		if (item.material->unlit || item.material->opacity < 0.9f || item.material->cutout) continue;
 		// Tiny details cast shadows smaller than a shadow-map texel; shapes outside the lamp's
 		// cone cannot cast into it.
 		if (item.radius < 0.035f || !lampFrustum.Visible(item.center, item.radius)) continue;
@@ -193,8 +194,10 @@ void Renderer::ApplyMaterial(const DrawUniforms& u, const Material& m, const Ren
 	glUniform1f(u.opacity, m.opacity);
 	glUniform1i(u.unlit, m.unlit ? 1 : 0);
 	glUniform2f(u.uvScale, m.uvScale.x, m.uvScale.y);
+	glUniform1i(u.cutout, m.cutout ? 1 : 0);
 
-	const Texture* tex = (settings.textures && m.texture) ? m.texture : &assets->WhiteTexture();
+	// A cut-out's alpha is its SHAPE, so its texture is bound even when textures are switched off.
+	const Texture* tex = ((settings.textures || m.cutout) && m.texture) ? m.texture : &assets->WhiteTexture();
 	tex->Bind(0);
 }
 
@@ -262,8 +265,13 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 		(item.material->opacity < 1.0f ? transparent : opaque).push_back(&item);
 	}
 
-	// Pass 1: opaque, grouped by material and mesh so state changes happen once per group
+	// Pass 1: opaque, front to back. A fragment hidden behind something already drawn fails the depth
+	// test BEFORE its fragment shader runs (early-z), so near objects drawn first save the lighting work
+	// of everything behind them. Within 0.5-unit depth slices, items are grouped by material and mesh to
+	// keep state changes low.
 	std::sort(opaque.begin(), opaque.end(), [](const DrawItem* a, const DrawItem* b) {
+		const int sa = static_cast<int>(a->viewDepth * 2.0f), sb = static_cast<int>(b->viewDepth * 2.0f);
+		if (sa != sb) return sa < sb;
 		return a->material != b->material ? a->material < b->material : a->mesh < b->mesh;
 	});
 	for (const DrawItem* item : opaque)

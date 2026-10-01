@@ -220,17 +220,16 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	solid(bed->AddShape("Headboard", &cube, &deskMat, {0, 1.0f, -2.35f}, {3.6f, 1.8f, 0.18f}));
 	for (float side : {-1.0f, 1.0f}) solid(bed->AddShape("Pillow", &sphere, &paper, {0.8f * side, 1.2f, -1.5f}, {1.4f, 0.3f, 0.9f}));
 	SceneNode* shelf = room->AddChild("Bookcase");
+	Material& books = Textured(a, "book-spines", glm::vec3(1.0f), Assets::BookSlot, {1, 1}, 0.08f, 16.0f);
+	books.plainColor = {0.42f, 0.22f, 0.16f};
 	shelf->local.position = {-8.9f, 0, -1.5f};
 	for (float side : {-1.0f, 1.0f}) solid(shelf->AddShape("Upright", &cube, &deskMat, {side * 0.9f, 1.75f, 0}, {0.12f, 3.5f, 1.0f}));
 	solid(shelf->AddShape("Back", &cube, &deskMat, {0, 1.75f, -0.47f}, {1.8f, 3.5f, 0.08f}));
 	for (int tier = 0; tier < 4; ++tier) {
 		const float level = 0.15f + tier * 1.05f;
 		solid(shelf->AddShape("Shelf", &cube, &deskMat, {0, level, 0}, {1.8f, 0.09f, 1.0f}));
-		for (int book = 0; book < 6; ++book) {
-			Material& cover = a.Mat("book-cover-" + std::to_string(book), blockColors[book % 3] * 0.55f, 0.08f);
-			const float x = -0.70f + book * 0.24f;
-			solid(shelf->AddShape("Book", &cube, &cover, {x, level + 0.37f, -0.1f}, {0.18f, 0.66f - (book % 3) * 0.08f, 0.56f}));
-		}
+		// One box per shelf whose front shows a row of book spines (a texture) instead of 6 book cubes.
+		solid(shelf->AddShape("Books", &cube, &books, {0, level + 0.37f, -0.1f}, {1.56f, 0.66f, 0.56f}));
 	}
 	// Distant silhouettes are outside the sealed play space and visible through the window.
 	Material& silhouette = a.Mat("distant-roofs", {0.035f, 0.045f, 0.085f}, 0.0f);

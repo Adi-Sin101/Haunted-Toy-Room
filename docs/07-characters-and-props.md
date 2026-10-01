@@ -17,14 +17,14 @@ triangle count of every object:
 
 | Object | Shapes | Triangles at full detail |
 |---|---|---|
-| Woody | 80 | 57 932 |
-| Jessie | 77 | 61 300 |
-| Buzz | 89 | 65 376 |
-| Bullseye | 46 | 31 576 |
-| RC Car | 36 | 6 408 |
+| Woody | 62 | 50 328 |
+| Jessie | 63 | 53 628 |
+| Buzz | 76 | 63 828 |
+| Bullseye | 44 | 28 264 |
+| RC Car | 32 | 6 360 |
 | Ball / Desk lamp | 1 / 5 | 1 656 / 3 632 |
 | Penny the cat | 34 | 34 656 |
-| Room and scenery (story / arrival with the house) | 117 / 337 | 15 798 / 70 170 |
+| Room and scenery (story / arrival with the house) | 97 / 232 | 15 558 / 57 402 |
 
 (With level of detail the *drawn* count is a fraction of this — see [03 §8](03-primitives.md) and
 [17](17-performance.md).)
@@ -41,10 +41,14 @@ triangle count of every object:
 * **Materials are shared by name** (`Assets::Mat`): e.g. `eye-white`, `eye-pupil`, `brass` are one material
   each, used by every character. The renderer sorts opaque draws by material, so sharing also means fewer
   state changes.
-* **Detail comes from textures, not from extra shapes.** Stitching, the braid weave, tyre grain and
+* **Detail comes from textures, not from extra shapes** (two rounds: [17](17-performance.md)). The second
+  round removed the shirt buttons, pockets, eye glints, Buzz's seal rings and vent, the car's stripes and
+  handles and the bridle buckles, merged the four finger cylinders of each hand into one block, turned
+  Woody's 5-cube star badge into a disc and the 24 books into 4 textured boxes.
+* **Earlier:** Stitching, the braid weave, tyre grain and
   saddle studs used to be hundreds of tiny spheres and cubes; they are now fabric/leather/denim textures on
   one shape (see [10](10-textures.md)). Shapes that remain are the ones that change the *silhouette*
-  (fingers, ears, buttons that stand proud of the cloth, the scarf, the holster).
+  (ears, the hat brim, the scarf, the holster, one finger block per hand).
 
 ## 2. Humanoid (Woody, Jessie, Buzz)
 
@@ -53,7 +57,6 @@ Root (feet on floor, heading)
 └─ Pelvis                  joint  pos (0, 0.85, 0)            bobs while walking
    ├─ Belt                 cube   pos (0, 0.03, 0)      size (0.40, 0.12, 0.25)
    ├─ Buckle               cube   pos (0, 0.03, 0.13)   size (0.11, 0.08, 0.03)
-   ├─ Pocket ×2            cube   pos (±0.12, −0.08, −0.135) size (0.14, 0.12, 0.018)   (Woody, Jessie)
    ├─ Holster              cube   pos (−0.24, −0.10, 0) size (0.09, 0.23, 0.15) rot (0,0,−12)  (Woody)
    ├─ LeftHip              joint  pos ( 0.11, 0, 0)           rotX = walk swing
    │  ├─ Leg               cyl    pos (0, −0.31, 0)     size (0.15, 0.62, 0.15)     denim texture
@@ -69,10 +72,9 @@ Root (feet on floor, heading)
       ├─ VestBack          cube   pos (0, 0.27, −0.125) size (0.43, 0.44, 0.02)
       ├─ Neck              cyl    pos (0, 0.54, 0)      size (0.10, 0.10, 0.10)
       ├─ Collar ×2         cube   pos (±0.075, 0.47, 0.14) size (0.13, 0.10, 0.025) rot (0,0,±24)
-      ├─ ShirtButton ×4    sphere pos (0, 0.12 + 0.085k, 0.14) size 0.024               brass
       ├─ Neckerchief       cyl    pos (0, 0.53, 0)      size (0.17, 0.055, 0.17)
       ├─ ScarfKnot, ScarfTail  sphere / cone at the front of the neck
-      ├─ SheriffBadge ×5   cube   pos (0.14, 0.39, 0.148) size (0.032, 0.10, 0.017) rot (0,0,72k)  (Woody: a 5-point star)
+      ├─ SheriffBadge      cyl    pos (0.14, 0.39, 0.145) size (0.09, 0.015, 0.09) rot (90,0,0)  (Woody: a brass disc)
       ├─ LeftShoulder      joint  pos ( 0.27, 0.46, 0)        rotX = −0.8·swing, rotZ = 6°
       │  ├─ UpperArm       cyl    pos (0, −0.14, 0)     size (0.12, 0.28, 0.12)
       │  ├─ ShoulderBall   sphere pos (0, 0, 0)         size 0.13
@@ -80,7 +82,7 @@ Root (feet on floor, heading)
       │  ├─ Forearm        cyl    pos (0, −0.41, 0)     size (0.105, 0.23, 0.105)
       │  ├─ Cuff           cyl    pos (0, −0.50, 0)     size (0.125, 0.06, 0.125)
       │  ├─ Hand           sphere pos (0, −0.57, 0)     size (0.13, 0.14, 0.09)
-      │  ├─ Finger ×4      cyl    pos (−0.044 + 0.029k, −0.635, 0.025) size (0.023, 0.065, 0.023)
+      │  ├─ Fingers        sphere pos (−0.002, −0.63, 0.022) size (0.12, 0.09, 0.06)   one rounded mitten block
       │  └─ Thumb          sphere pos (0.068, −0.565, 0.025) size (0.06, 0.065, 0.05)
       ├─ RightShoulder     joint  pos (−0.27, 0.46, 0)        (same children)
       └─ Head              joint  pos (0, 0.56, 0)            idle: rotY look-around, rotX nod
@@ -88,7 +90,6 @@ Root (feet on floor, heading)
          ├─ EyeLeft/Right  sphere pos (±0.07, 0.24, 0.145) size (0.08, 0.09, 0.05)   white
          ├─ Iris ×2        sphere pos (±0.07, 0.24, 0.168) size (0.046, 0.052, 0.014) brown / green
          ├─ PupilL/R       sphere pos (±0.07, 0.24, 0.165) size (0.04, 0.05, 0.03)
-         ├─ EyeCatchlight ×2 sphere size 0.011                                       a tiny white sparkle
          ├─ Eyebrow ×2     cube   pos (±0.072, 0.303, 0.146) size (0.079, 0.016, 0.019) rot (0,0,±9)
          ├─ Ear ×2         sphere pos (±0.17, 0.20, 0)  size (0.07, 0.11, 0.055)
          ├─ Cheek ×2       sphere pos (±0.095, 0.14, 0.12) size (0.09, 0.075, 0.06)
@@ -129,8 +130,8 @@ Root (feet on floor, heading)
 ```
 Head  + Hood (purple sphere behind the face), Chin (purple), Helmet (sphere 0.6, glass: opacity 0.22,
         reflectivity 0.25 → drawn in the transparent pass, reflective in ray tracing)
-Torso + ChestPlate, ChestStripe, three buttons (red/green/blue), RangerBadge, ChestVent (one dark panel)
-Each shoulder + ShoulderArmor, ElbowSeal, WristBand        Each hip + KneeArmor, AnkleSeal
+Torso + ChestPlate, ChestStripe, three buttons (red/green/blue), RangerBadge
+Each shoulder + ShoulderArmor, WristBand                   Each hip + KneeArmor
       + Wings joint pos (0, 0.33, −0.16): Pack, 2 Thrusters with rims, WingLeft/Right (cube 0.75×0.06×0.22,
         rolled ±8°) and red wing tips
         scale.x of the joint = 0.08 (folded) … 1.0 (open) — opens when Buzz is airborne
@@ -185,7 +186,7 @@ Root (hooves on floor, heading)
    │     ├─ EarL/R           cone     pos (±0.10, 0.30, 0.02) size (0.10, 0.22, 0.08)
    │     ├─ Forelock         cube     pos (0, 0.23, 0.12)
    │     ├─ BridleNose       cube     pos (0, 0.02, 0.52)  size (0.30, 0.045, 0.27)  leather
-   │     └─ CheekStrap ×2, BridleBuckle ×2     leather straps and brass buckles
+   │     └─ CheekStrap ×2                    leather straps
    ├─ Tail                   joint    pos (0, 1.42, −0.72) rot (−30, 0, 0)   swish (rotZ) when idle
    │  ├─ TailShape           cyl      pos (0, −0.35, 0)   size (0.10, 0.70, 0.10)
    │  └─ TailTip             cone     pos (0, −0.80, 0)   size (0.18, 0.30, 0.18) rot (180, 0, 0)
@@ -205,7 +206,7 @@ Controls: W/S, A/D, Shift gallop faster, SPACE stop. Faster (2.6 u/s) than the h
 Root (heading)
 ├─ Chassis           Body cube (0.8, 0.3, 1.4) · Cabin cube (0.7, 0.28, 0.7)
 │                    Windshield, RearWindow, SideWindowL/R (glass cubes) · BumperF/B
-│                    SpoilerPostL/R + Spoiler · Antenna + AntennaTip · RacingStripe ×2, DoorHandle ×2
+│                    SpoilerPostL/R + Spoiler · Antenna + AntennaTip
 │                    Grille (one dark block, replaces 7 bars) · HeadlightBulbL/R (emissive when on)
 │                    HeadlightL / HeadlightR anchors → two spot lights
 └─ WheelFL/FR/BL/BR  joints at (±0.45, 0.22, ±0.45); front ones steer (rotY = steering)
@@ -221,8 +222,8 @@ Root (heading)
 * **Car steering:** a car can only turn while moving — `TurnFactor = clamp(speed / maxSpeed) · 1.3`,
   so turning reverses when reversing. Front wheels show the steering angle (±28°).
 * **L** toggles the headlights (two spot lights with 12°/22° cones).
-* The car was drawn with 22 + 72 tread cubes per wheel before; the tyre texture replaced all of them
-  (36 shapes now).
+* The car's wheels used to carry 72 tread cubes and 16 radial spokes; the tyre texture replaced them, and
+  the second round removed the painted-on stripes and door handles (32 shapes now).
 
 ## 5. Character movement mathematics (`Character::Drive`)
 
@@ -262,7 +263,7 @@ position      p  += forward · v · dt
 | Toy blocks | a 6-cube tower plus the mission's doorway crate (1.2 × 2 × 3) | gravity, collisions; Buzz's laser pushes them |
 | Desk | top + 4 legs + drawer cubes, knob sphere, sketchbook, 3 pencils | solid furniture |
 | Bed | frame, mattress, quilted blanket (fabric texture), headboard, 2 pillows | solid furniture |
-| Bookcase | 2 uprights, back, 4 shelves, 24 books in three colours | solid furniture |
+| Bookcase | 2 uprights, back, 4 shelves, and on each shelf one box showing a row of book spines (texture) | solid furniture |
 | Curtains | 2 × 4 fabric-textured folds + a rod | |
 | Trim | skirting boards and crown moulding | |
 | Desk lamp (key 7) | Base cyl → ArmJoint (tilt) → Arm cyl + Elbow sphere → HeadJoint (tilt) → Shade cone, Bulb sphere (emissive), LightAnchor | point + spot light, flickers and looks around at night; A/D swivel, W/S tilt, R power |

@@ -114,6 +114,7 @@ albedo = material colour × texture colour          (greyscale textures are tint
 ```
 L = normalize(lightPos − P) or −direction ;  V = normalize(eye − P) ;  H = normalize(L + V) ;  R = 2(N·L)N − L
 att  = 1 / (kc + kl·d + kq·d²) ;  spot = smoothstep(cos outer, cos inner, −L·axis)
+skip the light (and its shadow lookup) if att·spot·intensity < 10⁻⁴ or N·L ≤ 0
 I = C·(ka·Ia + Σ att·spot·vis·Il·kd·max(N·L, 0)) + Σ att·spot·vis·Il·ks·spec + E
 spec = max(R·V, 0)^n (Phong)  or  max(N·H, 0)^(4n) (Blinn-Phong)
 ```
@@ -124,7 +125,8 @@ re-normalised) or per vertex (Gouraud). The selection rim adds `h·(0.12 + 0.6(1
 ## 12. Blending
 
 ```
-opaque pass:      sorted by material, then mesh            (state changes once per group)
+opaque pass:      front to back in 0.5-unit depth slices, then by material and mesh   (early-z rejects hidden fragments)
+cut-outs:         discard the fragment if texture alpha < 0.5
 transparent pass: sorted far → near, depth writes off,  colour = α·src + (1 − α)·dst
 ```
 
@@ -139,7 +141,10 @@ cone         x² + z² = ¼(½ − y)²  →  a = d'x² + d'z² − ¼ d'y², b 
 cube         slab method: tNear = max(min(t₁, t₂)), tFar = min(max(t₁, t₂)), hit if tNear ≤ tFar
 plane        t = −o'y / d'y  (from above only)
 normal       N = normalize((M⁻¹)ᵀ n')
-shadow ray   from P + 0.002 N towards each shadow-casting light; any hit before the light → vis = 0
+BVH          node box ⊇ its shapes; median split on the longest centre axis; traversal with a stack,
+             nearer child first; ray–box: tNear = max(min((lo−o)/d, (hi−o)/d), 0) ≤ tFar = min(max(…))
+M⁻¹          rows (N[r], −N[r]·t) from the normal matrix N = (A⁻¹)ᵀ — no 4×4 inverse
+shadow ray   only if att·intensity·N·L ≥ 0.02; from P + 0.002 N towards the light; any hit before it → vis = 0
 reflection   d ← d − 2(d·N)N ;  colour += throughput·(1 − ρ)·local ;  throughput ·= ρ
 transparency colour += throughput·α·local ;  throughput ·= (1 − α)
 ```
@@ -155,3 +160,8 @@ transparency colour += throughput·α·local ;  throughput ·= (1 − α)
 | A primary ray hitting the beach ball at t = 7.142 | [12 §3.3](12-ray-tracing.md) |
 | The roof pitch (28°) and the one-cube gable matrix | [04 §4.2](04-transformations.md) |
 | Penny's jump arc and the arrival's sunset clock | [18 §3](18-house-and-penny.md) |
+| Building and traversing a four-shape BVH (3 box tests + 2 shape tests; a miss in 1 test) | [12 §4.2](12-ray-tracing.md) |
+| Shadow-ray culling for the lamp bulb at 5 / 12 / 25 / 30 units | [12 §5](12-ray-tracing.md) |
+| A penumbra pixel of the lamp's shadow map (vis = 6/9) and a light skipped before the lookup | [08 §6.2](08-illumination.md) |
+| Fence cut-out coordinates (uvScale 3.741; picket centre at u' = 0.0625) | [10](10-textures.md) |
+| Triangles saved by the texture swaps (books 288 → 48) | [03 §9](03-primitives.md) |

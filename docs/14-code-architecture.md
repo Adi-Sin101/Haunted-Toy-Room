@@ -67,7 +67,11 @@ characters, characters nothing about the application.
 | 5 shared shapes (11 meshes with level of detail) for the whole scene | ≈ 82 KB of geometry, no per-object buffers |
 | Level of detail by screen size | small / distant spheres drawn with 100 – 396 triangles instead of 1 656 |
 | Frustum culling of bounding spheres | off-screen shapes are never submitted |
-| Opaque draws sorted by material, then mesh | material uniforms, texture and VAO bound once per group |
+| Opaque draws front to back (0.5-unit slices), then by material and mesh | early-z skips shading hidden fragments; few state changes |
+| Lights skipped where they cannot contribute (before the shadow-map lookup) | less per-pixel work |
+| Ray tracer: BVH rebuilt every frame, nearer-child-first traversal, shadow rays only where a light matters | ~log₂ n tests per ray instead of whole objects |
+| Alpha cut-out textures (fence, railings) | one box instead of dozens of picket cubes |
+| Debug build: `/Ob1` inlining, no `/RTC1` stack checks | Debug frame time roughly halved, still fully debuggable |
 | Hidden subtrees skipped (house exterior / ground floor) | ~220 shapes cost nothing during the story |
 | Physics: cached furniture boxes, broad phase, ≤ 6 steps per frame | no slow-frame feedback loop |
 | Static VBO/EBO uploaded once | no per-frame buffer traffic (only the debug lines and ray-tracer instance buffer are dynamic) |
@@ -76,7 +80,7 @@ characters, characters nothing about the application.
 | Reused `std::vector`s (draw list, instance buffer, debug lines) | no per-frame heap allocation |
 | One world-matrix pass per frame | each matrix computed once, shared by raster, ray tracer, picking and lights |
 | Back-face culling | ~half the fragments of closed objects skipped |
-| Ray tracer: analytic primitives + per-object bounding spheres + reduced resolution | real-time ray tracing on a GL 3.3 GPU |
+| Ray tracer: analytic primitives + BVH + reduced resolution | real-time ray tracing on a GL 3.3 GPU |
 | Frame-rate independent motion (`dt`, clamped to 0.1 s) | same speed on every machine, no jump after a stall |
 
 ## 5. Adding a new object (the pattern)

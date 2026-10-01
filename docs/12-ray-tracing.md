@@ -127,25 +127,105 @@ towards the camera, as expected.
 
 1. Take the renderer's flattened draw list (only visible shapes: the house exterior and the ground floor
    are hidden once Penny is upstairs, so they cost nothing then).
-2. **Group** shapes by owner (group 0 = room and scenery, then Woody, Jessie, …, Penny; at most 32 groups).
-   For each group compute a **bounding sphere** around its shapes; each unit primitive fits in a sphere of
-   radius `√3/2 × its largest axis scale` around its centre.
-3. Pack every shape into 8 RGBA32F texels of a **texture buffer** (`GL_TEXTURE_BUFFER`, core since GL 3.1):
+2. Compute the **world-space axis-aligned box** of every shape. A unit primitive lies in [−½, ½]³, so under
+   M = [a₀ a₁ a₂ | c] its box is centred on c with half-size `½(|a₀| + |a₁| + |a₂|)` (component-wise absolute
+   values of the axis columns).
+3. Build a **bounding volume hierarchy** (§4.1) over those boxes.
+4. Pack every shape, in the BVH's leaf order, into 8 RGBA32F texels of a **texture buffer**
+   (`GL_TEXTURE_BUFFER`, core since GL 3.1), followed by the BVH nodes (2 texels each):
 
-   | texel | contents |
+   | texel | shape contents |
    |---|---|
    | 0–2 | rows 0–2 of the inverse model matrix M⁻¹ |
    | 3 | colour.rgb, primitive type (0 plane, 1 cube, 2 sphere, 3 cylinder, 4 cone) |
    | 4 | ka, kd, ks, shininess |
    | 5 | emissive.rgb, opacity |
    | 6 | reflectivity, texture slot (−1 none), uvScale.xy |
-   | 7 | unlit flag |
+   | 7 | unlit flag, cut-out flag |
 
-4. Upload group spheres and index ranges as uniform arrays, the lights (the same `uLights[]` uniforms as
-   the rasteriser, uploaded by the same function) and a per-light shadow flag.
+   | texel | node contents |
+   |---|---|
+   | 0 | box min.xyz, `first` |
+   | 1 | box max.xyz, `count` (> 0: a leaf holding shapes first … first + count − 1; 0: an inner node whose children are nodes `first` and `first + 1`) |
+
+   **M⁻¹ without inverting a 4 × 4.** M = [A | t] is affine, so `M⁻¹ = [A⁻¹ | −A⁻¹ t]`, and the renderer
+   already has the normal matrix `N = (A⁻¹)ᵀ` for every shape. Row r of A⁻¹ is column r of N, so each packed
+   row is `(N[r], −N[r]·t)` — no matrix inversion per shape per frame.
+5. Upload the lights (the same `uLights[]` uniforms as the rasteriser, uploaded by the same function) and a
+   per-light shadow flag.
 
 Rebuilding this every frame keeps the ray tracer live: animation, driving and editing all show up
 immediately. Nothing is allocated per frame (the vectors are reused).
+
+### 4.1 The bounding volume hierarchy (BVH)
+
+Without an acceleration structure every ray would have to test every shape: with ~420 shapes, 360 000
+primary rays and up to three shadow rays and a reflection per pixel, that is hundreds of millions of
+intersection tests per frame. A BVH is a binary tree of boxes: every node's box encloses all the shapes
+below it, so if a ray misses a node's box it can skip that whole subtree.
+
+**Build** (`RayTracer::Build`, top-down, recursive):
+
+```
+node box   = union of the boxes of its shapes
+leaf       if it holds ≤ 2 shapes (or all centres coincide)
+otherwise  axis  = longest axis of the box CENTRES' extent
+           split = median: std::nth_element puts the half with the smaller centre coordinate first
+           children = Build(first half), Build(second half), stored next to each other
+```
+
+The median split always halves the shape count, so the tree has depth ⌈log₂(n/2)⌉ ≈ 8 for 420 shapes and
+about n nodes (2 × leaves − 1). Building it costs O(n log n) — a fraction of a millisecond — which is why it can simply
+be rebuilt every frame while the toys move.
+
+**Traversal** (`traceClosest` in `raytrace.frag`), with an explicit stack because GLSL has no recursion:
+
+```
+push root
+while the stack is not empty:
+    pop node
+    if the ray misses node.box, or enters it beyond the nearest hit so far: continue
+    if leaf: intersect its ≤ 2 shapes exactly, keep the nearest hit (this shrinks tBest)
+    else:    test both children's boxes; push the farther one first, so the nearer one is popped first
+```
+
+Ray–box test (slab method, with precomputed `1/d`):
+`t₁ = (lo − o)·(1/d)`, `t₂ = (hi − o)·(1/d)`, `tNear = max(min(t₁, t₂), 0)`, `tFar = min(max(t₁, t₂))`;
+the ray enters the box iff `tNear ≤ tFar` and `tNear < tBest`.
+
+Visiting the nearer child first finds a close hit early; every later box that starts beyond it is then
+rejected with one box test. **Shadow rays** (`occluded`) use the same traversal as an *any-hit* query: they
+stop at the first opaque blocker closer than the light. A ray now does about 2·log₂ n box tests plus a few
+exact shape tests, instead of testing whole objects (the previous version tested all 97 room shapes for
+every ray, and all 60–90 shapes of any toy whose bounding sphere the ray touched).
+
+### 4.2 Worked example: a four-shape BVH
+
+Four unit cubes A, B, C, D in a row along x: A = [0, 1] × [0, 1] × [0, 1], B = [2, 3] × …, C = [6, 7] × …,
+D = [8, 9] × … (all with y, z ∈ [0, 1]). Box centres x = 0.5, 2.5, 6.5, 8.5.
+
+**Build.** Root box = union = [0, 9] × [0, 1] × [0, 1]. The centres spread 8 units in x and 0 in y, z →
+split on x. The median puts {A, B} left and {C, D} right. Left box [0, 3] × [0, 1]², right box [6, 9] × [0, 1]².
+Each child holds 2 shapes = LeafSize → leaves. Nodes: 0 = root (first = 1, count = 0), 1 = left leaf
+(first = 0, count = 2), 2 = right leaf (first = 2, count = 2); the shapes are packed in the order A, B, C, D.
+
+**A ray that hits.** o = (−1, 0.5, 0.5), d = (1, 0, 0). `1/d` = (1, 10⁸, 10⁸) (`safeInverse` replaces a 0
+component by 10⁻⁸ so no division by zero produces NaN).
+
+| Step | Slabs | tNear / tFar | Result |
+|---|---|---|---|
+| root [0,9]×[0,1]² | x: (0+1)·1 = 1, (9+1)·1 = 10; y, z: (0−0.5)·10⁸ = −5·10⁷, (1−0.5)·10⁸ = 5·10⁷ | max(1, −5·10⁷, −5·10⁷, 0) = 1 / min(10, 5·10⁷, 5·10⁷) = 10 | enter at t = 1 |
+| left child [0,3] | x: 1 … 4 | 1 / 4 | entry 1 |
+| right child [6,9] | x: 7 … 10 | 7 / 10 | entry 7 |
+| push order | right (farther) first, then left | | pop left first |
+| left leaf: A, B | exact cube tests | A at t = 1, B at t = 3 | best t = 1 (A) |
+| pop right | its box starts at 7 > best 1 | | rejected with one box test |
+
+Total: 3 box tests + 2 exact shape tests (instead of 4 shape tests); with 420 shapes a typical ray needs
+~16 box tests + a handful of shape tests instead of hundreds of shape tests.
+
+**A ray that misses.** o = (−1, 2, 0.5), d = (1, 0, 0): the root's y-slab gives t ∈ [(0 − 2)·10⁸, (1 − 2)·10⁸]
+= [−2·10⁸, −10⁸], so tFar < tNear → the ray misses the whole scene with **one** box test.
 
 ## 5. The per-pixel algorithm (`raytrace.frag`)
 
@@ -155,7 +235,7 @@ runs the fragment shader once per pixel of a reduced-resolution framebuffer.
 ```
 ray = primary ray (§2);  colour = 0;  throughput = 1
 repeat up to (bounces + 1) times:
-    hit = nearest intersection over all groups whose bounding sphere the ray hits before the current best t
+    hit = nearest intersection, found by descending the BVH (§4.1); cut-out holes do not count (§6)
     if no hit: colour += throughput · background; stop
     P = o + t·d;  N = world normal (flipped to face the ray)
     albedo = colour × texture(uv from the analytic hit point, §6)
@@ -163,7 +243,9 @@ repeat up to (bounces + 1) times:
     else:
         for each enabled light:
             L, attenuation, spot factor               (lightVector() from lighting.glsl)
-            vis = light casts shadows ? (occluded(P + 0.002·N, L, distance − 0.004) ? 0 : 1) : 1
+            strength = attenuation · intensity · N·L
+            if strength < 0.004: skip the light        (it cannot change the pixel visibly)
+            vis = light casts shadows and strength > 0.02 ? (occluded(P + 0.002·N, L, distance − 0.004) ? 0 : 1) : 1
             accumulate diffuse + specular × vis       (addLight() from lighting.glsl)
         shaded = albedo · (ka·Ia + diffuse) + specular + emissive
     if opacity < 0.99:  colour += throughput · opacity · shaded;  throughput ·= (1 − opacity);  continue straight on
@@ -173,10 +255,17 @@ repeat up to (bounces + 1) times:
     stop early when max(throughput) < 0.02
 ```
 
-* **Group test.** For a group sphere (centre C, radius ρ) and a unit ray: `oc = o − C`, `b = oc·d`,
-  `c = oc·oc − ρ²`; skip the group if `b² − c < 0` (miss) or its entry `−b − √(b² − c)` is beyond the
-  current nearest hit; always test it if `c < 0` (ray starts inside). A ray that misses Woody's sphere never
-  tests his 80 shapes.
+* **Only useful shadow rays.** A shadow ray is a full BVH traversal, so it is only sent where the light can
+  visibly change the pixel: lights whose `attenuation · intensity · N·L` is below 0.004 are skipped, and
+  below 0.02 they are added unshadowed (an error of at most 0.02 in a 0–1 colour channel). Example, the
+  lamp bulb (intensity 0.8, kl 0.14, kq 0.07) on a surface with N·L = 0.3:
+
+  | distance | attenuation | strength | treatment |
+  |---|---|---|---|
+  | 5 | 0.290 | 0.070 | lit with a shadow ray |
+  | 12 | 0.078 | 0.019 | lit, no shadow ray |
+  | 25 | 0.021 | 0.005 | lit, no shadow ray |
+  | 30 | 0.015 | 0.0035 | skipped |
 * **Shadow rays** (`occluded`) are *any-hit* tests with a maximum distance: the first opaque, lit
   intersection closer than the light ends the search. Light sources (unlit shapes such as the bulb, sky,
   sun) and transparent glass do not cast shadows.
@@ -210,10 +299,18 @@ and `y = ½ sin φ` → `φ = asin(2y)`; longitude `θ = atan2(x, z)` because `x
 `z = r cos φ cos θ`.
 
 The sample is `texture(slot, uv · uvScale)`. GLSL 3.30 cannot index an array of samplers with a run-time
-value, so the 13 texture slots (`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars, moon,
-cotton, denim, leather, plaid, cow print) are 13 separate uniforms selected with `if`. The house's exterior
-textures (siding, shingles, brick, grass) have no slot, so in ray-traced mode the house shows their tint
-colours.
+value, so the 15 texture slots (`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars, moon,
+cotton, denim, leather, plaid, cow print, book spines, pickets) are 15 separate uniforms selected with
+`if` (together with the instance buffer that is 16 samplers, the minimum every GL 3.3 GPU provides). The
+house's raster-only textures (siding, shingles, brick, grass, window panes, flower bed) have no slot, so in
+ray-traced mode those surfaces show their plain colours.
+
+**Cut-outs.** The picket fence and the porch railings are single boxes whose texture has alpha = 0
+between the pickets ([10](10-textures.md)). For a shape with the cut-out flag, every candidate hit — in
+`traceClosest` and in the shadow rays — samples the texture's alpha at the hit's uv and is ignored when
+`alpha < 0.5`, so rays pass between the pickets and the pickets cast picket-shaped shadows. The alpha is
+read from mip level 0 (`textureLod(…, 0)`): neighbouring pixels of a ray tracer can hit unrelated surfaces,
+so the screen-space derivatives that normally choose the mip level are meaningless at a cut-out's edges.
 
 ## 7. Output
 
@@ -223,12 +320,19 @@ because the window's framebuffer is multisampled (4× MSAA).
 
 ## 8. Cost
 
-Per pixel: one primary ray plus, per bounce, one shadow ray per shadow-casting light (sun/moon, lamp bulb,
-lamp spot), each testing the shapes of every group whose sphere it enters. At 50 % of 1600 × 900 that is
-360 000 primary rays per frame. Measured on the development machine (`--benchmark`, story playing):
-about 9.6 ms per frame (~100 FPS) in the room. During Penny's arrival the house's ~220 exterior and interior shapes are in
-group 0 (always tested), so ray tracing outdoors is about twice as expensive (19.0 ms against 9.3 ms). **−** lowers the
-resolution, **9** the bounce count.
+Per pixel: one primary ray plus, per bounce, at most one shadow ray per shadow-casting light (sun/moon,
+lamp bulb, lamp spot) where that light matters. At 50 % of 1600 × 900 that is 360 000 primary rays per
+frame. Measured on the development machine (`--benchmark`, lighting + shading + textures on, story playing):
+
+| | Per-object groups (before) | BVH + shadow-ray culling |
+|---|---|---|
+| Story, 1600 × 900 | 30.3 ms (33 FPS) | 9.5 ms (105 FPS) |
+| Story, 1920 × 1080 | 46.6 ms (21 FPS) | 14.8 ms (68 FPS) |
+| Penny's arrival (house visible) | 41.1 ms (24 FPS) | 6.3 ms (159 FPS) |
+
+The arrival gains the most: the house's shapes (about 220 before this round, 135 now) used to be in the
+always-tested scenery group, so every ray tested all of them; in the BVH a ray only reaches the few that lie along it. **−** lowers the
+resolution, **9** the bounce count. See [17 — Performance](17-performance.md).
 
 ## 9. Mouse picking and Buzz's laser use the same maths on the CPU
 

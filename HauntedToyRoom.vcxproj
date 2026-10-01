@@ -80,6 +80,11 @@ exit /b 0</Command>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Still unoptimised (/Od) and fully debuggable, but functions marked inline are inlined (/Ob1)
+           and the per-call stack-frame checks (/RTC1) are off: with them every small inline helper was
+           a checked function call, which roughly halved the Debug frame rate. -->
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">

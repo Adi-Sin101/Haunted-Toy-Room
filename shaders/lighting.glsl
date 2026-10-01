@@ -141,13 +141,20 @@ vec3 basicIllumination(vec3 P, float ka, float kd)
 	return result;
 }
 
-// Diffuse + specular of all enabled lights (no shadows).
+// Diffuse + specular of all enabled lights. A light that cannot contribute here (outside its spot cone,
+// attenuated to nothing, or behind the surface) is skipped BEFORE the expensive part: the lamp's 9-sample
+// shadow-map lookup is only done where the lamp can actually light the point.
 void computeLighting(vec3 P, vec3 N, vec3 V, out vec3 diffuse, out vec3 specular)
 {
 	diffuse = vec3(0.0);
 	specular = vec3(0.0);
 	for (int i = 0; i < uLightCount; ++i) {
-		if (uLights[i].enabled == 1)
-			addLight(i, P, N, V, i == 2 ? lampVisibility(P, N) : 1.0, uMaterial.kd, uMaterial.ks, uMaterial.shininess, diffuse, specular);
+		if (uLights[i].enabled == 0 || uLights[i].intensity <= 0.0) continue;
+		vec3 L; float att; float dist;
+		lightVector(i, P, L, att, dist);
+		if (att * uLights[i].intensity < 1e-4 || dot(N, L) <= 0.0) continue;
+		float visibility = i == 2 ? lampVisibility(P, N) : 1.0;
+		if (visibility > 0.0)
+			addLight(i, P, N, V, visibility, uMaterial.kd, uMaterial.ks, uMaterial.shininess, diffuse, specular);
 	}
 }

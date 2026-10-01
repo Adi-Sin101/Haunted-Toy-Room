@@ -74,7 +74,6 @@ Bullseye::Bullseye(SceneNode& parent, Assets& a, const glm::vec3& position, floa
 	head->AddShape("BridleNose", &cube, &saddleMat, {0, 0.02f, 0.52f}, {0.30f, 0.045f, 0.27f});
 	for (float side : {-1.0f, 1.0f}) {
 		head->AddShape("CheekStrap", &cube, &saddleMat, {side * 0.172f, 0.03f, 0.25f}, {0.025f, 0.24f, 0.045f});
-		head->AddShape("BridleBuckle", &sphere, &brass, {side * 0.186f, 0.03f, 0.29f}, glm::vec3(0.045f));
 	}
 
 	// Tail

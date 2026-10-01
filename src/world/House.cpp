@@ -69,13 +69,25 @@ void Window(SceneNode& parent, Assets& a, const glm::vec3& centre, float w, floa
 {
 	const Mesh& cube = a.Cube();
 	Material& frame = a.Mat("house-trim", {0.95f, 0.95f, 0.93f}, 0.25f, 32.0f);
-	Material& glass = a.Mat("house-window-glass", {0.22f, 0.32f, 0.45f}, 0.9f, 96.0f);
-	glass.reflectivity = 0.2f;
+	// The pane's texture holds the glass, the inner frame and the cross mullions (was 3 more cubes + a sill).
+	Material& pane = a.Mat("house-window-pane", glm::vec3(1.0f), 0.9f, 96.0f);
+	pane.texture = a.Named("window-pane");
+	pane.plainColor = {0.22f, 0.32f, 0.45f};
+	pane.reflectivity = 0.2f;
 	parent.AddShape("WindowFrame", &cube, &frame, centre + glm::vec3(0, 0, 0.06f * sign), {w + 0.3f, h + 0.3f, 0.1f});
-	parent.AddShape("WindowGlass", &cube, &glass, centre + glm::vec3(0, 0, 0.12f * sign), {w, h, 0.04f});
-	parent.AddShape("Mullion", &cube, &frame, centre + glm::vec3(0, 0, 0.15f * sign), {0.07f, h, 0.04f});
-	parent.AddShape("Mullion", &cube, &frame, centre + glm::vec3(0, 0, 0.15f * sign), {w, 0.07f, 0.04f});
-	parent.AddShape("Sill", &cube, &frame, centre + glm::vec3(0, -h * 0.5f - 0.18f, 0.18f * sign), {w + 0.5f, 0.08f, 0.3f});
+	parent.AddShape("WindowPane", &cube, &pane, centre + glm::vec3(0, 0, 0.12f * sign), {w, h, 0.04f});
+}
+
+// A picket-fence / railing panel: ONE thin box whose texture has transparent gaps (alpha cut-out), in
+// place of a row of picket cubes and rails. `spacing` = distance between pickets (8 per texture repeat).
+void CutoutPanel(SceneNode& parent, Assets& a, const std::string& name, const glm::vec3& lo, const glm::vec3& hi, float spacing)
+{
+	Material& m = a.Mat("cutout-" + name, {0.97f, 0.97f, 0.95f}, 0.2f, 24.0f);
+	m.texture = a.SlotTexture(Assets::PicketSlot);
+	m.rtTextureSlot = Assets::PicketSlot;
+	m.cutout = true;
+	m.uvScale = {(hi.x - lo.x) / (8.0f * spacing), 1.0f};
+	Box(parent, name.c_str(), a.Cube(), m, lo, hi);
 }
 
 // A tree: trunk cylinder and three overlapping foliage spheres (drawn with the low-detail mesh when far).
@@ -237,10 +249,11 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	Window(*ext, a, {3.2f, Ground + 2.2f, HouseFront}, 3.4f, 1.9f);
 	Material& planter = a.Mat("flower-box", {0.92f, 0.92f, 0.90f}, 0.2f);
 	Box(*ext, "FlowerBox", cube, planter, {1.4f, Ground + 0.75f, HouseFront + 0.1f}, {5.0f, Ground + 1.15f, HouseFront + 0.55f});
-	const glm::vec3 flowerColors[4] = {{0.95f, 0.30f, 0.45f}, {0.98f, 0.95f, 0.95f}, {0.95f, 0.75f, 0.20f}, {0.70f, 0.35f, 0.85f}};
-	for (int i = 0; i < 7; ++i)
-		ext->AddShape("Flowers", &sphere, &a.Mat("flower-" + std::to_string(i % 4), flowerColors[i % 4], 0.1f),
-			{1.65f + i * 0.52f, Ground + 1.25f, HouseFront + 0.33f}, {0.42f, 0.26f, 0.32f});
+	Material& flowers = a.Mat("flower-bed", glm::vec3(1.0f), 0.05f, 8.0f);
+	flowers.texture = a.Named("flower-bed");
+	flowers.plainColor = {0.32f, 0.55f, 0.28f};
+	flowers.uvScale = {3.0f, 1.0f};
+	Box(*ext, "FlowerBed", cube, flowers, {1.5f, Ground + 1.15f, HouseFront + 0.15f}, {4.9f, Ground + 1.42f, HouseFront + 0.5f});
 
 	// Front door (hinged on its left jamb, opens inward) with a small window and a knob
 	Material& doorRed = a.Mat("front-door", {0.70f, 0.50f, 0.38f}, 0.25f, 24.0f);
@@ -270,12 +283,8 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 		Box(*ext, "ColumnBase", cube, brick, {x - 0.35f, porchTop, porchFront - 0.75f}, {x + 0.35f, porchTop + 1.3f, porchFront - 0.05f});
 		Box(*ext, "Column", cube, trim, {x - 0.17f, porchTop + 1.3f, porchFront - 0.57f}, {x + 0.17f, porchRoofY - 1.4f, porchFront - 0.23f});
 	}
-	for (float x0 : {8.7f, 13.3f}) {
-		const float x1 = x0 == 8.7f ? 10.7f : 15.3f;
-		Box(*ext, "RailTop", cube, trim, {x0, porchTop + 0.85f, porchFront - 0.45f}, {x1, porchTop + 0.95f, porchFront - 0.35f});
-		for (float x = x0 + 0.2f; x < x1; x += 0.4f)
-			Box(*ext, "Baluster", cube, trim, {x - 0.04f, porchTop, porchFront - 0.43f}, {x + 0.04f, porchTop + 0.85f, porchFront - 0.37f});
-	}
+	CutoutPanel(*ext, a, "railing-left", {8.7f, porchTop, porchFront - 0.43f}, {10.7f, porchTop + 0.95f, porchFront - 0.37f}, 0.4f);
+	CutoutPanel(*ext, a, "railing-right", {13.3f, porchTop, porchFront - 0.43f}, {15.3f, porchTop + 0.95f, porchFront - 0.37f}, 0.4f);
 	const float porchHalf = 4.6f, porchRise = 1.4f, porchDepth = porchFront + 0.5f - HouseFront;
 	const float porchSlope = std::atan2(porchRise, porchHalf), porchSlab = std::sqrt(porchHalf * porchHalf + porchRise * porchRise);
 	Material& porchShingles = Tinted(a, "porch-shingles", {0.86f, 0.42f, 0.28f}, "shingles", {3, 2}, 0.12f, 12.0f);
@@ -320,14 +329,8 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 
 	Material& picket = a.Mat("picket-white", {0.97f, 0.97f, 0.95f}, 0.2f, 24.0f);
 	const float fenceZ = 21.5f, fenceLeft = gx1 + 0.5f, fenceRight = 26.0f;
-	for (float x0 : {fenceLeft, 13.0f}) {
-		const float x1 = x0 == fenceLeft ? 11.0f : fenceRight;
-		for (float y : {0.45f, 1.05f})
-			Box(*ext, "FenceRail", cube, picket, {x0, Ground + y, fenceZ - 0.04f}, {x1, Ground + y + 0.12f, fenceZ + 0.04f});
-		for (float x = x0 + 0.2f; x < x1; x += 0.7f) {
-			Box(*ext, "Picket", cube, picket, {x - 0.09f, Ground, fenceZ + 0.04f}, {x + 0.09f, Ground + 1.4f, fenceZ + 0.1f});
-		}
-	}
+	CutoutPanel(*ext, a, "fence-left", {fenceLeft, Ground, fenceZ - 0.04f}, {11.0f, Ground + 1.4f, fenceZ + 0.04f}, 0.7f);
+	CutoutPanel(*ext, a, "fence-right", {13.0f, Ground, fenceZ - 0.04f}, {fenceRight, Ground + 1.4f, fenceZ + 0.04f}, 0.7f);
 	for (float x : {11.0f, 13.0f})
 		Box(*ext, "GatePost", cube, picket, {x - 0.15f, Ground, fenceZ - 0.15f}, {x + 0.15f, Ground + 1.75f, fenceZ + 0.15f});
 	Box(*ext, "MailboxPost", cube, a.Mat("tree-bark", {0.36f, 0.25f, 0.16f}, 0.05f), {14.4f, Ground, fenceZ - 0.6f}, {14.55f, Ground + 1.3f, fenceZ - 0.45f});

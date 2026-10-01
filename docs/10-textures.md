@@ -102,6 +102,10 @@ All generators evaluate a function `f(u, v) → colour` at the centre of every t
 | Shingles 256² | 8 rows × 6 tabs, odd rows shifted by half a tab; each tab `0.72 + 0.22·hash(tab, row)`, lighter towards its exposed edge, dark gaps | roofs (tinted terracotta) |
 | Brick 256² | running bond: 8 courses × 4 bricks, odd courses offset by ½; mortar where `frac(8v) < 0.12` or `frac(4u + offset) < 0.04`; each brick `0.75 + 0.25·hash` | foundation, column bases, chimney |
 | Grass 256² | `0.62 + 0.30·fbm(8u, 8v) + 0.18·(noise(180u, 60v) − ½)` — clumps plus fine blades | the lawn (repeated 80 × 80) |
+| Book spines 256² | 12 books across u; book k has height `h = 0.72 + 0.26·hash(k)` (the dark shelf back shows above it), a palette colour, a gold title band at `h − 0.12`, rounded shading `0.75 + 0.25 sin(π·u_book)` and dark gaps | the 4 book boxes (ray-tracer slot 13) |
+| Pickets 256², RGBA | 8 pickets across u: picket where `|frac(8u) − ½| < 0.22` and below a triangular tip `v < 0.80 + 0.14(1 − off/0.22)`; rails at v ∈ [0.24, 0.33] and [0.60, 0.69]; **alpha = 1 on pickets and rails, 0 elsewhere** | fence and porch railing cut-outs (slot 14) |
+| Window pane 128² | white frame where u or v is within 0.06 of the edge, cross mullions where `|u − ½| < 0.03` or `|v − ½| < 0.03`; glass blue graded with v plus a diagonal sheen | house windows (raster only) |
+| Flower bed 256² | leafy green noise; a 10 × 10 grid of cells each holding one blossom (radius 0.28 of a cell, random position and one of 4 colours) | the flower box (raster only) |
 
 **The moon.** For texel (u, v) the shader-like generator first converts the texel to a direction on the
 unit sphere — `longitude = 2πu`, `latitude = (v − ½)π`,
@@ -128,7 +132,39 @@ draw call, a matrix and, for a sphere, up to 1 656 triangles, every frame. A tex
 pixel no matter how much detail it shows, and it is filtered (mipmaps) so it never flickers in the
 distance. These details are now textures (`denim` on the tyres, `woven cotton` on the braid and mane,
 `leather` on the hat band and saddle, `plaid` on the bed). Shapes are kept only where they change the
-**silhouette** (fingers, ears, buttons, the scarf). See [17 — Performance](17-performance.md).
+**silhouette** (ears, the scarf, the hat brim). See [17 — Performance](17-performance.md).
+
+A second round replaced: the 24 book cubes (→ 4 boxes with the book-spine texture), the fence's ~50 picket
+cubes and 4 rails and the porch's ~12 balusters and rails (→ 4 cut-out boxes), the 3 extra cubes of every
+window (→ the window-pane texture), the 7 flower spheres (→ one textured flower bed), plus small painted-on
+details that are now simply left to the clothing textures (shirt buttons, pockets, stripes, handles,
+buckles, seal rings).
+
+### Alpha cut-outs
+
+A picket fence is mostly holes. Instead of modelling every picket, one thin box carries the **Pickets**
+texture whose alpha channel is 1 on the wood and 0 in the gaps. The fragment shader discards the gaps:
+
+```glsl
+vec4 texel = texture(uTexture, vUV * uMaterial.uvScale);
+if (uCutout == 1 && texel.a < 0.5) discard;
+```
+
+`uvScale.x = length / (8 · spacing)` keeps the picket spacing constant whatever the panel's length (8
+pickets per texture repeat): 0.7 units for the fence, 0.4 for the porch balusters. The alpha describes the
+object's *shape*, so the texture is bound even when textures are switched off (only its colour is then
+ignored). Cut-outs are left out of the lamp's shadow map. In the ray tracer the same test rejects hits in
+the gaps ([12 §6](12-ray-tracing.md)), so light passes between the pickets.
+
+*Worked example, the left fence panel.* It runs from x = −9.95 to x = 11.0, length L = 20.95, so
+`uvScale.x = 20.95 / (8 · 0.7) = 3.741` repeats. On the cube's front face `u = x_local + ½` runs 0 … 1 across
+the panel, so the texture coordinate is `u' = 3.741·(x − (−9.95))/20.95`. At x = −9.6 (0.35 from the end)
+`u' = 0.0625`, `frac(8u') = 0.5`: the centre of the first picket (alpha 1). At x = −9.25 (0.70 from the end)
+`frac(8u') = 0.0`: the middle of a gap (alpha 0, discarded). The porch railing, 2 units long with 0.4
+spacing, uses `uvScale.x = 2 / 3.2 = 0.625`.
+
+Mipmapping averages alpha too: far away, pickets and gaps blend to alpha ≈ 0.5 and the fence thins out.
+That is acceptable here; the standard fixes are alpha-to-coverage or scaling alpha per mip level.
 
 The **star texture** is used additively: sky output = `emissive (sky colour) + colour × stars`. By night the
 material colour is white (stars visible); by day it fades to black, so the stars disappear into the blue sky
@@ -169,8 +205,8 @@ poster.
 ## 5. Textures in the ray tracer
 
 The ray tracer computes uv analytically from the object-space hit point with formulas that match the mesh
-UVs exactly (`primitiveUV` in `raytrace.frag`), then samples one of 13 fixed texture slots
+UVs exactly (`primitiveUV` in `raytrace.frag`), then samples one of 15 fixed texture slots
 (`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars, moon, cotton, denim, leather, plaid,
-cow print). The four house textures (siding, shingles, brick, grass) are raster-only: they have no slot,
-so in ray-traced mode the house shows its tint colours. GLSL 3.30 cannot index an array of
+cow print, book spines, pickets). The house textures (siding, shingles, brick, grass, window pane, flower
+bed) are raster-only: they have no slot, so in ray-traced mode those surfaces show their plain colours. GLSL 3.30 cannot index an array of
 samplers with a run-time value, so each slot is a separate uniform and the shader selects with `if`.

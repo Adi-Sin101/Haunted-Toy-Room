@@ -29,9 +29,8 @@ SceneNode* BuildArm(SceneNode* shoulder, Assets& a, const Material& sleeve, cons
 	shoulder->AddShape("Forearm", &a.Cylinder(), &sleeve, {0, -0.41f, 0}, {0.105f, 0.23f, 0.105f});
 	shoulder->AddShape("Cuff", &a.Cylinder(), &sleeve, {0, -0.50f, 0}, {0.125f, 0.06f, 0.125f});
 	SceneNode* palm = shoulder->AddShape("Hand", &a.Sphere(), &hand, { 0, -0.57f, 0 }, {0.13f, 0.14f, 0.09f});
-	// Fingers are sibling shapes so their dimensions remain independent of the palm's scale.
-	for (int finger = 0; finger < 4; ++finger) shoulder->AddShape("Finger", &a.Cylinder(), &hand,
-		{-0.044f + finger * 0.029f, -0.635f, 0.025f}, {0.023f, 0.065f, 0.023f});
+	// The four fingers are one rounded block (a toy's mitten hand): one shape instead of four cylinders.
+	shoulder->AddShape("Fingers", &a.Sphere(), &hand, {-0.002f, -0.63f, 0.022f}, {0.12f, 0.09f, 0.06f});
 	shoulder->AddShape("Thumb", &a.Sphere(), &hand, {0.068f, -0.565f, 0.025f}, {0.06f, 0.065f, 0.05f});
 	return palm;
 }
@@ -130,17 +129,13 @@ Humanoid::Humanoid(SceneNode& parent, Assets& a, const HumanoidStyle& st, const 
 		Material& collar = a.Mat(n + "collar", st.longHair ? glm::vec3(0.95f, 0.69f, 0.22f) : st.shirt, 0.06f);
 		for (float side : {-1.0f, 1.0f}) {
 			torso->AddShape("Collar", &cube, &collar, {side * 0.075f, 0.47f, 0.14f}, {0.13f, 0.1f, 0.025f}, {0, 0, side * 24});
-			pelvis->AddShape("Pocket", &cube, &pants, {side * 0.12f, -0.08f, -0.135f}, {0.14f, 0.12f, 0.018f});
 		}
-		for (int button = 0; button < 4; ++button) torso->AddShape("ShirtButton", &sphere, &brass,
-			{0, 0.12f + button * 0.085f, 0.14f}, glm::vec3(0.024f));
 		Material& scarf = a.Mat(n + "scarf", {0.67f, 0.09f, 0.075f}, 0.04f);
 		torso->AddShape("Neckerchief", &cylinder, &scarf, {0, 0.53f, 0}, {0.17f, 0.055f, 0.17f});
 		torso->AddShape("ScarfKnot", &sphere, &scarf, {0, 0.5f, 0.13f}, glm::vec3(0.065f));
 		torso->AddShape("ScarfTail", &a.Cone(), &scarf, {0.025f, 0.40f, 0.155f}, {0.065f, 0.18f, 0.015f}, {0, 0, 12});
 		if (!st.longHair) {
-			for (int point = 0; point < 5; ++point) torso->AddShape("SheriffBadge", &cube, &brass,
-				{0.14f, 0.39f, 0.148f}, {0.032f, 0.10f, 0.017f}, {0, 0, point * 72.0f});
+			torso->AddShape("SheriffBadge", &cylinder, &brass, {0.14f, 0.39f, 0.145f}, {0.09f, 0.015f, 0.09f}, {90, 0, 0});
 			pelvis->AddShape("Holster", &cube, &belt, {-0.24f, -0.10f, 0}, {0.09f, 0.23f, 0.15f}, {0, 0, -12});
 		}
 	}
@@ -168,7 +163,6 @@ Humanoid::Humanoid(SceneNode& parent, Assets& a, const HumanoidStyle& st, const 
 	for (float side : {-1.0f, 1.0f}) {
 		head->AddShape("Ear", &sphere, &skin, {side * 0.17f, 0.20f, 0}, {0.07f, 0.11f, 0.055f});
 		head->AddShape("Iris", &sphere, &iris, {side * 0.07f, 0.24f, 0.168f}, {0.046f, 0.052f, 0.014f});
-		head->AddShape("EyeCatchlight", &sphere, &white, {side * 0.07f + 0.009f, 0.255f, 0.183f}, glm::vec3(0.011f));
 		head->AddShape("Eyebrow", &cube, &hair, {side * 0.072f, 0.303f, 0.146f}, {0.079f, 0.016f, 0.019f}, {0, 0, side * 9});
 		head->AddShape("Cheek", &sphere, &skin, {side * 0.095f, 0.14f, 0.12f}, {0.09f, 0.075f, 0.06f});
 	}
@@ -271,15 +265,12 @@ Buzz::Buzz(SceneNode& parent, Assets& a, const glm::vec3& position, float headin
 	torso->AddShape("ButtonBlue", &sphere, &blue, { 0.08f, 0.33f, 0.16f }, glm::vec3(0.05f));
 	Material& dark = a.Mat("Buzz-joints", {0.12f, 0.14f, 0.18f}, 0.4f, 40);
 	torso->AddShape("RangerBadge", &cube, &green, {0.08f, 0.42f, 0.17f}, {0.14f, 0.043f, 0.015f});
-	torso->AddShape("ChestVent", &cube, &dark, {-0.072f, 0.42f, 0.166f}, {0.11f, 0.05f, 0.014f});
 	for (SceneNode* shoulder : {leftShoulder, rightShoulder}) {
 		shoulder->AddShape("ShoulderArmor", &sphere, &green, {0, -0.04f, 0}, {0.18f, 0.16f, 0.18f});
-		shoulder->AddShape("ElbowSeal", &cylinder, &dark, {0, -0.30f, 0}, {0.13f, 0.05f, 0.13f});
 		shoulder->AddShape("WristBand", &cylinder, &green, {0, -0.47f, 0}, {0.14f, 0.08f, 0.14f});
 	}
 	for (SceneNode* hip : {leftHip, rightHip}) {
 		hip->AddShape("KneeArmor", &sphere, &green, {0, -0.34f, 0.06f}, {0.16f, 0.16f, 0.12f});
-		hip->AddShape("AnkleSeal", &cylinder, &dark, {0, -0.60f, 0}, {0.19f, 0.045f, 0.19f});
 	}
 
 	// Wings: a joint on the back whose X scale opens / folds both wings

@@ -59,6 +59,16 @@ renderer already skipped every shape whose bounding sphere lies completely outsi
 frustum planes (`Frustum` in `Renderer.cpp`, [17](17-performance.md)). After projection the GPU computes
 each triangle's signed screen area ([03](03-primitives.md)) and drops back faces (`glCullFace(GL_BACK)`).
 
+**Front-to-back order and early-z.** The depth test can run *before* the fragment shader: a fragment
+behind something already in the depth buffer is discarded without being shaded. The renderer therefore
+draws opaque shapes **front to back** (sorted by distance in 0.5-unit slices, and by material and mesh
+inside a slice to limit state changes). Near toys are drawn first, and the walls and floor behind them skip
+the full lighting computation wherever they are covered. Measured: the lit raster frame went from 6.9 ms
+to 4.1 ms together with the lighting early-outs of [08 §2.3](08-illumination.md).
+
+**Cut-outs.** Fragments of a cut-out material (fence, porch railing) whose texture alpha is below 0.5 are
+removed with `discard`, so one box shows a row of pickets ([10](10-textures.md)).
+
 ## 2. Rasterisation and interpolation
 
 For every pixel centre p inside a projected triangle (v0, v1, v2) the rasteriser computes screen-space

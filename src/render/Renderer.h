@@ -80,7 +80,7 @@ private:
 	// Uniform locations used for every draw call, looked up once instead of by name per draw.
 	struct DrawUniforms {
 		GLint model = -1, normalMatrix = -1, highlight = -1;
-		GLint color = -1, ka = -1, kd = -1, ks = -1, shininess = -1, emissive = -1, opacity = -1, unlit = -1, uvScale = -1;
+		GLint color = -1, ka = -1, kd = -1, ks = -1, shininess = -1, emissive = -1, opacity = -1, unlit = -1, uvScale = -1, cutout = -1;
 		void Resolve(const Shader& shader);
 	};
 	void ApplyMaterial(const DrawUniforms& u, const Material& m, const RenderSettings& settings) const;

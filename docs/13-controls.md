@@ -108,7 +108,7 @@ pausing the mission. **G** hides the interface and center aiming marker.
 ## Rendering settings
 
 The small Settings button at the top right opens four independent switches: Lighting, Shading,
-Ray tracing and Textures. All four start off. The backtick key opens or closes the menu; G hides or restores
+Ray tracing and Textures. All four start on. The backtick key opens or closes the menu; G hides or restores
 the entire interface, including its settings button. Toggling rendering does not pause the mission.
 Shift+F2 toggles surface shading; F2 enables it or cycles the retained shading model. F3 and F4 still
 toggle textures and ray tracing. Lighting off shows plain material colours. Shading off skips face
@@ -145,7 +145,7 @@ driven by the arrival.
 ```
 HauntedToyRoom.exe [--hour 21.5] [--select N] [--focus] [--orbit yaw,pitch,dist] [--cam x,y,z,tx,ty,tz]
                    [--mount] [--raytrace] [--shading 0..3] [--wireframe] [--normals] [--pause] [--story]
-                   [--capture file.bmp] [--frames 90] [--benchmark 400] [--intro] [--no-intro]
+                   [--capture file.bmp] [--frames 90] [--benchmark 400] [--intro] [--no-intro] [--no-raytrace]
 ```
 
 `--select` takes the 0-based object index (0 Woody … 7 Ghost). With `--capture`, the clock is paused, the
@@ -156,7 +156,8 @@ exits. Example:
 HauntedToyRoom.exe --hour 12 --select 2 --mount --orbit 60,15,5 --capture mounted.bmp
 ```
 
-`--no-intro` starts directly with the story (Penny is already on the bed); `--intro` keeps Penny's arrival
+`--no-raytrace` starts in raster mode (ray tracing is on by default, like lighting, shading and
+textures). `--no-intro` starts directly with the story (Penny is already on the bed); `--intro` keeps Penny's arrival
 in a scripted capture (captures skip it otherwise). Example: `--intro --no-hud --story-step 0.05 --frames 160
 --capture garden.bmp` shows Penny on the garden path 8 s into the arrival.
 

@@ -161,6 +161,7 @@ lamp (manually or in edit mode) moves the light cone.
 ## 7. Selection ownership
 
 `AddSelectable` tags a whole subtree with an `ownerId` (`SceneNode::SetOwner`). The renderer highlights all
-draw items of the selected owner, picking maps a hit part back to its owner, and the ray tracer groups
-parts by owner for its bounding spheres. When Jessie is re-parented her nodes keep her owner id, so she is
+draw items of the selected owner and picking maps a hit part back to its owner. (The ray tracer no longer
+groups parts by owner: its bounding volume hierarchy is built over all parts, [12 §4.1](12-ray-tracing.md).)
+When Jessie is re-parented her nodes keep her owner id, so she is
 still selected/highlighted as Jessie while riding.

@@ -44,10 +44,6 @@ RCCar::RCCar(SceneNode& parent, Assets& a, const glm::vec3& position, float head
 	chassis->AddShape("Spoiler", &cube, &trim, { 0, 0.7f, -0.64f }, { 0.9f, 0.04f, 0.2f });
 	chassis->AddShape("Antenna", &cylinder, &trim, { 0.25f, 0.95f, -0.4f }, { 0.02f, 0.5f, 0.02f });
 	chassis->AddShape("AntennaTip", &sphere, &paint, {0.25f, 1.20f, -0.4f}, glm::vec3(0.055f));
-	for (float side : {-1.0f, 1.0f}) {
-		chassis->AddShape("RacingStripe", &cube, &hub, {side * 0.14f, 0.537f, 0.40f}, {0.08f, 0.014f, 0.55f});
-		chassis->AddShape("DoorHandle", &cube, &hub, {side * 0.409f, 0.48f, -0.17f}, {0.012f, 0.025f, 0.09f});
-	}
 	chassis->AddShape("Grille", &cube, &trim, {0, 0.39f, 0.706f}, {0.38f, 0.1f, 0.016f});
 
 	for (int i = 0; i < 2; ++i) {

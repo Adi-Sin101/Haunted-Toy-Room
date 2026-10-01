@@ -1107,6 +1107,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		else if (a == "--focus") o.focus = true;
 		else if (a == "--mount") o.mount = true;
 		else if (a == "--raytrace") o.rayTrace = true;
+		else if (a == "--no-raytrace") o.noRayTrace = true;
 		else if (a == "--lighting") o.lighting=true;
 		else if (a == "--textures") o.textures=true;
 		else if (a == "--render-settings") o.renderSettings=true;
@@ -1154,6 +1155,7 @@ void ToyRoomApp::ApplyLaunchOptions()
 	if (!launch.capture.empty() && !launch.story) { story.enabled=false; story.Pause(); }
 	environment.hauntingEnabled = false;
 	if (launch.rayTrace) settings.rayTracing = true;
+	if (launch.noRayTrace) settings.rayTracing = false;
 	if (launch.shading >= 0 && launch.shading <= 3) { settings.shadingEnabled=true; settings.shading = static_cast<ShadingMode>(launch.shading); }
 	settings.lighting=launch.lighting; settings.textures=launch.textures; renderSettingsOpen=launch.renderSettings;
 	settings.wireframe = launch.wireframe;

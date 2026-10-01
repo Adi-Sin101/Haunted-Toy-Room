@@ -290,6 +290,71 @@ Image Grass(int size)
 	});
 }
 
+// 12 books across u. Book k has a random height h (fraction of the shelf), colour and a gold title band;
+// above its top the shelf's dark back shows. Thin dark lines separate the spines.
+Image BookSpines(int size)
+{
+	const glm::vec3 palette[6] = {{0.55f, 0.12f, 0.10f}, {0.10f, 0.22f, 0.50f}, {0.80f, 0.62f, 0.12f},
+		{0.12f, 0.40f, 0.20f}, {0.45f, 0.16f, 0.45f}, {0.80f, 0.40f, 0.12f}};
+	return Generate(size, size, [&](float u, float v) {
+		const float books = 12.0f;
+		const float k = std::floor(u * books);
+		const float bu = u * books - k;
+		const float h = 0.72f + 0.26f * Hash(k, 3.0f);
+		if (v > h) return glm::vec3(0.10f, 0.07f, 0.05f);                      // shelf back above the book
+		if (bu < 0.05f || bu > 0.95f) return glm::vec3(0.05f);                 // gap between spines
+		glm::vec3 c = palette[static_cast<int>(Hash(k, 9.0f) * 6.0f) % 6];
+		if (std::abs(v - (h - 0.12f)) < 0.025f) c = glm::vec3(0.90f, 0.75f, 0.35f); // gold title band
+		const float round = 0.75f + 0.25f * std::sin(bu * glm::pi<float>());   // rounded spine shading
+		return c * round * (0.92f + 0.08f * ValueNoise(u * 90.0f, v * 30.0f));
+	});
+}
+
+// 8 pickets across u with pointed tops, two horizontal rails; everything else fully transparent.
+Image Pickets(int size)
+{
+	Image img(size, size);
+	for (int y = 0; y < size; ++y) {
+		for (int x = 0; x < size; ++x) {
+			const float u = (static_cast<float>(x) + 0.5f) / size, v = (static_cast<float>(y) + 0.5f) / size;
+			const float cell = u * 8.0f - std::floor(u * 8.0f);
+			const float off = std::abs(cell - 0.5f);                            // distance from the picket's centre line
+			const bool picket = off < 0.22f && v < 0.80f + 0.14f * (1.0f - off / 0.22f); // triangular tip
+			const bool rail = (v > 0.24f && v < 0.33f) || (v > 0.60f && v < 0.69f);
+			const float shade = picket ? 0.97f - 0.12f * (off / 0.22f) : 0.88f;
+			img.Set(x, y, glm::vec3(shade), (picket || rail) ? 1.0f : 0.0f);
+		}
+	}
+	return img;
+}
+
+Image WindowPane(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const bool frame = u < 0.06f || u > 0.94f || v < 0.06f || v > 0.94f;
+		const bool mullion = std::abs(u - 0.5f) < 0.03f || std::abs(v - 0.5f) < 0.03f;
+		if (frame || mullion) return glm::vec3(0.95f, 0.95f, 0.93f);
+		// glass: darker at the bottom, a soft diagonal sky reflection
+		const float sheen = std::max(0.0f, 1.0f - std::abs((u + v) - 1.2f) * 4.0f) * 0.25f;
+		return glm::mix(glm::vec3(0.16f, 0.24f, 0.36f), glm::vec3(0.32f, 0.44f, 0.60f), v) + glm::vec3(sheen);
+	});
+}
+
+Image FlowerBed(int size)
+{
+	const glm::vec3 blossoms[4] = {{0.95f, 0.30f, 0.45f}, {0.98f, 0.95f, 0.95f}, {0.95f, 0.75f, 0.20f}, {0.70f, 0.35f, 0.85f}};
+	return Generate(size, size, [&](float u, float v) {
+		glm::vec3 c = glm::vec3(0.20f, 0.45f, 0.18f) * (0.75f + 0.5f * ValueNoise(u * 60.0f, v * 60.0f));
+		const float cells = 10.0f;
+		const float cx = std::floor(u * cells), cy = std::floor(v * cells);
+		const glm::vec2 centre(Hash(cx, cy) * 0.6f + 0.2f, Hash(cy, cx + 3.0f) * 0.6f + 0.2f);
+		const glm::vec2 local(u * cells - cx, v * cells - cy);
+		if (glm::length(local - centre) < 0.28f)
+			c = blossoms[static_cast<int>(Hash(cx + 1.0f, cy + 7.0f) * 4.0f) % 4];
+		return c;
+	});
+}
+
 // Used only if assets/textures/poster.bmp cannot be loaded.
 Image PosterFallback(int width, int height)
 {

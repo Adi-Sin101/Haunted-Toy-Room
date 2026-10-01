@@ -66,9 +66,14 @@ Everything is made from the five primitives:
 * **Roof slabs**, **gables** and **door hinges** are rotated and non-uniformly scaled cubes — see
   [04 §4.2](04-transformations.md) for the matrices (the triangular gables are a 45°-rotated cube stretched
   by its parent joint).
-* **Windows** on the facade are decorative: frame, glass (reflective in ray tracing), cross mullions and sill.
-* **Garden**: lawn plane, path, pavement, street, ~50 white pickets and 4 rails, gate posts, mailbox, shrubs,
-  five trees (trunk + three foliage spheres each), and a flower box with seven flowers.
+* **Windows** on the facade are decorative: a white frame box and one pane box whose texture draws the
+  glass, inner frame and cross mullions (reflective in ray tracing).
+* **Garden**: lawn plane, path, pavement, street, the white picket fence as two **alpha cut-out** panels
+  (one box each; the texture's transparent gaps make the pickets, [10](10-textures.md)), gate posts,
+  mailbox, shrubs, five trees (trunk + three foliage spheres each), and a flower box with a textured flower
+  bed. The porch railings are cut-out panels too.
+* The house went from about 220 to 135 shapes this way (fence ~55 → 2, railing ~12 → 2, windows 35 → 14,
+  flowers 7 → 1).
 * **Interior**: corridor floor, runner rug, ceiling with a lamp, walls (one-sided planes facing inward),
   stair landing, 18 solid step boxes inset 2 cm from the side walls (so their faces never coincide with the
   wall planes, which would flicker — z-fighting), a brass handrail tilted along the slope, the stairwell walls
@@ -93,7 +98,8 @@ HouseInterior.visible = the arrival is still running (the stair door shuts behin
 A hidden subtree is skipped by both the world-matrix update and the draw list ([06](06-scene-graph-hierarchy.md)),
 so during the story the house costs nothing but its three doors. Without this the ground floor's large walls
 would be shaded behind the room's walls every frame (overdraw), and in ray tracing they would be tested by
-every ray (they belong to the always-tested scenery group).
+every ray they could reach. (Since the ray tracer uses a BVH a ray only reaches shapes along its path,
+but hidden shapes still cost box tests and the per-frame BVH build.)
 
 ## 2. Penny (`class Cat : Character`)
 

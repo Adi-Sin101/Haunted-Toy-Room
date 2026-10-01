@@ -14,12 +14,16 @@ uniform vec3 uCameraPos;
 uniform sampler2D uTexture;
 uniform int uUseTexture;
 uniform float uHighlight;
+uniform int uCutout;       // 1: texture alpha < 0.5 is a hole (fence, railing)
 
 out vec4 FragColor;
 
 void main()
 {
-	vec3 texColor = uUseTexture == 1 ? texture(uTexture, vUV * uMaterial.uvScale).rgb : vec3(1.0);
+	vec4 texel = texture(uTexture, vUV * uMaterial.uvScale);
+	if (uCutout == 1 && texel.a < 0.5)
+		discard;
+	vec3 texColor = uUseTexture == 1 ? texel.rgb : vec3(1.0);
 	vec3 albedo = uMaterial.color * texColor;
 
 	if (uMaterial.unlit == 1) {

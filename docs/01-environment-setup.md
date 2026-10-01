@@ -105,6 +105,11 @@ automatically without editing the project file.
 **VS Code:** open the project folder, then press **F5** and select a Haunted Toy Room launch configuration. The workspace tasks build the matching x64 configuration first. Use **Ctrl+Shift+B** to build Debug.
 
 **Visual Studio:** open `HauntedToyRoom.slnx`, pick `Debug | x64` or `Release | x64`, press **F5**.
+
+The Debug configuration is unoptimised (`/Od`) and fully debuggable, but it inlines functions marked
+`inline` (`/Ob1`) and does not add the `/RTC1` stack-frame checks to every call. Without these two settings
+every small helper (most GLM vector operations) was a checked function call, which made the Debug frame
+time about twice as long. Release is still about 2–3× faster than Debug.
 The debugger's working directory is the output folder, where the post-build step has copied `shaders/`
 and `assets/`.
 

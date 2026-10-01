@@ -341,24 +341,26 @@ would cost at full detail (measured from the real draw list):
 
 | Object | Shapes | Triangles at full detail |
 |---|---|---|
-| Room and scenery during the story (walls, desk, bed, bookcase, curtains, window, hall, doors, contact shadows…) | 117 | 15 798 |
-| … during Penny's arrival (+ house exterior, garden, ground floor, stairs) | 337 | 70 170 |
+| Room and scenery during the story (walls, desk, bed, bookcase, curtains, window, hall, doors…) | 97 | 15 558 |
+| … during Penny's arrival (+ house exterior, garden, ground floor, stairs) | 232 | 57 402 |
 | Penny the cat | 34 | 34 656 |
-| Woody | 80 | 57 932 |
-| Jessie | 77 | 61 300 |
-| Bullseye | 46 | 31 576 |
-| Buzz | 89 | 65 376 |
-| RC Car | 36 | 6 408 |
+| Woody | 62 | 50 328 |
+| Jessie | 63 | 53 628 |
+| Bullseye | 44 | 28 264 |
+| Buzz | 76 | 63 828 |
+| RC Car | 32 | 6 360 |
 | Ball | 1 | 1 656 |
 | Desk lamp | 5 | 3 632 |
 | Doorway crate + 6 wooden blocks | 7 | 12 each |
 
-During the story everything at full detail is ≈ 278 000 triangles; the frame actually draws about
-28 000 – 50 000 because
+(In raster mode with lighting on, 5 flattened contact-shadow spheres are added to the scenery.) During the
+story everything at full detail is ≈ 258 000 triangles in 421 shapes (it was 278 000 in 492 shapes before
+the last round of texture replacements); the frame actually draws about 28 000 – 50 000 because
 of level of detail, frustum culling and shadow-pass culling ([17](17-performance.md)). A humanoid is
-mostly **spheres**: Woody has 80 shapes, of which 33 are spheres (skull, eyes, pupils, irises, ears, cheeks,
-nose, hair, knees, toes, shoulder/elbow/hand balls, thumbs, buttons, scarf knot), each worth 1 656 triangles
-at full detail — 33 × 1 656 = 54 648 of his 57 932 triangles (94 %). That is why a small sphere must not use
+mostly **spheres**: Woody has 62 shapes, of which 29 are spheres (skull, eyes, pupils, irises, ears, cheeks,
+nose, chin, hair, knees, toes, shoulder/elbow/hand balls, thumbs, finger blocks, scarf knot), each worth
+1 656 triangles at full detail — 29 × 1 656 = 48 024 of his 50 328 triangles (95 %); his 16 cylinders,
+16 cubes and 1 cone add 2 048 + 192 + 64. That is why a small sphere must not use
 the full mesh.
 
 *Check, the desk lamp:* Base cylinder 128 + Arm cylinder 128 + Elbow sphere 1 656 + Shade cone 64 +
@@ -393,6 +395,11 @@ not use triangles at all — is unaffected: it always intersects the exact analy
 
 * 11 VBOs / EBOs for the entire scene; nothing is re-uploaded per frame.
 * `GL_UNSIGNED_INT` indices, interleaved attributes (one buffer, good cache locality).
+* What a texture swap saves, in this file's terms: one shelf's 6 book cubes were 6 × 12 = 72 triangles,
+  6 draw calls, 6 matrices and 6 ray-tracer intersection tests per ray; the textured box is 12 triangles and
+  1 of each (all 4 shelves: 288 → 48 triangles, 24 → 4 shapes). The fence's ~50 picket cubes + 4 rails
+  (≈ 650 triangles, ~55 shapes) are now 2 boxes (24 triangles). For spheres the saving is bigger: each
+  removed shirt button or eye glint was up to 1 656 triangles.
 * Surface detail that used to be modelled with extra shapes (stitching, braid beads, tyre treads,
   quilt seams, studs, mane strands — over 200 shapes) now comes from textures
   ([10 — Textures](10-textures.md)): a texture costs the same however much detail it shows, a shape

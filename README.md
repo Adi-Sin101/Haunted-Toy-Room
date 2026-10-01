@@ -27,7 +27,7 @@ You can also open `HauntedToyRoom.slnx` in Visual Studio and press **F5**.
 
 ## First things to try
 
-Lighting, surface shading, ray tracing and textures currently start **off** for a plain preview.
+Lighting, surface shading, ray tracing and textures all start **on**.
 Click the small **Settings** button at the top right, or press the **backtick (`)** key, to toggle each
 feature independently. **G** hides the button, menu and the rest of the interface; press G again to show
 them. All rendering implementations remain available. With lighting on and shading off, basic light

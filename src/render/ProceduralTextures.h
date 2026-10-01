@@ -25,6 +25,11 @@ Image Siding(int size = 256);         // horizontal lap boards with a shadow lin
 Image Shingles(int size = 256);       // staggered rows of roof tabs
 Image Brick(int size = 256);          // running-bond bricks with mortar joints
 Image Grass(int size = 256);          // fine blades of lawn
+// Textures that replace modelled detail (each used to be many separate shapes):
+Image BookSpines(int size = 256);     // a row of 12 book spines of varied height and colour (was 6 cubes per shelf)
+Image Pickets(int size = 256);        // white pickets + two rails with ALPHA = 0 between them (cut-out; was ~50 cubes)
+Image WindowPane(int size = 128);     // glass with a white frame and cross mullions (was 4 cubes per window)
+Image FlowerBed(int size = 256);      // leaves with coloured blossoms (was 7 spheres)
 
 // Hash-based value noise in [0, 1], smoothly interpolated (used for wood grain, flicker, stars).
 float ValueNoise(float x, float y);

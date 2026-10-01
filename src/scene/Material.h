@@ -29,4 +29,5 @@ struct Material {
 	const Texture* texture = nullptr;
 	glm::vec2 uvScale{ 1.0f };    // texture repeat count
 	int rtTextureSlot = -1;       // which texture the ray tracer samples (-1 = none)
+	bool cutout = false;          // texture alpha < 0.5 cuts holes (fence pickets, railings); applies even with textures off
 };
