@@ -14,7 +14,9 @@ delta time `dt`, so speeds are in units per **second**, independent of the frame
 * `hour` runs 0 … 24. One full day lasts `dayLengthSeconds = 150` real seconds × `timeScale`.
 * Keys: **P** pause, **[** / **]** halve / double the speed (0.25× … 32×), **,** / **.** scrub backward /
   forward.
-* The mission starts at midnight and advances to 08:00 during its Morning scene.
+* Penny's arrival runs the clock from 16:18 to midnight while she walks into the house
+  ([18](18-house-and-penny.md)); the mission then starts at midnight and advances to 08:00 during its
+  Morning scene.
 
 **Sun and moon.** Angle `a = (hour − 6) / 12 · π` (0 at 06:00, π at 18:00). Both bodies move on a half
 ellipse behind the window:
@@ -23,6 +25,11 @@ ellipse behind the window:
 position(angle) = skyCentre + ( −cos(angle)·3.2,  sin(angle)·3.1,  0 )
 sun  = position(a)          moon = position(a + π)
 ```
+
+From the garden (during the arrival) the sun is drawn on a much larger arc in front of the sky backdrop,
+`OutdoorSunPosition = (−60 cos a, 4 + 55 sin a, −37)`, so it can be seen above the house's roof.
+The neighbouring houses' silhouettes are recoloured with the daylight
+(`mix((0.035, 0.045, 0.085), (0.50, 0.52, 0.60), daylight)`).
 
 The directional light points from the visible body to the room centre. `daylight =
 smoothstep(−0.1, 0.25, sin a)` blends ambient light, clear colour, sky colour and star visibility; an extra
@@ -75,7 +82,14 @@ position   += (sin heading, 0, cos heading) · speed · dt
 * **Transitions** (mount / dismount) interpolate position and heading over 0.6–0.7 s with smoothstep
   easing and a small hop arc `sin(πt)·0.4`, so nothing teleports.
 
-## 6. The Midnight Mission (StoryDirector)
+## 6. Penny's arrival (prologue)
+
+Before the story, Penny the cat walks from the street into the house, up the stairs and onto the bed, with
+a chase camera, opening doors and a sunset — see [18](18-house-and-penny.md). Her trot, sitting and
+sleeping poses blend with exponential easing; while she watches the story her head turns towards the toy
+that is acting, and in the Morning scene she curls up asleep. **Y** skips the arrival.
+
+## 7. The Midnight Mission (StoryDirector)
 
 Default playback follows seven coordinated scenes: Discovery, Moving Outside, Clearing the Path,
 Reaching the Car, Activating the Car, Returning Home and Morning. The right-side doorway connects

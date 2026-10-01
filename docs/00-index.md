@@ -41,6 +41,12 @@ New: [Physics, scene detail and on-screen controls](15-physics-and-interface.md)
 Also: [project-context.md](project-context.md) (original idea and requirements) and
 [implementation-plan.md](implementation-plan.md) (the plan this implementation follows).
 
+**The prologue.** The program opens in front of a yellow two-storey house in the afternoon sun. Penny,
+a white cat with ginger patches, walks in through the front door, climbs the stairs and settles on the bed
+in the toy room; then the Midnight Mission starts. **Y** skips it.
+
+![The house](images/house-exterior.png)
+
 ## Quick start
 
 1. Open `HauntedToyRoom.slnx` in Visual Studio 2026, choose `Release | x64`, press **F5**.
@@ -74,3 +80,5 @@ Also: [project-context.md](project-context.md) (original idea and requirements) 
 
 - [16 - The Midnight Mission](16-midnight-mission.md): seven coordinated scenes, manual takeover, car activation and the compact interface.
 - [17 - Performance](17-performance.md): measured bottlenecks, level of detail, culling and why surface detail belongs in textures.
+- [18 - The house, Penny the cat and the arrival](18-house-and-penny.md): the house around the toy room, Penny's model and poses, the prologue's route, doors, camera and sunset.
+- [19 - Rendering mathematics](19-rendering-mathematics.md): one frame formula by formula, from input to pixel, with links to every worked example.

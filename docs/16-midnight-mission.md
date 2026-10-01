@@ -2,6 +2,10 @@
 
 The default automatic mode performs one complete mission, then holds the ending. It replaces independent patrol loops. Scene transitions depend on arrival and interaction state, rather than teleporting toys after arbitrary delays.
 
+**Prologue.** Before Scene 1, Penny the cat walks home from the street, through the front door, up the
+stairs and into the toy room, and jumps onto the bed to watch; the sun sets on the way
+([18](18-house-and-penny.md)). **Y** skips it.
+
 | Scene | Action and transition |
 |---|---|
 | 1. Discovery | Midnight. Woody looks toward the lost car beyond the obstructed doorway. |
@@ -10,7 +14,7 @@ The default automatic mode performs one complete mission, then holds the ending.
 | 4. Reaching the Car | Woody walks through the doorway; Bullseye carries Jessie; Buzz flies beside them. All three must arrive before activation. |
 | 5. Activating the Car | Enter activates it, or unattended playback activates after three seconds. Its headlights illuminate and its wheels rotate as it follows a predefined route home. The friends wait clear of the route. |
 | 6. Returning Home | The car parks. Woody walks home, Bullseye carries Jessie home and she dismounts, and Buzz returns and lands. |
-| 7. Morning | Dawn brightens over twelve seconds, the lamp switches off, and every toy returns to its saved original pose. The camera pulls back, then holds the ending. |
+| 7. Morning | Dawn brightens over twelve seconds, the lamp switches off, and every toy returns to its saved original pose. Penny curls up asleep on the bed. The camera pulls back, then holds the ending. |
 
 ## Taking control
 

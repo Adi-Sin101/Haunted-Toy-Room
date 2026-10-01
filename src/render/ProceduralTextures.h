@@ -20,6 +20,11 @@ Image Rug(int size = 256);            // concentric bands
 Image PosterFallback(int width = 256, int height = 384);
 Image Moon(int width = 1024, int height = 512);
 Image Fabric(int pattern, int size = 256); // cotton, denim, leather, plaid, cow print
+// House exterior (greyscale detail, tinted by the material colour):
+Image Siding(int size = 256);         // horizontal lap boards with a shadow line under each board
+Image Shingles(int size = 256);       // staggered rows of roof tabs
+Image Brick(int size = 256);          // running-bond bricks with mortar joints
+Image Grass(int size = 256);          // fine blades of lawn
 
 // Hash-based value noise in [0, 1], smoothly interpolated (used for wood grain, flicker, stars).
 float ValueNoise(float x, float y);

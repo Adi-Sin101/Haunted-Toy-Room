@@ -17,12 +17,15 @@
 #include "scene/SceneNode.h"
 #include "world/Environment.h"
 #include "world/StoryDirector.h"
+#include "world/House.h"
+#include "world/PennyArrival.h"
 
 class Character;
 class Humanoid;
 class Buzz;
 class Bullseye;
 class RCCar;
+class Cat;
 
 // Everything the user can select (number keys or mouse click) and inspect.
 struct Selectable {
@@ -63,7 +66,8 @@ struct LaunchOptions {
 	int frames = 90;
 	float storyStep = 0.0f;
 	int storySteps = 1;
-	int benchmark = 0;     // run this many frames without v-sync, print timings, then quit
+	int benchmark = 0;
+	bool intro = false, noIntro = false; // force / skip Penny's arrival (captures skip it unless --intro)     // run this many frames without v-sync, print timings, then quit
 
 	static LaunchOptions Parse(int argc, char* argv[]);
 };
@@ -118,6 +122,10 @@ private:
 	std::vector<Light> lights;
 	Environment environment;
 	StoryDirector story;
+	HouseRig house;
+	PennyArrival arrival;
+	std::unique_ptr<Cat> penny; // not in `characters`: the story and the collision solver ignore her
+	int pennyId = -1;
 	PhysicsWorld physics;
 	Hud hud;
 	std::vector<SceneNode*> contactShadows;

@@ -36,13 +36,17 @@ characters, characters nothing about the application.
 | `math/Transform3D` | hand-written matrices | `translate`, `rotateX/Y/Z`, `rotateAxis`, `shear`, `reflect`, `lookAt`, `perspective`, `normalMatrix` |
 | `math/Ray` | ray–primitive intersection (CPU) | `RayIntersect::Object` |
 | `scene/SceneNode` | the hierarchy, world matrices | `AddChild`, `AddShape`, `AttachChild`, `DetachChild`, `UpdateWorld` |
-| `render/Assets` | 5 meshes, all textures, all materials (by name) | `Load`, `Mat`, `SlotTexture` |
-| `render/Renderer` | draw list, raster passes, debug overlay | `Collect`, `Render`, `RenderDebug`, `UploadLights` |
+| `render/Assets` | 5 shapes × level of detail (11 meshes), all textures, all materials (by name) | `Load`, `Mat`, `SlotTexture`, `Named` |
+| `render/Renderer` | draw list (LOD choice), frustum culling, lamp shadow map, sorted raster passes, debug overlay, stats | `Collect`, `Render`, `RenderDebug`, `UploadLights`, `Stats` |
 | `render/RayTracer` | instance buffer, FBO, trace + present | `Render` |
 | `characters/Character` | movement, walk phase, autopilot, transitions | `Drive`, `Stop`, `SteerTowards`, `StartTransition` |
 | `world/Room` | building the room and props | `BuildRoom` → `RoomRig` handles |
 | `world/Environment` | clock, sky, lamp, ball, ghost | `Update`, `Scrub`, `PushBall`, `DriveLamp` |
 | `world/StoryDirector` | coordinated seven-scene Midnight Mission and car autopilot | `Init`, `Restart`, `Update`, `Pause` |
+| `world/House` | the house around the toy room: exterior, ground floor, stairs, doors | `BuildHouse` → `HouseRig` handles |
+| `world/PennyArrival` | the prologue: Penny's route, doors, chase camera, sunset clock, visibility switching | `Init`, `Restart`, `Skip`, `Update` |
+| `world/PhysicsWorld` | collision proxies, swept movement, camera constraint, block simulation, laser | `ConstrainActor`, `MoveCamera`, `Update`, `FireLaser` |
+| `characters/Cat` | Penny: model, trot / sit / sleep poses, look-at head | `Animate`, `SetPose`, `LookAt` |
 
 ## 3. Ownership and lifetime
 
@@ -60,9 +64,14 @@ characters, characters nothing about the application.
 
 | Decision | Benefit |
 |---|---|
-| 5 shared meshes for the whole scene | tiny GPU memory, no per-object buffers |
+| 5 shared shapes (11 meshes with level of detail) for the whole scene | ≈ 82 KB of geometry, no per-object buffers |
+| Level of detail by screen size | small / distant spheres drawn with 100 – 396 triangles instead of 1 656 |
+| Frustum culling of bounding spheres | off-screen shapes are never submitted |
+| Opaque draws sorted by material, then mesh | material uniforms, texture and VAO bound once per group |
+| Hidden subtrees skipped (house exterior / ground floor) | ~220 shapes cost nothing during the story |
+| Physics: cached furniture boxes, broad phase, ≤ 6 steps per frame | no slow-frame feedback loop |
 | Static VBO/EBO uploaded once | no per-frame buffer traffic (only the debug lines and ray-tracer instance buffer are dynamic) |
-| Cached uniform locations | no string lookups in the driver per draw |
+| Cached uniform locations (per-draw uniforms resolved once into `DrawUniforms`) | no string lookups per draw |
 | Material upload skipped when consecutive items share a material | fewer uniform calls |
 | Reused `std::vector`s (draw list, instance buffer, debug lines) | no per-frame heap allocation |
 | One world-matrix pass per frame | each matrix computed once, shared by raster, ray tracer, picking and lights |

@@ -19,8 +19,15 @@ vec3 texColor = texture(uTexture, vUV * uMaterial.uvScale).rgb;
 vec3 albedo   = uMaterial.color * texColor;          // colour × texture (tinting)
 ```
 
-`uvScale` repeats the texture: the floor uses (4, 3), so the 4-plank image repeats 4 × 3 times over the
-16 × 12 floor, keeping planks the right size.
+`uvScale` repeats the texture: the floor uses (8, 4), so the 4-plank image repeats 8 × 4 times over the
+20 × 18 floor (one repeat = 2.5 × 4.5 units), keeping planks the right size. With `GL_REPEAT`, a
+coordinate u > 1 wraps to `u − floor(u)`.
+
+**Textures are off by default** (Settings panel or **F3** turns them on). A material can define a
+`plainColor` used while textures are off (the wood floor becomes a flat brown, the wallpaper a flat blue);
+otherwise its colour is used on its own. Because the colour multiplies the texture, a greyscale texture is
+*tinted* by the material colour: one fabric image serves as Woody's yellow plaid shirt, Jessie's white
+shirt, Bullseye's brown coat and Penny's fur.
 
 | Primitive | UV mapping ([03](03-primitives.md)) |
 |---|---|
@@ -51,6 +58,17 @@ glGenerateMipmap(GL_TEXTURE_2D);
 * **Minification** (far away, many texels per pixel): **mipmaps** — pre-shrunk copies at ½, ¼, … size.
   Trilinear filtering picks the two nearest mip levels and blends them. Without it the distant floor planks
   shimmer (aliasing).
+* **Bilinear filtering.** For texture coordinates (u, v) on a W × H image, the sample position is
+  `(x, y) = (u·W − ½, v·H − ½)`; with `i = floor(x)`, `j = floor(y)`, `fx = x − i`, `fy = y − j`:
+  ```
+  colour = (1−fx)(1−fy)·T[i, j] + fx(1−fy)·T[i+1, j] + (1−fx)fy·T[i, j+1] + fx·fy·T[i+1, j+1]
+  ```
+* **Mip level selection.** Level k is the image downsampled k times by 2 (each texel = average of 2 × 2
+  texels of level k−1). The GPU estimates how many texels one pixel covers from the screen-space
+  derivatives of the texture coordinates,
+  `ρ = max( |∂(uW, vH)/∂x|, |∂(uW, vH)/∂y| )`, and uses level `λ = log₂ ρ`. Trilinear filtering samples the
+  two levels ⌊λ⌋ and ⌈λ⌉ bilinearly and blends them by the fraction of λ. A 512² floor texture has
+  10 levels (512 … 1); the mip chain adds one third to its memory (1 + ¼ + 1/16 + … = 4/3).
 * **Texture units:** the rasteriser binds the material's texture to unit 0 (`uTexture = 0`). Untextured
   materials bind a 1 × 1 white texture, so `colour × white = colour` and the shader needs no branch.
 
@@ -78,6 +96,39 @@ All generators evaluate a function `f(u, v) → colour` at the centre of every t
 | Toy block 128² | dark bevel where `max(|x|,|y|) > 0.44`; five-pointed star where `r < 0.18 + 0.09·cos(5θ − 90°)` | toy blocks (tinted by material colour) |
 | Night sky 1024×512 | 64 × 32 cells, ~45 % hold a star at a random position with random size/brightness | sky behind the window |
 | Checker | `(floor(u·n) + floor(v·n)) mod 2` | available helper |
+| Moon 1024×512 | see below | moon (unlit, colour 1.65 × texture) |
+| Fabric ×5, 256² | `shade = 0.78 + 0.15·noise(120u, 120v) + 0.07·weave`, `weave = ½ + ½ sin(256πu)·sin(256πv)`; denim × `0.8 + 0.2|sin(160(u+v))|` (twill); leather `0.65 + 0.3·fbm(45u, 45v) + 0.1·noise`; plaid: brown lines where `|sin(8πu)| < 0.18` or `|sin(8πv)| < 0.18`; cow print: black where `fbm(9u, 9v) > 0.51` | clothes, saddle, hats, boots, belts, Bullseye's coat and mane, Jessie's braid, the bed sheet, the tyres, Penny's fur |
+| Siding 256² | 8 boards along v; in a board `b = frac(8v)`: `shade = 0.80 + 0.16·b`, × `(0.55 + 0.45·b/0.08)` in the shadow line `b < 0.08`, × grain `0.94 + 0.06·fbm(6u, 90v)` | house walls, gables, garage door (tinted yellow / grey) |
+| Shingles 256² | 8 rows × 6 tabs, odd rows shifted by half a tab; each tab `0.72 + 0.22·hash(tab, row)`, lighter towards its exposed edge, dark gaps | roofs (tinted terracotta) |
+| Brick 256² | running bond: 8 courses × 4 bricks, odd courses offset by ½; mortar where `frac(8v) < 0.12` or `frac(4u + offset) < 0.04`; each brick `0.75 + 0.25·hash` | foundation, column bases, chimney |
+| Grass 256² | `0.62 + 0.30·fbm(8u, 8v) + 0.18·(noise(180u, 60v) − ½)` — clumps plus fine blades | the lawn (repeated 80 × 80) |
+
+**The moon.** For texel (u, v) the shader-like generator first converts the texel to a direction on the
+unit sphere — `longitude = 2πu`, `latitude = (v − ½)π`,
+`n = (cos lat · sin lon, sin lat, cos lat · cos lon)` — so the pattern is continuous across the texture
+seam and does not pinch at the poles. Then:
+
+```
+shade = 0.40 + 0.60 · fbm(5 nx + 3 nz + 12, 7 ny + 4)                 dark maria and bright highlands
+      + 0.10 · (noise(180 nx + 40 nz, 180 ny) − ½)                     fine grain
+for each of 110 craters (centre c on the sphere, radius r = 0.018 + 0.17·hash²):
+      d = |n − c| / r          (|n − c|² = 2 − 2 n·c, cheap)
+      shade −= 0.18 · exp(−3 d²)                                       bowl
+      shade += 0.20 · exp(−70 (d − 1)²)                                bright rim at d = 1
+      shade += 0.16 · (ny − cy)/r · exp(−2 d²)                         one side lit, one in shadow
+lit   = 0.32 + 0.68 · max(0, n · normalize(−0.15, 0.25, 1))            baked sunlight with a soft terminator
+colour = (0.94, 0.95, 1.0) · shade · lit
+```
+
+### Texture instead of geometry
+
+Fine surface detail used to be built from extra shapes: 48 hat-stitch spheres, 72 tyre-tread cubes,
+12 braid beads, 14 saddle studs, 9 mane strands, quilt seams and 24 book spine bands. Every shape costs a
+draw call, a matrix and, for a sphere, up to 1 656 triangles, every frame. A texture costs one lookup per
+pixel no matter how much detail it shows, and it is filtered (mipmaps) so it never flickers in the
+distance. These details are now textures (`denim` on the tyres, `woven cotton` on the braid and mane,
+`leather` on the hat band and saddle, `plaid` on the bed). Shapes are kept only where they change the
+**silhouette** (fingers, ears, buttons, the scarf). See [17 — Performance](17-performance.md).
 
 The **star texture** is used additively: sky output = `emissive (sky colour) + colour × stars`. By night the
 material colour is white (stars visible); by day it fades to black, so the stars disappear into the blue sky
@@ -118,6 +169,8 @@ poster.
 ## 5. Textures in the ray tracer
 
 The ray tracer computes uv analytically from the object-space hit point with formulas that match the mesh
-UVs exactly (`primitiveUV` in `raytrace.frag`), then samples one of 7 fixed texture slots
-(`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars). GLSL 3.30 cannot index an array of
+UVs exactly (`primitiveUV` in `raytrace.frag`), then samples one of 13 fixed texture slots
+(`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars, moon, cotton, denim, leather, plaid,
+cow print). The four house textures (siding, shingles, brick, grass) are raster-only: they have no slot,
+so in ray-traced mode the house shows its tint colours. GLSL 3.30 cannot index an array of
 samplers with a run-time value, so each slot is a separate uniform and the shader selects with `if`.

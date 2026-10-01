@@ -120,6 +120,48 @@ is rebuilt from them whenever needed.
 | `scale` | size | edit mode scale, shape sizes, Buzz's wings opening |
 | `basis` | extra 3×3 linear part | ball rolling, edit mode shear / mirror |
 
+### 4.1 The product, multiplied out once (`Transform::Matrix`)
+
+`Matrix()` runs for every visible node every frame (several hundred), so instead of five general 4 × 4 products it
+writes the rotation directly. With `cx = cos pitch, sx = sin pitch`, `cy, sy` for yaw and `cz, sz` for roll:
+
+```
+Rx · Rz = | cz      −sz      0   |          Ry · (Rx · Rz) = R =
+          | cx sz    cx cz  −sx  |          | cy cz + sy sx sz    −cy sz + sy sx cz    sy cx |
+          | sx sz    sx cz   cx  |          | cx sz                cx cz              −sx    |
+                                            | −sy cz + cy sx sz    sy sz + cy sx cz    cy cx |
+```
+
+Then: `M = R · B` (only if B is not the identity), multiply column k by `scale[k]` (that is `· S`), and add
+`position` to the last column (that is `T ·`, because T only changes the translation column of a matrix
+whose last row is (0, 0, 0, 1)). The result was checked against the original five-matrix product on 2 000
+random transforms including shear and translation in B: identical to the last bit.
+
+### 4.2 Shapes from rotated, non-uniformly scaled cubes (the house)
+
+*Sloped roof slabs.* A roof face is a thin cube rotated about X by the roof pitch
+`φ = atan2(rise, run)`. `Rx(φ)` maps the cube's local +Z (its length along the slope) to
+`(0, −sin φ, cos φ)`: going down as it goes forward, so the front slab uses +φ and the back slab −φ. Its
+length is the hypotenuse `√(run² + rise²)`. The main roof: run 10.15, rise 5.4 → φ = 28°, length 11.5.
+
+*Triangular gables from one cube.* A unit cube rotated 45° about X has a diamond cross-section with
+corners at distance √2/2 from its centre; scaling it by √2 in y and z puts the corners at distance 1. A
+**parent joint** with scale `(1, rise, halfSpan)` then stretches the diamond to a rhombus with half-height
+`rise` and half-width `halfSpan`:
+
+```
+M = T(base) · S(1, rise, halfSpan) · Rx(45°) · S(thickness, √2, √2)
+```
+
+Rotation followed by non-uniform scale is not a rotation any more — it is what turns the square into a
+rhombus (in general, an affine map turns a square into a parallelogram). The lower half of the rhombus lies
+inside the wall below it and is hidden; the upper half is the gable triangle under the roof. The house's
+two main gables, the porch gable and the garage gable are built this way (`Gable` in `House.cpp`).
+
+*Door hinges.* A door leaf hangs from a joint at its hinge. Rotating the joint by θ about Y maps the
+leaf's width direction +X to `(cos θ, 0, −sin θ)`: θ = 90° swings the front door inward (−Z); the toy
+room's double door uses +90° and −90° on its two leaves.
+
 ## 5. Transforming normals — the normal matrix
 
 Positions transform with M, but normals must stay **perpendicular** to the surface. Under non-uniform scale
@@ -143,7 +185,8 @@ object space ──model (M)──► world space ──view (V)──► camera
 ```
 
 * **Object / local space** — the unit primitive, or a node relative to its parent.
-* **World space** — the room: floor at y = 0, x ∈ [−8, 8], z ∈ [−6, 6], height 7. Lighting is done here.
+* **World space** — the toy room's floor at y = 0, x ∈ [−10, 10], z ∈ [−9, 9], height 7.5; the hallway
+  x ∈ [10, 17]; the ground floor at y = −4.5 and the garden around the house. Lighting is done here.
 * **Camera space**, **clip space**, **NDC**, **window** — see [05 — Camera](05-camera.md).
 
 ## 7. Live demonstration checklist (edit mode)

@@ -145,6 +145,14 @@ Left side vector for a heading h (forward = (sin h, 0, cos h)): `left = (cos h, 
 | Desk lamp | Lamp (swivel Y) → ArmJoint (tilt X) → HeadJoint (tilt X) → LightAnchor | the spotlight follows the head |
 | Ball | Ball (position) → BallShape (basis = accumulated rolling rotation) | rolls without slipping |
 | Ghost | Ghost (path) → Body (sway Z) | floats and wobbles |
+| Penny the cat | Body (pitch on stairs / sitting, roll when asleep) → Head (look-at yaw), Tail → TailTip, 4 legs | trot, sit, sleep ([18](18-house-and-penny.md)) |
+| House | FrontDoor, RoomDoorLeft/Right, StairDoor hinge joints (yaw); Gable joints (non-uniform scale) | doors open as Penny arrives |
+| HouseExterior / HouseInterior | group nodes; `visible = false` hides a whole subtree | the outside and the ground floor are hidden once Penny is upstairs |
+
+**Hidden subtrees cost nothing.** `SceneNode::UpdateWorld` stops at a node whose `visible` is false (its
+descendants keep their last world matrices and are recomputed when it becomes visible again), and
+`Renderer::Collect` does not descend into it either. Hiding `HouseExterior` removes about 200 shapes from
+both passes in one assignment.
 
 Lights are attached the same way: every frame the lamp's spot light takes its position from the
 `LightAnchor` node's world matrix and its direction from the head joint's −Y axis, so moving or tilting the

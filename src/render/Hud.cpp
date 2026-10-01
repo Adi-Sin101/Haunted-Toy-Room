@@ -132,7 +132,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
  Text(info.clock + " / " + (info.story ? "STORY" : "MANUAL"),x+14,y+32,0.55f,Muted);
  Text(info.selection,x+14,y+54,0.58f,Cream,panelWidth-28,true);
  Text(info.description,x+14,y+82,0.56f,Muted,panelWidth-28);
- Text(info.story ? "N manual / Enter activate / Shift+N replay" : info.controls,
+ Text(info.arrival ? "Y skip the arrival / Shift+N replay" : info.story ? "N manual / Enter activate / Shift+N replay" : info.controls,
   x+14,y+119,0.55f,Cream,panelWidth-28);
  for (int i=0;i<9;++i) {
   const float bx=x+14+i*40;

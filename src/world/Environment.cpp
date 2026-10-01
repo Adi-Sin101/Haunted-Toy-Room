@@ -44,6 +44,17 @@ glm::vec3 Environment::AmbientLight() const
 	return glm::mix(glm::vec3(0.18f, 0.19f, 0.26f), glm::vec3(0.48f, 0.46f, 0.43f), daylight);
 }
 
+float Environment::SunHeight() const
+{
+	return std::sin((hour - 6.0f) / 12.0f * glm::pi<float>());
+}
+
+glm::vec3 Environment::OutdoorSunPosition() const
+{
+	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	return {-std::cos(a) * 60.0f, 4.0f + std::sin(a) * 55.0f, -37.0f};
+}
+
 glm::vec3 Environment::ClearColor() const
 {
 	return glm::mix(glm::vec3(0.02f, 0.02f, 0.05f), glm::vec3(0.35f, 0.45f, 0.6f), daylight);
@@ -95,6 +106,9 @@ void Environment::UpdateSky()
 	skyColor += glm::vec3(0.55f, 0.22f, 0.05f) * sunset;
 	rig.skyMaterial->emissive = skyColor;
 	rig.skyMaterial->color = glm::vec3(1.0f - daylight);
+	// Neighbouring houses: dark silhouettes at night, muted blue-grey by day.
+	if (rig.skylineMaterial)
+		rig.skylineMaterial->color = glm::mix(glm::vec3(0.035f, 0.045f, 0.085f), glm::vec3(0.50f, 0.52f, 0.60f), daylight);
 }
 
 void Environment::DriveLamp(float swivel, float tilt, float dt)

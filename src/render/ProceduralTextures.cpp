@@ -232,6 +232,64 @@ Image Rug(int size)
 	});
 }
 
+// 8 boards across v. Inside a board the shade ramps from light (top) to dark (bottom edge, where the
+// next board overlaps it and casts a thin shadow), plus wood grain stretched along u.
+Image Siding(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const float boards = 8.0f;
+		const float b = v * boards - std::floor(v * boards);       // 0 at a board's lower edge, 1 at its top
+		float shade = 0.80f + 0.16f * b;                           // overlapping board: brighter towards its top
+		if (b < 0.08f) shade *= 0.55f + 0.45f * (b / 0.08f);       // shadow line under the board above
+		shade *= 0.94f + 0.06f * Fbm(u * 6.0f, v * 90.0f);         // grain along the board
+		return glm::vec3(shade);
+	});
+}
+
+// 8 rows of tabs; every other row is shifted by half a tab (staggered like real shingles).
+Image Shingles(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const float rows = 8.0f, tabs = 6.0f;
+		const float row = std::floor(v * rows);
+		const float rv = v * rows - row;
+		const float su = u * tabs + (static_cast<int>(row) % 2 == 0 ? 0.0f : 0.5f);
+		const float tab = std::floor(su);
+		const float tu = su - tab;
+		float shade = 0.72f + 0.22f * Hash(tab, row);              // each tab has its own tint
+		shade *= 0.85f + 0.15f * rv;                               // lighter towards the exposed edge
+		if (rv < 0.10f || tu < 0.04f || tu > 0.96f) shade *= 0.55f; // gaps between tabs and rows
+		return glm::vec3(shade * (0.93f + 0.07f * ValueNoise(u * 120.0f, v * 120.0f)));
+	});
+}
+
+// Running bond: 8 courses, 4 bricks per course, alternate courses offset by half a brick.
+Image Brick(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const float courses = 8.0f, perCourse = 4.0f;
+		const float course = std::floor(v * courses);
+		const float cv = v * courses - course;
+		const float bu = u * perCourse + (static_cast<int>(course) % 2 == 0 ? 0.0f : 0.5f);
+		const float brick = std::floor(bu);
+		const float cu = bu - brick;
+		if (cv < 0.12f || cu < 0.04f)
+			return glm::vec3(1.25f);                               // pale mortar (tint 0.55 -> grey-beige)
+		const float shade = 0.75f + 0.25f * Hash(brick, course) + 0.08f * (ValueNoise(u * 64.0f, v * 64.0f) - 0.5f);
+		return glm::vec3(shade);
+	});
+}
+
+// Lawn: two scales of noise for clumps and individual blades.
+Image Grass(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const float clumps = Fbm(u * 8.0f, v * 8.0f);
+		const float blades = ValueNoise(u * 180.0f, v * 60.0f);
+		return glm::vec3(0.62f + 0.30f * clumps + 0.18f * (blades - 0.5f));
+	});
+}
+
 // Used only if assets/textures/poster.bmp cannot be loaded.
 Image PosterFallback(int width, int height)
 {

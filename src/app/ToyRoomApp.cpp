@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -15,6 +16,7 @@
 #include "characters/Bullseye.h"
 #include "characters/Humanoid.h"
 #include "characters/RCCar.h"
+#include "characters/Cat.h"
 #include "math/Ray.h"
 #include "render/BmpLoader.h"
 #include "world/Room.h"
@@ -100,6 +102,13 @@ void ToyRoomApp::BuildScene()
 	AddSelectable("Ghost", rig.ghost, nullptr, 8, 0.3f, 5.0f);
 	for (size_t i = 0; i < rig.blocks.size(); ++i)
 		AddSelectable(rig.blocks[i]==rig.missionObstacle ? "Doorway crate" : "Wooden block " + std::to_string(i), rig.blocks[i], nullptr, 0, 0.0f, 2.4f);
+
+	// The house around the toy room, and Penny the cat who walks into it before the story begins.
+	house = BuildHouse(*scene, assets);
+	penny = std::make_unique<Cat>(*scene, assets, glm::vec3(2.0f, RoomSize::Ground, 23.4f), 90.0f);
+	pennyId = static_cast<int>(selectables.size());
+	AddSelectable("Penny", penny->Root(), nullptr, 0, 0.5f, 3.0f);
+	arrival.Init(penny.get(), house);
 
 	characters.push_back(std::move(woodyPtr));
 	characters.push_back(std::move(jessiePtr));
@@ -197,22 +206,40 @@ void ToyRoomApp::StepScene(float dt)
   for (size_t i=0;i<characters.size();++i) previous[i]=characters[i]->Root()->WorldPosition();
   missionRestarted=false;
  }
-	HandleSelection();
-	HandleCamera(dt);
-	if (!story.enabled) {
-		if (editMode) HandleEditMode(dt); else HandleObjectControl(dt);
+	// Penny's arrival owns the camera and the clock; the toys stay frozen until it ends (Y skips it).
+	if (arrival.Active() && input.Pressed(GLFW_KEY_Y)) arrival.Skip();
+	const bool arriving = arrival.Active();
+	if (!arriving) {
+		HandleSelection();
+		HandleCamera(dt);
+		if (!story.enabled) {
+			if (editMode) HandleEditMode(dt); else HandleObjectControl(dt);
+		}
 	}
 
  const bool interaction=input.Pressed(GLFW_KEY_ENTER) && (story.enabled || selectedId==4 ||
   (DrivenCharacter() && glm::distance(DrivenCharacter()->Root()->WorldPosition(),car->Root()->WorldPosition())<3.0f));
- story.Update(environment.paused ? 0.0f : dt,jessieMounted,interaction);
+ if (arriving) { arrival.Update(dt); environment.hour = arrival.Hour(); }
+ else story.Update(environment.paused ? 0.0f : dt,jessieMounted,interaction);
  const bool userPaused=environment.paused;
  if (story.enabled) environment.paused=true; // film owns its night-to-dawn clock
  environment.Update(dt,static_cast<float>(time),selectedId==lampId,selectedId==ballId,selectedId==ghostId);
  environment.paused=userPaused;
 
-	for (auto& c : characters)
-		c->Animate(dt, static_cast<float>(time));
+	if (!arriving) // during the arrival the toys keep the rest pose the story's restart gave them
+		for (auto& c : characters)
+			c->Animate(dt, static_cast<float>(time));
+	// Penny watches the action from the bed and falls asleep in the morning.
+	if (!arriving) {
+		penny->SetPose(story.enabled && story.CurrentScene() >= StoryDirector::Scene::Morning ? Cat::Pose::Sleep : Cat::Pose::Sit);
+		const Character* focus = buzz->LaserOn() ? static_cast<const Character*>(buzz) : jessieMounted ? static_cast<const Character*>(bullseye) : woody;
+		penny->LookAt(focus->Root()->WorldPosition() + glm::vec3(0.0f, 1.0f, 0.0f));
+	}
+	penny->Animate(dt, static_cast<float>(time));
+	house.exterior->visible = arrival.ExteriorVisible();
+	house.interior->visible = arrival.InteriorVisible();
+	house.outdoorSun->local.position = environment.OutdoorSunPosition();
+	house.outdoorSun->visible = environment.SunHeight() > -0.08f;
  if (story.enabled && story.CurrentScene()>=StoryDirector::Scene::Morning)
   for (auto& c:characters) c->RestoreRestPose();
 	physics.EnableActor(jessie->Root(), !jessieMounted);
@@ -246,7 +273,7 @@ void ToyRoomApp::StepScene(float dt)
 		buzz->SetLaserLength(physics.FireLaser(buzz->LaserTip(), buzz->LaserDirection(), dt, buzz->Root()));
 		scene->UpdateWorld(glm::mat4(1.0f));
 	}
-	if (story.enabled && storyCamera) {
+	if (story.enabled && storyCamera && !arriving) {
   camera.mode=CameraMode::Free;
   glm::vec3 shot(-4.5f,4.6f,7.8f), focus(4,1.4f,2.5f);
   const auto phase=story.CurrentScene();
@@ -262,12 +289,21 @@ void ToyRoomApp::StepScene(float dt)
   camera.position=glm::mix(camera.position,shot,k);
   camera.target=glm::mix(camera.target,focus,k); camera.LookAt(camera.target);
  }
- if (camera.mode != CameraMode::Free) {
-		const Selectable* selected = Selected();
-		camera.position = physics.CameraSightline(camera.target, camera.position, selected ? selected->node : nullptr);
+	if (arriving) {
+		// The arrival camera moves freely through the garden and the house; the room's camera
+		// constraints apply again once Penny is on the bed.
+		camera.mode = CameraMode::Free;
+		camera.position = arrival.CameraPosition();
+		camera.LookAt(arrival.CameraTarget());
 	}
-	camera.position = physics.MoveCamera(previousCamera, camera.position);
-	if (camera.mode != CameraMode::Free) camera.LookAt(camera.target);
+	else {
+		if (camera.mode != CameraMode::Free) {
+			const Selectable* selected = Selected();
+			camera.position = physics.CameraSightline(camera.target, camera.position, selected ? selected->node : nullptr);
+		}
+		camera.position = physics.MoveCamera(previousCamera, camera.position);
+		if (camera.mode != CameraMode::Free) camera.LookAt(camera.target);
+	}
 	UpdateLights();
 
 	// Console feedback only when the driven character starts / stops.
@@ -354,7 +390,7 @@ void ToyRoomApp::HandleGlobalKeys()
  }
 	if (input.Pressed(GLFW_KEY_N)) {
   if (input.ShiftDown()) {
-   story.Restart(jessieMounted);
+   story.Restart(jessieMounted); arrival.Restart();
    for (int id : {ballId,lampId,ghostId}) selectables[static_cast<size_t>(id)].node->local=selectables[static_cast<size_t>(id)].initial;
    scene->UpdateWorld(glm::mat4(1)); camera.Reset(); missionRestarted=true;
   }
@@ -962,6 +998,9 @@ void ToyRoomApp::DrawHud()
  if (story.enabled) {
   info.story=true; info.selection=story.Title(); info.description=story.Caption();
  }
+ if (arrival.Active()) {
+  info.story=true; info.arrival=true; info.selection="Prologue: Penny comes home"; info.description=arrival.Caption();
+ }
  hud.Render(width,height,info);
 }
 
@@ -1018,6 +1057,15 @@ void ToyRoomApp::OnRender()
 					<< seconds * 1000.0 / n << " ms/frame (" << n / seconds << " FPS), "
 					<< benchmarkDraws / launch.benchmark << " draw calls, "
 					<< benchmarkTriangles / launch.benchmark << " triangles per frame" << std::endl;
+				// Shapes (scene nodes that carry a mesh) and full-detail triangles, per selectable object.
+				std::map<int, std::pair<int, long long>> perOwner;
+				for (const DrawItem& item : renderer.Items()) {
+					auto& entry = perOwner[item.ownerId];
+					++entry.first; entry.second += static_cast<long long>(item.source->TriangleCount());
+				}
+				for (const auto& [owner, entry] : perOwner)
+					std::cout << "  " << (owner >= 0 ? selectables[static_cast<size_t>(owner)].name : std::string("Room and scenery"))
+						<< ": " << entry.first << " shapes, " << entry.second << " triangles at full detail" << std::endl;
 				Close();
 			}
 		}
@@ -1077,6 +1125,8 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		else if (a == "--capture" && hasValue) o.capture = argv[++i];
 		else if (a == "--frames" && hasValue) o.frames = std::stoi(argv[++i]);
 		else if (a == "--story-steps" && hasValue) o.storySteps=std::clamp(std::stoi(argv[++i]),1,20);
+		else if (a == "--intro") o.intro = true;
+		else if (a == "--no-intro") o.noIntro = true;
 		else if (a == "--benchmark" && hasValue) o.benchmark = std::max(1, std::stoi(argv[++i]));
 		else if (a == "--story-step" && hasValue) o.storyStep=std::clamp(std::stof(argv[++i]),0.001f,0.05f);
 		else if (a == "--cam" && hasValue) {
@@ -1098,6 +1148,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 void ToyRoomApp::ApplyLaunchOptions()
 {
 	if (launch.benchmark > 0) glfwSwapInterval(0); // measure the real frame cost, not the monitor rate
+	if (launch.noIntro || (!launch.capture.empty() && !launch.intro)) arrival.Skip();
 	if (launch.hour >= 0.0f) environment.hour = launch.hour;
 	if (launch.pauseClock || (!launch.capture.empty() && !launch.story)) environment.paused = true;
 	if (!launch.capture.empty() && !launch.story) { story.enabled=false; story.Pause(); }
@@ -1197,6 +1248,7 @@ void ToyRoomApp::PrintHelp() const
 		"            V list parts of selected object, Shift+V dump vertex/index tables\n"
 		"WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/story  Shift+N replay  Enter car activation\n"
 		"            H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit\n"
+		"PROLOGUE    Penny the cat walks into the house before the story; Y skips it, Shift+N replays it\n"
 		"==========================================================\n\n";
 }
 

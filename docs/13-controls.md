@@ -115,6 +115,17 @@ toggle textures and ray tracing. Lighting off shows plain material colours. Shad
 lighting, specular highlights and shadows, while enabled lighting can still supply light colour and
 distance attenuation. Textures off uses flat preview colours so room surfaces remain distinguishable.
 
+## Prologue (Penny's arrival)
+
+| Key | Action |
+|---|---|
+| Y | skip the arrival: Penny is placed on the bed, the doors open, the story begins |
+| Shift+N | replay the arrival and the story from the start |
+| G / H | hide the interface / expand the guide (as always) |
+
+During the arrival the camera, selection and object controls are disabled; the clock and the camera are
+driven by the arrival.
+
 ## World
 
 | Key | Action |
@@ -134,7 +145,7 @@ distance attenuation. Textures off uses flat preview colours so room surfaces re
 ```
 HauntedToyRoom.exe [--hour 21.5] [--select N] [--focus] [--orbit yaw,pitch,dist] [--cam x,y,z,tx,ty,tz]
                    [--mount] [--raytrace] [--shading 0..3] [--wireframe] [--normals] [--pause] [--story]
-                   [--capture file.bmp] [--frames 90] [--benchmark 400]
+                   [--capture file.bmp] [--frames 90] [--benchmark 400] [--intro] [--no-intro]
 ```
 
 `--select` takes the 0-based object index (0 Woody … 7 Ghost). With `--capture`, the clock is paused, the
@@ -144,6 +155,10 @@ exits. Example:
 ```
 HauntedToyRoom.exe --hour 12 --select 2 --mount --orbit 60,15,5 --capture mounted.bmp
 ```
+
+`--no-intro` starts directly with the story (Penny is already on the bed); `--intro` keeps Penny's arrival
+in a scripted capture (captures skip it otherwise). Example: `--intro --no-hud --story-step 0.05 --frames 160
+--capture garden.bmp` shows Penny on the garden path 8 s into the arrival.
 
 `--benchmark N` turns v-sync off, skips 60 warm-up frames, times the next N frames and prints the
 average frame time, draw calls and triangles, then exits (see [17 - Performance](17-performance.md)).

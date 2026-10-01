@@ -1,6 +1,9 @@
 # Physics, scene detail and on-screen controls
 
-The room is now 20 by 18 units, with a 7.5-unit ceiling. A doorway in the right wall connects to a bounded hallway for the Midnight Mission. Character collisions permit crossing through this opening; the camera remains inside the room. The initial camera starts inside it. The bed, bookcase, window frame, desk, lamp and wooden blocks have collision bounds. Character proxies cover moving limbs, hats, the horse's head and tail, and Buzz's open wings. Jessie shares Bullseye's larger proxy while mounted.
+The room is now 20 by 18 units, with a 7.5-unit ceiling, and it is the upper floor of a house
+([18](18-house-and-penny.md)). A doorway in the right wall (with a double door) connects to a bounded
+hallway for the Midnight Mission; the hallway's side wall has a door at the top of the stairs, and the
+collision bounds keep the toys in the hallway. Character collisions permit crossing through this opening; the camera remains inside the room. The initial camera starts inside it. The bed, bookcase, window frame, desk, lamp and wooden blocks have collision bounds. Character proxies cover moving limbs, hats, the horse's head and tail, and Buzz's open wings. Jessie shares Bullseye's larger proxy while mounted.
 
 `PhysicsWorld` sweeps movement against expanded bounds instead of checking only the final position. This stops fast movement through thin obstacles and allows sliding along furniture. The same solver keeps Free, Orbit and Follow cameras inside the room and clear of solid objects. Obstructed orbit/follow views shorten toward the target. If an edit puts the camera inside an object, it moves to a clear face without crossing a room boundary. Very large edited toys are scaled to fit the room.
 

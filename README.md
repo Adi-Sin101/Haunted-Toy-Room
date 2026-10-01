@@ -1,7 +1,9 @@
 # Toy Story: The Midnight Mission
 
 A computer graphics lab project in C++ and OpenGL 3.3: **Toy Story: The Midnight Mission**.
-Woody discovers a lost car beyond the doorway, Jessie mounts Bullseye, and Buzz clears the obstacle
+It opens on a sunny street in front of a yellow two-storey house: Penny, a white cat with ginger patches,
+walks home through the garden, in at the front door and up the stairs to the toy room, where she settles
+on the bed as the sun sets (**Y** skips this prologue). At midnight the toys come alive. Woody discovers a lost car beyond the doorway, Jessie mounts Bullseye, and Buzz clears the obstacle
 with his laser. The friends reach the car, activate it, escort its automatic return and head home.
 Morning light fades in, the lamp switches off, the toys return to their original poses, and the camera
 pulls back. The complete seven-scene story plays automatically until you take manual control.
@@ -60,6 +62,7 @@ and knock over the wooden blocks. **B** rebuilds the tower. You can also click a
 | **N / Shift+N / P / Enter** | manual/story, replay, pause, activate car |
 | **[ ] / , .** | clock speed / scrub in manual mode |
 | **H / G** | expand corner guide / hide all text |
+| **Y** | skip Penny's arrival (Shift+N replays it with the story) |
 
 Full key list: [docs/13-controls.md](docs/13-controls.md).
 
@@ -67,7 +70,9 @@ Full key list: [docs/13-controls.md](docs/13-controls.md).
 
 [docs/00-index.md](docs/00-index.md) lists every chapter: pipeline basics, the vertex and index tables of
 each primitive, transformation matrices, the camera, the scene graph and mounting, the characters,
-illumination, shading, textures, animation, ray tracing and the code architecture.
+illumination, shading, textures, animation, ray tracing, the code architecture, performance, the house and
+Penny, and a formula-by-formula reference of one rendered frame
+([docs/19-rendering-mathematics.md](docs/19-rendering-mathematics.md)).
 
 ## Project layout
 

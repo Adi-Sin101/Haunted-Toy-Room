@@ -43,6 +43,10 @@ std::unique_ptr<SceneNode> SceneNode::DetachChild(SceneNode* child)
 
 void SceneNode::UpdateWorld(MatrixStack& stack)
 {
+	// A hidden subtree (the house exterior once Penny is inside) keeps its last world matrices; they
+	// are recomputed on the first update after it becomes visible again.
+	if (!visible)
+		return;
 	stack.push();
 	stack.multiply(local.Matrix());
 	world = stack.top();

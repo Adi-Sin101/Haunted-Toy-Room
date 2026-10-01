@@ -71,8 +71,10 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	Material& hallMat = Textured(a, "hall-floor", {0.72f,0.68f,0.59f}, Assets::FloorSlot, {3,3});
 	room->AddShape("HallFloor", &plane, &hallMat, {(HalfWidth+HallEnd)*0.5f,0,4}, {HallEnd-HalfWidth,1,DoorHigh-DoorLow});
 	Material& hallWall = a.Mat("hall-wall", {0.34f,0.37f,0.42f}, 0.04f);
-	for (float side : {DoorLow,DoorHigh}) solid(room->AddShape("HallSide", &cube, &hallWall,
-		{(HalfWidth+HallEnd)*0.5f,DoorHeight*0.5f,side}, {HallEnd-HalfWidth,DoorHeight,0.16f}));
+	// Hall side walls; the z = DoorLow wall has an opening where the stairs arrive from the ground floor.
+	solid(room->AddShape("HallSide", &cube, &hallWall, {(HalfWidth+HallEnd)*0.5f,DoorHeight*0.5f,DoorHigh}, {HallEnd-HalfWidth,DoorHeight,0.16f}));
+	solid(room->AddShape("HallSide", &cube, &hallWall, {(HalfWidth+StairLeft)*0.5f,DoorHeight*0.5f,DoorLow}, {StairLeft-HalfWidth,DoorHeight,0.16f}));
+	solid(room->AddShape("HallSide", &cube, &hallWall, {(StairRight+HallEnd)*0.5f,DoorHeight*0.5f,DoorLow}, {HallEnd-StairRight,DoorHeight,0.16f}));
 	solid(room->AddShape("HallEnd", &cube, &hallWall, {HallEnd,DoorHeight*0.5f,4}, {0.16f,DoorHeight,6}));
 	solid(room->AddShape("HallCeiling", &cube, &hallWall, {13.5f,DoorHeight,4}, {7,0.15f,6}));
 	Material& doorway = a.Mat("door-frame", {0.82f,0.77f,0.65f},0.2f);
@@ -112,10 +114,10 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	sky.plainColor=glm::vec3(0); // the procedural sky colour stays visible without its star texture
 	sky.texture = a.SlotTexture(Assets::StarsSlot);
 	sky.rtTextureSlot = Assets::StarsSlot;
-	sky.uvScale = { 3.0f, 1.0f };
+	sky.uvScale = { 6.4f, 2.25f }; // same star size as before on a backdrop large enough for the garden view
 	rig.skyMaterial = &sky;
 	rig.skyCenter = { cx * 1.5f, 2.5f, -20.0f };
-	room->AddShape("Sky", &plane, &sky, { cx, 18.0f, -40.0f }, { 140.0f, 1.0f, 40.0f }, { 90, 0, 0 });
+	room->AddShape("Sky", &plane, &sky, { cx, 38.5f, -40.0f }, { 300.0f, 1.0f, 90.0f }, { 90, 0, 0 });
 
 	Material& sunMat = a.Mat("sun", glm::vec3(0.0f), 0.0f);
 	sunMat.unlit = true;
@@ -207,7 +209,9 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 		}
 	}
 	room->AddShape("CurtainRod", &cylinder, &knobMat, {cx, winT + 0.4f, z + 0.23f}, {0.055f, 6.3f, 0.055f}, {0, 0, 90});
-	Material& quilt = Textured(a, "quilt", {0.32f, 0.47f, 0.57f}, Assets::FabricSlot, {4, 5}, 0.0f);
+	// Orange plaid bed sheet with a beige pillow, as in the photos of Penny asleep.
+	Material& quilt = Textured(a, "quilt", {1.0f, 0.62f, 0.30f}, Assets::PlaidSlot, {3, 4}, 0.0f);
+	quilt.plainColor = {0.86f, 0.48f, 0.20f};
 	SceneNode* bed = room->AddChild("Bed");
 	bed->local.position = {7.2f, 0, -5.8f};
 	solid(bed->AddShape("BedFrame", &cube, &deskMat, {0, 0.45f, 0}, {3.4f, 0.75f, 4.7f}));
@@ -231,8 +235,11 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	// Distant silhouettes are outside the sealed play space and visible through the window.
 	Material& silhouette = a.Mat("distant-roofs", {0.035f, 0.045f, 0.085f}, 0.0f);
 	silhouette.unlit = true;
-	for (int i = 0; i < 9; ++i) room->AddShape("DistantHouse", &cube, &silhouette,
-		{-22.0f + i * 6.0f, -1.3f, -29.0f}, {5.0f, 3.0f + (i % 3), 2.0f});
+	rig.skylineMaterial = &silhouette;
+	for (int i = 0; i < 9; ++i) {
+		const float h = 7.5f + static_cast<float>(i % 3) * 1.5f; // stand on the garden level, tops show through the window
+		room->AddShape("DistantHouse", &cube, &silhouette, {-22.0f + i * 6.0f, Ground + h * 0.5f, -29.0f}, {5.0f, h, 2.0f});
+	}
 
 	// ---- Beach ball ------------------------------------------------------------------------
 	Material& ballMat = Textured(a, "beach-ball", glm::vec3(1.0f), Assets::BallSlot, { 1, 1 }, 0.6f, 64.0f);

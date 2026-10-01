@@ -1,17 +1,37 @@
 # 03 — Primitives: Vertices, Indices, Triangles
 
 Every object in the scene — room, furniture, five characters, ghost — is assembled from **five
-primitive meshes** whose vertices and indices we write ourselves in `src/geometry/Primitives.cpp`.
-They are uploaded to the GPU **once** (`Assets::Load`) and shared: every sphere in the scene (heads,
+primitive shapes** whose vertices and indices we write ourselves in `src/geometry/Primitives.cpp`.
+Each shape is uploaded to the GPU **once** (`Assets::Load`) and shared: every sphere in the scene (heads,
 eyes, hands, the ball, the sun…) is drawn from the same sphere VBO with a different model matrix.
 
-| Primitive | Unit shape (object space) | Vertices | Triangles |
+The sphere, cylinder and cone exist in **three levels of detail** (full, medium, low) so that small or
+distant parts are drawn with far fewer triangles (section 8). The plane and cube are already minimal and
+have a single version.
+
+| Mesh | Unit shape (object space) | Vertices | Triangles |
 |---|---|---|---|
 | Plane | 1 × 1 square in XZ at y = 0, facing +Y | 4 | 2 |
 | Cube | [−0.5, 0.5]³ | 24 | 12 |
-| Sphere | radius 0.5 (18 stacks × 32 sectors) | 627 | 1088 |
-| Cylinder | radius 0.5, y ∈ [−0.5, 0.5], capped (32 sectors) | 134 | 128 |
-| Cone | base radius 0.5 at y = −0.5, apex at y = +0.5, capped (32 sectors) | 99 | 64 |
+| Sphere, full | radius 0.5, 24 stacks × 36 sectors | 925 | 1 656 |
+| Sphere, medium | 12 stacks × 18 sectors | 247 | 396 |
+| Sphere, low | 6 stacks × 10 sectors | 77 | 100 |
+| Cylinder, full | radius 0.5, y ∈ [−0.5, 0.5], capped, 32 sectors | 134 | 128 |
+| Cylinder, medium | 16 sectors | 70 | 64 |
+| Cylinder, low | 8 sectors | 38 | 32 |
+| Cone, full | base radius 0.5 at y = −0.5, apex at y = +0.5, capped, 32 sectors | 99 | 64 |
+| Cone, medium | 16 sectors | 51 | 32 |
+| Cone, low | 8 sectors | 27 | 16 |
+
+The counts follow closed formulas (`n` = sectors, `s` = stacks):
+
+| Shape | Vertices | Triangles |
+|---|---|---|
+| Plane | 4 | 2 |
+| Cube | 6 faces × 4 = 24 | 6 faces × 2 = 12 |
+| Sphere | (s + 1)(n + 1) | 2n(s − 1) |
+| Cylinder | 2(n + 1) side + 2(n + 2) caps = 4n + 6 | 2n side + 2n caps = 4n |
+| Cone | (n + 1) base ring + n apexes + (n + 2) cap = 3n + 3 | n side + n cap = 2n |
 
 **Why unit size?** A model matrix scale of `(w, h, d)` then produces an object of exactly `w × h × d`
 units, so the numbers in the character builders read like real dimensions ("a leg 0.15 wide and 0.62
@@ -23,7 +43,55 @@ That is OpenGL's front face, so back-face culling removes only hidden faces. How
 outside the face, write down the screen positions (right, up) of the three vertices a → b → c, and compute
 the 2D cross product `(b−a) × (c−a)`; positive = counter-clockwise.
 
-Each vertex stores `position`, `normal`, `uv` (see [02](02-opengl-pipeline-fundamentals.md)).
+Each vertex stores `position`, `normal`, `uv` (see [02](02-opengl-pipeline-fundamentals.md)) — three
+floats, three floats and two floats, **32 bytes** per vertex. An index is a 4-byte `GLuint`, three per
+triangle (12 bytes per triangle).
+
+### Polygons, triangles and why everything is a triangle
+
+A **polygon** is a flat shape bounded by straight edges. Modelling is easiest with quadrilaterals (a cube
+face, a floor, a wall), but a GPU rasterises **only triangles**, for three reasons:
+
+1. Three points are always **coplanar**; four points need not be, so a quad has no single well-defined
+   normal or interpolation.
+2. A triangle is always **convex**, so "is this pixel inside?" is three half-plane tests.
+3. Interpolating a value across a triangle is a *unique* linear function (barycentric coordinates); across
+   a general polygon it is ambiguous.
+
+An `n`-sided convex polygon becomes `n − 2` triangles. So a quad → 2 triangles (cube faces, plane, wall),
+and a cylinder cap with `n` rim vertices is a **triangle fan** of `n` triangles around its centre vertex
+(the centre is an extra vertex, which is why a fan has `n` triangles rather than `n − 2`: it keeps the cap's
+uv mapping a perfect disk).
+
+Geometry formulas used by the project for a triangle with corners **a**, **b**, **c**:
+
+```
+face normal      n = normalize( (b − a) × (c − a) )      points to the side from which a, b, c look counter-clockwise
+area             A = ½ · | (b − a) × (c − a) |
+barycentric      p = α·a + β·b + γ·c ,  α + β + γ = 1 ,  α, β, γ ≥ 0 inside the triangle
+                 α = area(p, b, c) / A ,  β = area(a, p, c) / A ,  γ = area(a, b, p) / A
+screen winding   signed area  S = ½ [ (b.x − a.x)(c.y − a.y) − (c.x − a.x)(b.y − a.y) ]
+                 S > 0 → counter-clockwise → front face (kept) ;  S < 0 → back face (culled)
+```
+
+The barycentric weights are exactly what the rasteriser uses to interpolate normals, uvs and colours
+(see [09 — Shading](09-shading.md)).
+
+**Indexed drawing.** A vertex shared by several triangles is stored once and referenced by index. For
+the full sphere, 1 656 triangles use only 925 vertices; without indices it would need
+1 656 × 3 = 4 968 vertices (about 5.4× the vertex data and 5.4× the vertex-shader work, minus whatever the
+GPU's post-transform cache recovers). Where neighbouring triangles need *different* normals or uvs
+(cube edges, cylinder caps, the texture seam) the vertex is deliberately duplicated — a vertex is a
+*full bundle of attributes*, not just a position.
+
+**Memory.** Total GPU memory of all eleven meshes ≈ 82 KB (54 KB of vertices + 30 KB of indices):
+
+| Mesh | Vertex bytes (×32) | Index bytes (×12 per triangle) |
+|---|---|---|
+| Sphere full / medium / low | 29 600 / 7 904 / 2 464 | 19 872 / 4 752 / 1 200 |
+| Cylinder full / medium / low | 4 288 / 2 240 / 1 216 | 1 536 / 768 / 384 |
+| Cone full / medium / low | 3 168 / 1 632 / 864 | 768 / 384 / 192 |
+| Plane / cube | 128 / 768 | 24 / 144 |
 
 You can print the real tables from the running program: select an object and press **Shift+V** — every
 primitive it uses is dumped with all vertices and all triangles. **F10** draws the vertices of the selected
@@ -195,7 +263,15 @@ ring 2-3:                     (10,15,11) (11,15,16) (11,16,12) (12,16,17) (12,17
 ring 3-4 (bottom cap, T0):    (15,20,16) (16,21,17) (17,22,18) (18,23,19)
 ```
 
-The scene uses 18 stacks × 32 sectors: 627 vertices, 1088 triangles — smooth enough for heads and the ball.
+The full-detail sphere uses 24 stacks × 36 sectors (925 vertices, 1 656 triangles); the medium and low
+versions are produced by the **same function** with fewer stacks and sectors (section 8). Smooth shading
+interpolates the sphere's exact normals (`n = p / r`), so even the 100-triangle version looks round in the
+interior of the shape; only its silhouette is visibly polygonal, and only when it is large on screen —
+which is exactly when the full version is chosen.
+
+Edge-length check: with 36 sectors a sphere of radius `r` has a silhouette chord of
+`2 r sin(π/36) ≈ 0.174 r`, i.e. the polygonal silhouette deviates from a true circle by at most
+`r (1 − cos(π/36)) ≈ 0.0038 r` (0.4 %) — below one pixel for any sphere with a radius under ~260 px.
 
 Used for: heads, eyes, pupils, noses, hands, hair, shoulder joints, horse body (scaled into an ellipsoid),
 the ball, sun, moon, bulb, ghost head, Buzz's helmet.
@@ -258,9 +334,66 @@ hip->AddShape("Foot", &a.Cube(), &boots, { 0, -0.80f, 0.05f }, { 0.18f, 0.10f, 0
 How nodes are combined into characters is covered in [06 — Scene graph](06-scene-graph-hierarchy.md) and
 [07 — Characters](07-characters-and-props.md).
 
-## 7. Efficiency notes
+## 7. How many shapes and triangles are in the scene
 
-* 5 VBOs / EBOs for the entire scene; nothing is re-uploaded per frame.
+`bin\Release\HauntedToyRoom.exe --benchmark 5` prints the shape count and the triangles each object
+would cost at full detail (measured from the real draw list):
+
+| Object | Shapes | Triangles at full detail |
+|---|---|---|
+| Room and scenery during the story (walls, desk, bed, bookcase, curtains, window, hall, doors, contact shadows…) | 117 | 15 798 |
+| … during Penny's arrival (+ house exterior, garden, ground floor, stairs) | 337 | 70 170 |
+| Penny the cat | 34 | 34 656 |
+| Woody | 80 | 57 932 |
+| Jessie | 77 | 61 300 |
+| Bullseye | 46 | 31 576 |
+| Buzz | 89 | 65 376 |
+| RC Car | 36 | 6 408 |
+| Ball | 1 | 1 656 |
+| Desk lamp | 5 | 3 632 |
+| Doorway crate + 6 wooden blocks | 7 | 12 each |
+
+During the story everything at full detail is ≈ 278 000 triangles; the frame actually draws about
+28 000 – 50 000 because
+of level of detail, frustum culling and shadow-pass culling ([17](17-performance.md)). A humanoid is
+mostly **spheres**: Woody has 80 shapes, of which 33 are spheres (skull, eyes, pupils, irises, ears, cheeks,
+nose, hair, knees, toes, shoulder/elbow/hand balls, thumbs, buttons, scarf knot), each worth 1 656 triangles
+at full detail — 33 × 1 656 = 54 648 of his 57 932 triangles (94 %). That is why a small sphere must not use
+the full mesh.
+
+*Check, the desk lamp:* Base cylinder 128 + Arm cylinder 128 + Elbow sphere 1 656 + Shade cone 64 +
+Bulb sphere 1 656 = **3 632** ✓.
+
+## 8. Level of detail (LOD)
+
+A triangle smaller than a pixel contributes nothing visible but still costs vertex work, so each sphere,
+cylinder and cone has three meshes (`Assets::Load`, `Mesh::SetDetailLevels`). Every frame
+`Renderer::CollectNode` computes, for each shape:
+
+```
+radius      = ½ · sqrt( |a₀|² + |a₁|² + |a₂|² )       a₀,a₁,a₂ = the three axis columns of the model matrix
+                                                       (half the diagonal of the scaled unit cube: it encloses every primitive)
+distance    = | shape centre − camera position |
+screenSize  = radius / distance                        ≈ tangent of the angular radius, proportional to size in pixels
+
+screenSize <  0.012  → low mesh
+screenSize <  0.060  → medium mesh
+otherwise            → full mesh
+```
+
+*Example, Woody's skull* (scale 0.34 × 0.38 × 0.34): `radius = ½·sqrt(0.1156 + 0.1444 + 0.1156) = 0.306`.
+It uses the full mesh closer than `0.306 / 0.06 = 5.1` units, the medium mesh up to `0.306 / 0.012 = 25.5`
+units and the low mesh beyond. From the default camera (≈ 10 units away) the skull is drawn with 396
+triangles instead of 1 656.
+
+The shape's **world matrix is unchanged**, only the mesh pointer differs, so the ray tracer — which does
+not use triangles at all — is unaffected: it always intersects the exact analytic shape.
+
+## 9. Efficiency notes
+
+* 11 VBOs / EBOs for the entire scene; nothing is re-uploaded per frame.
 * `GL_UNSIGNED_INT` indices, interleaved attributes (one buffer, good cache locality).
-* Sphere/cylinder/cone resolution is chosen once (18×32 / 32 sectors): smooth silhouettes without
-  wasting vertices on tiny eyes.
+* Surface detail that used to be modelled with extra shapes (stitching, braid beads, tyre treads,
+  quilt seams, studs, mane strands — over 200 shapes) now comes from textures
+  ([10 — Textures](10-textures.md)): a texture costs the same however much detail it shows, a shape
+  costs triangles, draw calls and a matrix every frame.

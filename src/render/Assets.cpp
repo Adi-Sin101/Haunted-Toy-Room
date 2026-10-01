@@ -42,6 +42,10 @@ void Assets::Load()
 	AddTexture("worn-leather", PT::Fabric(2), LeatherSlot);
 	AddTexture("shirt-plaid", PT::Fabric(3), PlaidSlot);
 	AddTexture("cow-print", PT::Fabric(4), CowSlot);
+	AddTexture("siding", PT::Siding());
+	AddTexture("shingles", PT::Shingles());
+	AddTexture("brick", PT::Brick());
+	AddTexture("grass", PT::Grass());
 
 	// The poster is a real image file read by our own BMP loader.
 	const std::string posterPath = Paths::resolve("assets/textures/poster.bmp").string();
@@ -58,9 +62,16 @@ const Texture* Assets::AddTexture(const std::string& name, const Image& image, i
 {
 	textures.push_back(std::make_unique<Texture>(name, image, nearest));
 	const Texture* tex = textures.back().get();
+	named[name] = tex;
 	if (slot >= 0)
 		slotTextures[static_cast<size_t>(slot)] = tex;
 	return tex;
+}
+
+const Texture* Assets::Named(const std::string& name) const
+{
+	auto it = named.find(name);
+	return it == named.end() ? nullptr : it->second;
 }
 
 Material& Assets::Mat(const std::string& name, const glm::vec3& color, float ks, float shininess)

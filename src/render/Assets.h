@@ -29,6 +29,8 @@ public:
 	std::vector<const Mesh*> AllMeshes() const { return { plane.get(), cube.get(), sphere.get(), cylinder.get(), cone.get() }; }
 
 	const Texture& WhiteTexture() const { return *white; }
+	// Textures without a ray-tracer slot (the house exterior), looked up by name; nullptr if unknown.
+	const Texture* Named(const std::string& name) const;
 	const Texture* SlotTexture(int slot) const { return slotTextures[static_cast<size_t>(slot)]; }
 
 	// Creates (or returns the existing) material with this name.
@@ -43,5 +45,6 @@ private:
 	std::vector<std::unique_ptr<Texture>> textures;
 	std::array<const Texture*, SlotCount> slotTextures{};
 	const Texture* white = nullptr;
+	std::map<std::string, const Texture*> named;
 	std::map<std::string, std::unique_ptr<Material>> materials;
 };

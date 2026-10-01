@@ -29,6 +29,10 @@ public:
 	std::string ClockText() const;
 
 	glm::vec3 AmbientLight() const;
+	// The sun as seen from the garden: the same orbit angle as the sun behind the window, on a large
+	// arc just in front of the sky backdrop. SunHeight() = sin(orbit angle), > 0 while the sun is up.
+	glm::vec3 OutdoorSunPosition() const;
+	float SunHeight() const;
 	glm::vec3 ClearColor() const;
 
 	// Direction the sky light travels, its colour and intensity (sun by day, moon by night).
