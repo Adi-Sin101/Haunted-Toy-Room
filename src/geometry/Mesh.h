@@ -35,6 +35,20 @@ public:
 	void Draw() const;
 	void DrawPoints() const;
 
+	// Level of detail: cheaper versions of the same shape (same PrimitiveType, fewer triangles).
+	// `screenSize` = bounding radius / distance to the camera; small or distant objects pick a
+	// coarser mesh, because their extra triangles would be smaller than a pixel anyway.
+	void SetDetailLevels(const Mesh* medium, const Mesh* low) { mediumDetail = medium; lowDetail = low; }
+	const Mesh& ForScreenSize(float screenSize) const
+	{
+		if (lowDetail && screenSize < 0.012f) return *lowDetail;
+		if (mediumDetail && screenSize < 0.06f) return *mediumDetail;
+		return *this;
+	}
+
+	void Bind() const { vao.Bind(); }
+	void DrawBound() const { glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr); }
+
 	const std::string& Name() const { return name; }
 	PrimitiveType Type() const { return type; }
 	const MeshData& Data() const { return data; }
@@ -46,6 +60,8 @@ private:
 	PrimitiveType type;
 	MeshData data;
 	GLsizei indexCount = 0;
+	const Mesh* mediumDetail = nullptr;
+	const Mesh* lowDetail = nullptr;
 
 	VAO vao;
 	VBO vbo;

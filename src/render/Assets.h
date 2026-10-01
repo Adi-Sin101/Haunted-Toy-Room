@@ -39,6 +39,7 @@ private:
 	const Texture* AddTexture(const std::string& name, const Image& image, int slot = -1, bool nearest = false);
 
 	std::unique_ptr<Mesh> plane, cube, sphere, cylinder, cone;
+	std::vector<std::unique_ptr<Mesh>> detailLevels; // coarser sphere / cylinder / cone versions
 	std::vector<std::unique_ptr<Texture>> textures;
 	std::array<const Texture*, SlotCount> slotTextures{};
 	const Texture* white = nullptr;

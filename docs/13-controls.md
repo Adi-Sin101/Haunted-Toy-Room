@@ -134,7 +134,7 @@ distance attenuation. Textures off uses flat preview colours so room surfaces re
 ```
 HauntedToyRoom.exe [--hour 21.5] [--select N] [--focus] [--orbit yaw,pitch,dist] [--cam x,y,z,tx,ty,tz]
                    [--mount] [--raytrace] [--shading 0..3] [--wireframe] [--normals] [--pause] [--story]
-                   [--capture file.bmp] [--frames 90]
+                   [--capture file.bmp] [--frames 90] [--benchmark 400]
 ```
 
 `--select` takes the 0-based object index (0 Woody … 7 Ghost). With `--capture`, the clock is paused, the
@@ -144,3 +144,6 @@ exits. Example:
 ```
 HauntedToyRoom.exe --hour 12 --select 2 --mount --orbit 60,15,5 --capture mounted.bmp
 ```
+
+`--benchmark N` turns v-sync off, skips 60 warm-up frames, times the next N frames and prints the
+average frame time, draw calls and triangles, then exits (see [17 - Performance](17-performance.md)).

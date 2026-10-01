@@ -24,6 +24,7 @@ Bullseye::Bullseye(SceneNode& parent, Assets& a, const glm::vec3& position, floa
 	Material& pupil = a.Mat("eye-pupil", { 0.05f, 0.05f, 0.08f }, 0.9f, 128.0f);
 	Material& brass = a.Mat("brass", { 0.85f, 0.65f, 0.25f }, 0.8f, 64.0f);
 	saddleMat.texture = a.SlotTexture(Assets::LeatherSlot); saddleMat.rtTextureSlot = Assets::LeatherSlot;
+	mane.texture = a.SlotTexture(Assets::FabricSlot); mane.rtTextureSlot = Assets::FabricSlot; mane.uvScale = {1, 4};
 	coat.texture = a.SlotTexture(Assets::FabricSlot); coat.rtTextureSlot = Assets::FabricSlot; coat.uvScale = {3, 3};
 
 	const Mesh& cube = a.Cube();
@@ -45,8 +46,6 @@ Bullseye::Bullseye(SceneNode& parent, Assets& a, const glm::vec3& position, floa
 	for (float side : {-1.0f, 1.0f}) {
 		saddle->AddShape("StirrupStrap", &cube, &saddleMat, {side * 0.36f, -0.30f, 0.12f}, {0.035f, 0.52f, 0.035f});
 		saddle->AddShape("StirrupBase", &cube, &brass, {side * 0.36f, -0.57f, 0.12f}, {0.16f, 0.025f, 0.13f});
-		for (int stud = 0; stud < 7; ++stud) saddle->AddShape("SaddleStud", &sphere, &brass,
-			{side * 0.36f, -0.055f - stud * 0.04f, 0.205f}, glm::vec3(0.014f));
 	}
 	seat = saddle->AddChild("Seat");
 	seat->local.position = { 0, 0.06f, -0.05f };
@@ -77,8 +76,6 @@ Bullseye::Bullseye(SceneNode& parent, Assets& a, const glm::vec3& position, floa
 		head->AddShape("CheekStrap", &cube, &saddleMat, {side * 0.172f, 0.03f, 0.25f}, {0.025f, 0.24f, 0.045f});
 		head->AddShape("BridleBuckle", &sphere, &brass, {side * 0.186f, 0.03f, 0.29f}, glm::vec3(0.045f));
 	}
-	for (int strand = 0; strand < 9; ++strand) neck->AddShape("ManeStrand", &cylinder, &mane,
-		{(strand % 2 == 0 ? 0.025f : -0.025f), 0.08f + strand * 0.09f, -0.20f}, {0.035f, 0.17f, 0.08f}, {-28, 0, 0});
 
 	// Tail
 	tail = body->AddChild("Tail");

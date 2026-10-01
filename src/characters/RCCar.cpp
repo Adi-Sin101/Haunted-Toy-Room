@@ -21,6 +21,7 @@ RCCar::RCCar(SceneNode& parent, Assets& a, const glm::vec3& position, float head
 	Material& glass = a.Mat("car-glass", { 0.25f, 0.45f, 0.7f }, 1.0f, 128.0f);
 	glass.reflectivity = 0.3f;
 	Material& tyre = a.Mat("tyre", { 0.08f, 0.08f, 0.08f }, 0.1f, 8.0f);
+	tyre.texture = a.SlotTexture(Assets::DenimSlot); tyre.rtTextureSlot = Assets::DenimSlot; tyre.uvScale = {6, 1}; // rubber tread grain
 	Material& hub = a.Mat("hub", { 0.75f, 0.75f, 0.8f }, 0.9f, 96.0f);
 	Material& lamp = a.Mat("car-headlight", { 1.0f, 1.0f, 0.85f }, 0.5f, 32.0f);
 	lampMaterial = &lamp;
@@ -47,8 +48,7 @@ RCCar::RCCar(SceneNode& parent, Assets& a, const glm::vec3& position, float head
 		chassis->AddShape("RacingStripe", &cube, &hub, {side * 0.14f, 0.537f, 0.40f}, {0.08f, 0.014f, 0.55f});
 		chassis->AddShape("DoorHandle", &cube, &hub, {side * 0.409f, 0.48f, -0.17f}, {0.012f, 0.025f, 0.09f});
 	}
-	for (int grille = 0; grille < 7; ++grille) chassis->AddShape("Grille", &cube, &hub,
-		{-0.18f + grille * 0.06f, 0.39f, 0.706f}, {0.017f, 0.1f, 0.016f});
+	chassis->AddShape("Grille", &cube, &trim, {0, 0.39f, 0.706f}, {0.38f, 0.1f, 0.016f});
 
 	for (int i = 0; i < 2; ++i) {
 		const float x = i == 0 ? 0.25f : -0.25f;
@@ -68,13 +68,7 @@ RCCar::RCCar(SceneNode& parent, Assets& a, const glm::vec3& position, float head
 		spinJoints[i]->AddShape("Tyre", &cylinder, &tyre, { 0, 0, 0 }, { 2 * WheelRadius, 0.2f, 2 * WheelRadius }, { 0, 0, 90 });
 		spinJoints[i]->AddShape("Hub", &cylinder, &hub, { 0, 0, 0 }, { 0.2f, 0.22f, 0.2f }, { 0, 0, 90 });
 		spinJoints[i]->AddShape("Spoke", &cube, &hub, { 0, 0, 0 }, { 0.23f, 0.05f, 0.36f });
-		for (int tread = 0; tread < 18; ++tread) {
-			const float angle = glm::radians(tread * 20.0f);
-			spinJoints[i]->AddShape("Tread", &cube, &trim, {0, std::cos(angle) * (WheelRadius + 0.006f), std::sin(angle) * (WheelRadius + 0.006f)},
-				{0.205f, 0.018f, 0.055f}, {tread * 20.0f, 0, 0});
-		}
-		for (int spoke = 1; spoke < 5; ++spoke) spinJoints[i]->AddShape("RadialSpoke", &cube, &hub,
-			{0, 0, 0}, {0.23f, 0.028f, 0.31f}, {spoke * 36.0f, 0, 0});
+		spinJoints[i]->AddShape("RadialSpoke", &cube, &hub, {0, 0, 0}, {0.23f, 0.05f, 0.36f}, {90, 0, 0});
 	}
 	SaveHome();
 }

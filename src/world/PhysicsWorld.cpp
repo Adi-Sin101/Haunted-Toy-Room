@@ -71,6 +71,13 @@ void PhysicsWorld::Init(SceneNode& scene, const std::vector<SceneNode*>& blocks)
 	scenery.clear(); bodies.clear(); actors.clear(); accumulator = 0.0f;
 	for (SceneNode* n : blocks) bodies.push_back({n, n->local});
 	scene.ForEach([&](SceneNode& n) { if (n.solid && n.mesh && !IsBlock(&n)) scenery.push_back(&n); });
+	RefreshScenery();
+}
+
+void PhysicsWorld::RefreshScenery()
+{
+	sceneryBounds.clear();
+	for (SceneNode* n : scenery) sceneryBounds.push_back(ShapeBounds(n));
 }
 
 void PhysicsWorld::AddActor(SceneNode* node, glm::vec3 half, glm::vec3 offset)
@@ -99,10 +106,10 @@ std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore) con
 {
 	std::vector<Bounds> list;
 	list.reserve(scenery.size() + actors.size() + bodies.size());
-	for (SceneNode* n : scenery) {
+	for (const Bounds& b : sceneryBounds) {
 		bool ignored = false;
-		for (SceneNode* parent = n; parent; parent = parent->Parent()) if (parent == ignore) ignored = true;
-		if (!ignored) list.push_back(ShapeBounds(n));
+		if (ignore) for (SceneNode* parent = b.node; parent && !ignored; parent = parent->Parent()) ignored = parent == ignore;
+		if (!ignored) list.push_back(b);
 	}
 	for (const Body& b : bodies) if (b.node != ignore && b.node->visible) {
 		const glm::vec3 half = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
@@ -217,16 +224,28 @@ void PhysicsWorld::StopBlock(SceneNode* node)
 void PhysicsWorld::Update(float dt)
 {
 	laserCooldown = std::max(0.0f, laserCooldown - dt);
-	accumulator += std::min(dt, 0.1f);
 	constexpr float step = 1.0f / 120.0f;
-	auto bounds = [](Body& b) {
-		const glm::vec3 h = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
-		return Bounds{b.node->local.position - h, b.node->local.position + h, b.node};
+	// At most 6 steps per frame: a slow frame must not schedule even more work for the next one.
+	accumulator = std::min(accumulator + std::min(dt, 0.1f), 6.0f * step);
+	// Furniture and actors stand still while the blocks are simulated, so their boxes are computed
+	// once per frame instead of once per block, per contact iteration and per step.
+	RefreshScenery();
+	std::vector<Bounds> actorBounds;
+	for (const Actor& actor : actors) if (actor.enabled) actorBounds.push_back(ActorBounds(actor));
+	// A block's rotation is fixed during the contact pass; only its position is corrected.
+	std::vector<glm::vec3> halves(bodies.size());
+	auto bounds = [&](size_t i) {
+		const glm::vec3& p = bodies[i].node->local.position;
+		return Bounds{p - halves[i], p + halves[i], bodies[i].node};
+	};
+	auto overlaps = [](const Bounds& a, const Bounds& b) {
+		return glm::all(glm::lessThan(a.low, b.high)) && glm::all(glm::lessThan(b.low, a.high));
 	};
 	while (accumulator >= step) {
 		accumulator -= step;
-		for (Body& b : bodies) {
-   if (!b.node->visible) continue;
+		for (size_t i = 0; i < bodies.size(); ++i) {
+			Body& b = bodies[i];
+			if (!b.node->visible) continue;
 			const glm::vec3 available(RoomSize::HalfWidth - 0.6f, RoomSize::Height * 0.5f - 0.25f, RoomSize::HalfDepth - 0.6f);
 			const glm::vec3 current = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
 			const float fit = std::min({1.0f, available.x / std::max(current.x, 0.001f), available.y / std::max(current.y, 0.001f), available.z / std::max(current.z, 0.001f)});
@@ -235,7 +254,8 @@ void PhysicsWorld::Update(float dt)
 			b.node->local.position += b.velocity * step;
 			b.node->local.rotation += b.angular * step;
 			b.angular *= std::exp(-step * 1.7f);
-			Bounds box = bounds(b);
+			halves[i] = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
+			Bounds box = bounds(i);
 			if (box.low.y < 0.0f) {
 				b.node->local.position.y -= box.low.y;
 				if (b.velocity.y < 0) b.velocity.y = -b.velocity.y * 0.14f;
@@ -243,32 +263,42 @@ void PhysicsWorld::Update(float dt)
 				b.angular *= std::exp(-step * 7.0f);
 				if (glm::length(b.velocity) < 0.18f && glm::length(b.angular) < 8.0f) {
 					for (int axis : {0, 2}) b.node->local.rotation[axis] += (std::round(b.node->local.rotation[axis] / 90.0f) * 90.0f - b.node->local.rotation[axis]) * step * 5.0f;
+					halves[i] = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
 				}
 			}
-			const glm::vec3 half = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
+			const glm::vec3& half = halves[i];
 			const glm::vec3 clamped = RoomClamp(b.node->local.position, half);
 			for (int axis : {0, 2}) if (clamped[axis] != b.node->local.position[axis]) b.velocity[axis] *= -0.25f;
 			b.node->local.position.x = clamped.x; b.node->local.position.z = clamped.z;
 			if (b.node->local.position.y > clamped.y && b.velocity.y > 0) b.velocity.y *= -0.15f;
 			b.node->local.position.y = std::min(b.node->local.position.y, clamped.y + 0.001f);
 		}
+		// Broad phase: only furniture near a block can touch it during this step's contact pass.
+		nearby.resize(bodies.size());
+		for (size_t i = 0; i < bodies.size(); ++i) {
+			nearby[i].clear();
+			if (!bodies[i].node->visible) continue;
+			Bounds reach = bounds(i);
+			reach.low -= 0.25f; reach.high += 0.25f;
+			for (const Bounds& wall : sceneryBounds) if (overlaps(reach, wall)) nearby[i].push_back(&wall);
+		}
 		// Iterative separation keeps stacks and furniture solid after an impact.
 		for (int iteration = 0; iteration < 6; ++iteration) {
 			for (size_t i = 0; i < bodies.size(); ++i) {
 				Body& a = bodies[i]; if (!a.node->visible) continue; glm::vec3 n; float depth;
-				for (SceneNode* wall : scenery) if (Contact(bounds(a), ShapeBounds(wall), n, depth)) {
+				for (const Bounds* wall : nearby[i]) if (Contact(bounds(i), *wall, n, depth)) {
 					a.node->local.position += n * (depth + 0.001f);
 					const float speed = glm::dot(a.velocity, n);
 					if (speed < 0) a.velocity -= n * speed * 1.15f;
 				}
-				for (const Actor& actor : actors) if (actor.enabled && Contact(bounds(a), ActorBounds(actor), n, depth)) {
+				for (const Bounds& actor : actorBounds) if (Contact(bounds(i), actor, n, depth)) {
 					a.node->local.position += n * (depth + 0.001f);
 					const float speed = glm::dot(a.velocity, n);
 					if (speed < 0) a.velocity -= n * speed;
 				}
 				for (size_t j = i + 1; j < bodies.size(); ++j) {
 					Body& b = bodies[j]; if (!b.node->visible) continue;
-					if (!Contact(bounds(a), bounds(b), n, depth)) continue;
+					if (!Contact(bounds(i), bounds(j), n, depth)) continue;
 					a.node->local.position += n * (depth * 0.5f + 0.0001f);
 					b.node->local.position -= n * (depth * 0.5f + 0.0001f);
 					const float closing = glm::dot(a.velocity - b.velocity, n);
@@ -277,10 +307,10 @@ void PhysicsWorld::Update(float dt)
 				}
 			}
 		}
-		for (Body& b : bodies) {
-   if (!b.node->visible) continue;
-			const Bounds box = bounds(b);
-			if (box.low.y < 0) b.node->local.position.y -= box.low.y;
+		for (size_t i = 0; i < bodies.size(); ++i) {
+			if (!bodies[i].node->visible) continue;
+			const Bounds box = bounds(i);
+			if (box.low.y < 0) bodies[i].node->local.position.y -= box.low.y;
 		}
 	}
 }

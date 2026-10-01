@@ -73,3 +73,4 @@ Also: [project-context.md](project-context.md) (original idea and requirements) 
 | Environment with its own motion; toys come alive at night, return in the morning | [11](11-environment-animation.md) |
 
 - [16 - The Midnight Mission](16-midnight-mission.md): seven coordinated scenes, manual takeover, car activation and the compact interface.
+- [17 - Performance](17-performance.md): measured bottlenecks, level of detail, culling and why surface detail belongs in textures.

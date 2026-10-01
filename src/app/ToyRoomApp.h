@@ -63,6 +63,7 @@ struct LaunchOptions {
 	int frames = 90;
 	float storyStep = 0.0f;
 	int storySteps = 1;
+	int benchmark = 0;     // run this many frames without v-sync, print timings, then quit
 
 	static LaunchOptions Parse(int argc, char* argv[]);
 };
@@ -150,4 +151,6 @@ private:
 	bool wasMoving = false;
 	LaunchOptions launch;
 	int frameCounter = 0;
+	double benchmarkStart = 0.0, benchmarkCpu = 0.0;
+	long long benchmarkTriangles = 0, benchmarkDraws = 0;
 };

@@ -201,9 +201,9 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	}
 	Material& curtain = Textured(a, "curtain", {0.38f, 0.45f, 0.57f}, Assets::FabricSlot, {2, 5}, 0.0f);
 	for (int side = -1; side <= 1; side += 2) {
-		for (int fold = 0; fold < 7; ++fold) {
-			const float x = (side < 0 ? winL - 0.9f : winR + 0.12f) + fold * 0.13f;
-			room->AddShape("CurtainFold", &cylinder, &curtain, {x, cy, z + 0.22f}, {0.19f, 3.6f, 0.13f});
+		for (int fold = 0; fold < 4; ++fold) {
+			const float x = (side < 0 ? winL - 0.86f : winR + 0.14f) + fold * 0.24f;
+			room->AddShape("CurtainFold", &cylinder, &curtain, {x, cy, z + 0.22f}, {0.30f, 3.6f, 0.15f});
 		}
 	}
 	room->AddShape("CurtainRod", &cylinder, &knobMat, {cx, winT + 0.4f, z + 0.23f}, {0.055f, 6.3f, 0.055f}, {0, 0, 90});
@@ -215,7 +215,6 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	solid(bed->AddShape("Blanket", &cube, &quilt, {0, 1.10f, 0.55f}, {3.36f, 0.12f, 3.45f}));
 	solid(bed->AddShape("Headboard", &cube, &deskMat, {0, 1.0f, -2.35f}, {3.6f, 1.8f, 0.18f}));
 	for (float side : {-1.0f, 1.0f}) solid(bed->AddShape("Pillow", &sphere, &paper, {0.8f * side, 1.2f, -1.5f}, {1.4f, 0.3f, 0.9f}));
-	for (int seam = 0; seam < 9; ++seam) bed->AddShape("QuiltSeam", &cube, &paper, {-1.55f + seam * 0.39f, 1.165f, 0.55f}, {0.012f, 0.006f, 3.4f});
 	SceneNode* shelf = room->AddChild("Bookcase");
 	shelf->local.position = {-8.9f, 0, -1.5f};
 	for (float side : {-1.0f, 1.0f}) solid(shelf->AddShape("Upright", &cube, &deskMat, {side * 0.9f, 1.75f, 0}, {0.12f, 3.5f, 1.0f}));
@@ -227,7 +226,6 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 			Material& cover = a.Mat("book-cover-" + std::to_string(book), blockColors[book % 3] * 0.55f, 0.08f);
 			const float x = -0.70f + book * 0.24f;
 			solid(shelf->AddShape("Book", &cube, &cover, {x, level + 0.37f, -0.1f}, {0.18f, 0.66f - (book % 3) * 0.08f, 0.56f}));
-			shelf->AddShape("SpineBand", &cube, &knobMat, {x, level + 0.2f, 0.19f}, {0.14f, 0.025f, 0.01f});
 		}
 	}
 	// Distant silhouettes are outside the sealed play space and visible through the window.

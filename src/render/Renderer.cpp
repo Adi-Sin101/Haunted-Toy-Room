@@ -39,7 +39,11 @@ void Renderer::Init(const Assets& library)
 		lightNames[static_cast<size_t>(i)] = { p + "type", p + "enabled", p + "position", p + "direction", p + "color",
 			p + "intensity", p + "constant", p + "linear", p + "quadratic", p + "innerCutoff", p + "outerCutoff" };
 	}
-	items.reserve(512);
+	litUniforms.Resolve(litShader);
+	gouraudUniforms.Resolve(gouraudShader);
+	shadowModel = shadowShader.Uniform("uModel");
+	items.reserve(1024);
+	opaque.reserve(1024);
 	transparent.reserve(64);
 }
 
@@ -49,12 +53,56 @@ Renderer::~Renderer()
 	if (shadowFbo) glDeleteFramebuffers(1, &shadowFbo);
 }
 
+namespace {
+
+// The six clipping planes of a view-projection matrix (Gribb & Hartmann): each plane is
+// row3 +/- row0..2, stored as (normal, d) so that dot(normal, p) + d >= 0 means "inside".
+struct Frustum {
+	glm::vec4 planes[6];
+	explicit Frustum(const glm::mat4& viewProj)
+	{
+		const glm::vec4 row0(viewProj[0][0], viewProj[1][0], viewProj[2][0], viewProj[3][0]);
+		const glm::vec4 row1(viewProj[0][1], viewProj[1][1], viewProj[2][1], viewProj[3][1]);
+		const glm::vec4 row2(viewProj[0][2], viewProj[1][2], viewProj[2][2], viewProj[3][2]);
+		const glm::vec4 row3(viewProj[0][3], viewProj[1][3], viewProj[2][3], viewProj[3][3]);
+		const glm::vec4 raw[6] = { row3 + row0, row3 - row0, row3 + row1, row3 - row1, row3 + row2, row3 - row2 };
+		for (int i = 0; i < 6; ++i)
+			planes[i] = raw[i] / glm::length(glm::vec3(raw[i]));
+	}
+	// A bounding sphere is culled only when it lies completely behind one plane.
+	bool Visible(const glm::vec3& c, float r) const
+	{
+		for (const glm::vec4& p : planes)
+			if (p.x * c.x + p.y * c.y + p.z * c.z + p.w < -r) return false;
+		return true;
+	}
+};
+
+} // namespace
+
+void Renderer::DrawUniforms::Resolve(const Shader& shader)
+{
+	model = shader.Uniform("uModel");
+	normalMatrix = shader.Uniform("uNormalMatrix");
+	highlight = shader.Uniform("uHighlight");
+	color = shader.Uniform("uMaterial.color");
+	ka = shader.Uniform("uMaterial.ka");
+	kd = shader.Uniform("uMaterial.kd");
+	ks = shader.Uniform("uMaterial.ks");
+	shininess = shader.Uniform("uMaterial.shininess");
+	emissive = shader.Uniform("uMaterial.emissive");
+	opacity = shader.Uniform("uMaterial.opacity");
+	unlit = shader.Uniform("uMaterial.unlit");
+	uvScale = shader.Uniform("uMaterial.uvScale");
+}
+
 void Renderer::RenderLampShadow(const FrameInfo& frame)
 {
 	const Light& lamp = (*frame.lights)[2];
 	const glm::vec3 up = std::abs(lamp.direction.y) > 0.95f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
 	lampViewProjection = t3d::perspective(std::acos(std::clamp(lamp.outerCutoff, -1.0f, 1.0f)) * 2.0f, 1, 0.08f, 36.0f)
 		* t3d::lookAt(lamp.position, lamp.position + lamp.direction, up);
+	const Frustum lampFrustum(lampViewProjection);
 	GLint viewport[4]; glGetIntegerv(GL_VIEWPORT, viewport);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo); glViewport(0, 0, 2048, 2048);
 	glEnable(GL_DEPTH_TEST); glDepthMask(GL_TRUE); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
@@ -62,7 +110,13 @@ void Renderer::RenderLampShadow(const FrameInfo& frame)
 	shadowShader.Activate(); shadowShader.SetMat4("uLightVP", lampViewProjection);
 	for (const DrawItem& item : items) {
 		if (item.material->unlit || item.material->opacity < 0.9f) continue;
-		shadowShader.SetMat4("uModel", item.model); item.mesh->Draw();
+		// Tiny details cast shadows smaller than a shadow-map texel; shapes outside the lamp's
+		// cone cannot cast into it.
+		if (item.radius < 0.035f || !lampFrustum.Visible(item.center, item.radius)) continue;
+		const Mesh& mesh = item.source->ForScreenSize(item.radius / std::max(glm::distance(lamp.position, item.center), 0.01f));
+		glUniformMatrix4fv(shadowModel, 1, GL_FALSE, &item.model[0][0]);
+		mesh.Draw();
+		++stats.shadowDrawCalls; stats.shadowTriangles += static_cast<long long>(mesh.TriangleCount());
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 }
@@ -79,12 +133,18 @@ void Renderer::CollectNode(const SceneNode& node, const glm::vec3& cameraPos)
 		return;
 	if (node.mesh && node.material) {
 		DrawItem item;
-		item.mesh = node.mesh;
+		item.source = node.mesh;
 		item.material = node.material;
 		item.model = node.World();
 		item.normalMatrix = t3d::normalMatrix(item.model);
 		item.ownerId = node.ownerId;
-		item.viewDepth = glm::length(node.WorldPosition() - cameraPos);
+		item.center = node.WorldPosition();
+		// Every primitive fits in the unit cube [-0.5, 0.5]^3, whose corners lie within
+		// 0.5 * sqrt(|a0|^2 + |a1|^2 + |a2|^2) of the centre for the model's axis columns a0..a2.
+		const glm::vec3 a0(item.model[0]), a1(item.model[1]), a2(item.model[2]);
+		item.radius = 0.5f * std::sqrt(glm::dot(a0, a0) + glm::dot(a1, a1) + glm::dot(a2, a2));
+		item.viewDepth = glm::length(item.center - cameraPos);
+		item.mesh = &node.mesh->ForScreenSize(item.radius / std::max(item.viewDepth, 0.01f));
 		items.push_back(item);
 	}
 	for (const auto& child : node.Children())
@@ -121,17 +181,18 @@ void Renderer::UploadLights(const Shader& shader, const FrameInfo& frame, const 
 	shader.SetInt("uRasterShadows", 0); // analytic visibility is used by the ray tracer
 }
 
-void Renderer::ApplyMaterial(const Shader& shader, const Material& m, const RenderSettings& settings) const
+void Renderer::ApplyMaterial(const DrawUniforms& u, const Material& m, const RenderSettings& settings) const
 {
-	shader.SetVec3("uMaterial.color", m.DisplayColor(settings.textures));
-	shader.SetFloat("uMaterial.ka", m.ka);
-	shader.SetFloat("uMaterial.kd", m.kd);
-	shader.SetFloat("uMaterial.ks", m.ks);
-	shader.SetFloat("uMaterial.shininess", m.shininess);
-	shader.SetVec3("uMaterial.emissive", m.emissive);
-	shader.SetFloat("uMaterial.opacity", m.opacity);
-	shader.SetInt("uMaterial.unlit", m.unlit ? 1 : 0);
-	shader.SetVec2("uMaterial.uvScale", m.uvScale);
+	const glm::vec3 color = m.DisplayColor(settings.textures);
+	glUniform3f(u.color, color.r, color.g, color.b);
+	glUniform1f(u.ka, m.ka);
+	glUniform1f(u.kd, m.kd);
+	glUniform1f(u.ks, m.ks);
+	glUniform1f(u.shininess, m.shininess);
+	glUniform3f(u.emissive, m.emissive.r, m.emissive.g, m.emissive.b);
+	glUniform1f(u.opacity, m.opacity);
+	glUniform1i(u.unlit, m.unlit ? 1 : 0);
+	glUniform2f(u.uvScale, m.uvScale.x, m.uvScale.y);
 
 	const Texture* tex = (settings.textures && m.texture) ? m.texture : &assets->WhiteTexture();
 	tex->Bind(0);
@@ -139,10 +200,15 @@ void Renderer::ApplyMaterial(const Shader& shader, const Material& m, const Rend
 
 void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 {
-	if (settings.lighting && settings.shadingEnabled) RenderLampShadow(frame);
+	stats = {};
+	const Light& lamp = (*frame.lights)[2];
+	// The shadow map only matters while the lamp is shining: skip the whole pass otherwise.
+	const bool lampShadows = settings.lighting && settings.shadingEnabled && lamp.enabled && lamp.intensity > 0.001f;
+	if (lampShadows) RenderLampShadow(frame);
 	const Camera& camera = *frame.camera;
 	const glm::mat4 view = camera.View();
 	const glm::mat4 proj = camera.Projection(frame.aspect);
+	const Frustum frustum(proj * view);
 
 	glClearColor(frame.clearColor.r, frame.clearColor.g, frame.clearColor.b, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -152,7 +218,9 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	glFrontFace(GL_CCW);
 	glPolygonMode(GL_FRONT_AND_BACK, settings.wireframe ? GL_LINE : GL_FILL);
 
-	const Shader& shader = settings.shadingEnabled && settings.shading == ShadingMode::Gouraud ? gouraudShader : litShader;
+	const bool gouraud = settings.shadingEnabled && settings.shading == ShadingMode::Gouraud;
+	const Shader& shader = gouraud ? gouraudShader : litShader;
+	const DrawUniforms& u = gouraud ? gouraudUniforms : litUniforms;
 	shader.Activate();
 	shader.SetMat4("uView", view);
 	shader.SetMat4("uProj", proj);
@@ -162,30 +230,44 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	shader.SetInt("uUseTexture", settings.textures ? 1 : 0);
 	UploadLights(shader, frame, settings);
 	glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, shadowDepth);
-	shader.SetInt("uShadowMap", 1); shader.SetInt("uRasterShadows", settings.lighting && settings.shadingEnabled ? 1 : 0);
+	shader.SetInt("uShadowMap", 1); shader.SetInt("uRasterShadows", lampShadows ? 1 : 0);
 	shader.SetMat4("uLightVP", lampViewProjection);
 
 	const float pulse = 0.55f + 0.45f * std::sin(frame.time * 5.0f);
-	const Material* current = nullptr;
+	const Material* currentMaterial = nullptr;
+	const Mesh* currentMesh = nullptr;
+	float currentHighlight = -1.0f;
 	auto draw = [&](const DrawItem& item) {
-		if (item.material != current) { // skip redundant material uploads
-			ApplyMaterial(shader, *item.material, settings);
-			current = item.material;
+		if (item.material != currentMaterial) { // skip redundant material uploads
+			ApplyMaterial(u, *item.material, settings);
+			currentMaterial = item.material;
 		}
-		shader.SetMat4("uModel", item.model);
-		shader.SetMat3("uNormalMatrix", item.normalMatrix);
-		shader.SetFloat("uHighlight", (frame.selectedOwner >= 0 && item.ownerId == frame.selectedOwner) ? pulse : 0.0f);
-		item.mesh->Draw();
+		if (item.mesh != currentMesh) { // consecutive shapes often share a mesh: bind its VAO once
+			item.mesh->Bind();
+			currentMesh = item.mesh;
+		}
+		glUniformMatrix4fv(u.model, 1, GL_FALSE, &item.model[0][0]);
+		glUniformMatrix3fv(u.normalMatrix, 1, GL_FALSE, &item.normalMatrix[0][0]);
+		const float highlight = (frame.selectedOwner >= 0 && item.ownerId == frame.selectedOwner) ? pulse : 0.0f;
+		if (highlight != currentHighlight) { glUniform1f(u.highlight, highlight); currentHighlight = highlight; }
+		item.mesh->DrawBound();
+		++stats.drawCalls; stats.triangles += static_cast<long long>(item.mesh->TriangleCount());
 	};
 
-	// Pass 1: opaque
+	// Frustum culling: shapes behind the camera or off-screen are never submitted.
+	opaque.clear();
 	transparent.clear();
 	for (const DrawItem& item : items) {
-		if (item.material->opacity < 1.0f)
-			transparent.push_back(&item);
-		else
-			draw(item);
+		if (!frustum.Visible(item.center, item.radius)) { ++stats.culled; continue; }
+		(item.material->opacity < 1.0f ? transparent : opaque).push_back(&item);
 	}
+
+	// Pass 1: opaque, grouped by material and mesh so state changes happen once per group
+	std::sort(opaque.begin(), opaque.end(), [](const DrawItem* a, const DrawItem* b) {
+		return a->material != b->material ? a->material < b->material : a->mesh < b->mesh;
+	});
+	for (const DrawItem* item : opaque)
+		draw(*item);
 
 	// Pass 2: transparent, far to near, blended over what is already drawn
 	if (!transparent.empty()) {

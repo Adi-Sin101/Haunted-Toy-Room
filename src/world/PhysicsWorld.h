@@ -38,7 +38,10 @@ private:
 	glm::vec3 Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore) const;
 	std::vector<Bounds> Obstacles(SceneNode* ignore) const;
 	Bounds ActorBounds(const Actor& actor) const;
+	void RefreshScenery();
 	std::vector<SceneNode*> scenery;
+	std::vector<Bounds> sceneryBounds; // world boxes of `scenery`, recomputed once per Update
+	std::vector<std::vector<const Bounds*>> nearby; // broad phase: scenery close to each block, per step
 	std::vector<Actor> actors;
 	std::vector<Body> bodies;
 	float accumulator = 0.0f, laserCooldown = 0.0f;

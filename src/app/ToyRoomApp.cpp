@@ -1002,6 +1002,27 @@ void ToyRoomApp::OnRender()
 	}
 
 	if (hudVisible) DrawHud();
+	if (launch.benchmark > 0) {
+		// Skip a warm-up period (shader compilation, driver caches), then time the next N frames.
+		constexpr int warmup = 60;
+		++frameCounter;
+		if (frameCounter == warmup) { glFinish(); benchmarkStart = glfwGetTime(); }
+		else if (frameCounter > warmup) {
+			benchmarkTriangles += renderer.Stats().triangles + renderer.Stats().shadowTriangles;
+			benchmarkDraws += renderer.Stats().drawCalls + renderer.Stats().shadowDrawCalls;
+			if (frameCounter == warmup + launch.benchmark) {
+				glFinish();
+				const double seconds = glfwGetTime() - benchmarkStart;
+				const double n = launch.benchmark;
+				std::cout << std::fixed << std::setprecision(2) << "Benchmark: " << launch.benchmark << " frames, "
+					<< seconds * 1000.0 / n << " ms/frame (" << n / seconds << " FPS), "
+					<< benchmarkDraws / launch.benchmark << " draw calls, "
+					<< benchmarkTriangles / launch.benchmark << " triangles per frame" << std::endl;
+				Close();
+			}
+		}
+		return;
+	}
 	// Scripted capture (--capture): read the finished back buffer before it is swapped.
 	if (!launch.capture.empty() && ++frameCounter == launch.frames) {
 		if (launch.laserDemo) {
@@ -1056,6 +1077,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		else if (a == "--capture" && hasValue) o.capture = argv[++i];
 		else if (a == "--frames" && hasValue) o.frames = std::stoi(argv[++i]);
 		else if (a == "--story-steps" && hasValue) o.storySteps=std::clamp(std::stoi(argv[++i]),1,20);
+		else if (a == "--benchmark" && hasValue) o.benchmark = std::max(1, std::stoi(argv[++i]));
 		else if (a == "--story-step" && hasValue) o.storyStep=std::clamp(std::stof(argv[++i]),0.001f,0.05f);
 		else if (a == "--cam" && hasValue) {
 			const auto v = floats(argv[++i]);
@@ -1075,6 +1097,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 
 void ToyRoomApp::ApplyLaunchOptions()
 {
+	if (launch.benchmark > 0) glfwSwapInterval(0); // measure the real frame cost, not the monitor rate
 	if (launch.hour >= 0.0f) environment.hour = launch.hour;
 	if (launch.pauseClock || (!launch.capture.empty() && !launch.story)) environment.paused = true;
 	if (!launch.capture.empty() && !launch.story) { story.enabled=false; story.Pause(); }
@@ -1140,6 +1163,11 @@ void ToyRoomApp::UpdateTitle()
 	  << " | " << (settings.rayTracing ? "Ray traced" : ToString(settings.shading))
 	  << (settings.wireframe ? " wireframe" : "")
 	  << " | " << static_cast<int>(fps + 0.5f) << " FPS";
+	if (!settings.rayTracing) {
+		const RenderStats& st = renderer.Stats();
+		t << " | " << st.drawCalls + st.shadowDrawCalls << " draws, "
+		  << (st.triangles + st.shadowTriangles) / 1000 << "k triangles";
+	}
 	if (settings.rayTracing)
 		t << " (" << rayTracer.InstanceCount() << " primitives, x" << settings.rayScale << ")";
 	SetTitle(t.str());

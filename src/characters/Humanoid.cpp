@@ -19,8 +19,6 @@ void BuildLeg(SceneNode* hip, Assets& a, const Material& pants, const Material& 
 	Material& sole = a.Mat("boot-sole", {0.12f, 0.08f, 0.055f}, 0.2f, 12);
 	hip->AddShape("Sole", &a.Cube(), &sole, {0, -0.848f, 0.055f}, {0.19f, 0.025f, 0.32f});
 	hip->AddShape("RoundedToe", &a.Sphere(), &boots, {0, -0.78f, 0.16f}, {0.18f, 0.09f, 0.13f});
-	Material& stitch = a.Mat("clothing-stitch", {0.76f, 0.64f, 0.40f}, 0.0f);
-	hip->AddShape("TrouserSeam", &a.Cylinder(), &stitch, {0.065f, -0.32f, 0.045f}, {0.007f, 0.48f, 0.007f});
 }
 
 SceneNode* BuildArm(SceneNode* shoulder, Assets& a, const Material& sleeve, const Material& hand)
@@ -182,20 +180,17 @@ Humanoid::Humanoid(SceneNode& parent, Assets& a, const HumanoidStyle& st, const 
 			SceneNode* braid = head->AddChild("Braid");
 			braid->local.position = { 0, 0.22f, -0.17f };
 			braid->local.rotation = { -12.0f, 0, 0 };
-			braid->AddShape("Plait", &cylinder, &hair, { 0, -0.28f, 0 }, { 0.1f, 0.56f, 0.1f });
+			// The woven texture shows the plait pattern on one cylinder (it used to be 12 spheres).
+			Material& plait = a.Mat(n + "plait", st.hair, 0.3f, 24.0f);
+			surface(plait, Assets::FabricSlot, {2, 6});
+			braid->AddShape("Plait", &cylinder, &plait, { 0, -0.28f, 0 }, { 0.12f, 0.56f, 0.12f });
 			braid->AddShape("Bow", &sphere, &a.Mat("hair-bow", { 1.0f, 0.85f, 0.2f }), { 0, -0.02f, -0.02f }, { 0.16f, 0.09f, 0.09f });
 			braid->AddShape("Tip", &sphere, &hair, { 0, -0.58f, 0 }, glm::vec3(0.12f));
-			for (int knot = 0; knot < 12; ++knot) braid->AddShape("BraidWeave", &sphere, &hair,
-				{(knot % 2 == 0 ? 0.032f : -0.032f), -0.055f - knot * 0.042f, -0.02f}, {0.085f, 0.078f, 0.07f});
 		}
 		if (st.hasHat) {
 			head->AddShape("HatBrim", &cylinder, &hat, { 0, 0.38f, 0 }, { 0.66f, 0.03f, 0.66f });
 			head->AddShape("HatCrown", &cylinder, &hat, { 0, 0.49f, 0 }, { 0.30f, 0.2f, 0.30f });
 			head->AddShape("HatBand", &cylinder, &belt, { 0, 0.42f, 0 }, { 0.31f, 0.04f, 0.31f });
-			for (int stitch = 0; stitch < 24; ++stitch) {
-				const float angle = stitch * glm::radians(15.0f);
-				head->AddShape("HatStitch", &sphere, &brass, {std::sin(angle) * 0.30f, 0.398f, std::cos(angle) * 0.30f}, {0.012f, 0.008f, 0.024f});
-			}
 		}
 	}
 	SaveHome();
@@ -276,8 +271,7 @@ Buzz::Buzz(SceneNode& parent, Assets& a, const glm::vec3& position, float headin
 	torso->AddShape("ButtonBlue", &sphere, &blue, { 0.08f, 0.33f, 0.16f }, glm::vec3(0.05f));
 	Material& dark = a.Mat("Buzz-joints", {0.12f, 0.14f, 0.18f}, 0.4f, 40);
 	torso->AddShape("RangerBadge", &cube, &green, {0.08f, 0.42f, 0.17f}, {0.14f, 0.043f, 0.015f});
-	for (int vent = 0; vent < 5; ++vent) torso->AddShape("ChestVent", &cube, &dark,
-		{-0.12f + vent * 0.024f, 0.42f, 0.166f}, {0.012f, 0.05f, 0.014f});
+	torso->AddShape("ChestVent", &cube, &dark, {-0.072f, 0.42f, 0.166f}, {0.11f, 0.05f, 0.014f});
 	for (SceneNode* shoulder : {leftShoulder, rightShoulder}) {
 		shoulder->AddShape("ShoulderArmor", &sphere, &green, {0, -0.04f, 0}, {0.18f, 0.16f, 0.18f});
 		shoulder->AddShape("ElbowSeal", &cylinder, &dark, {0, -0.30f, 0}, {0.13f, 0.05f, 0.13f});
@@ -300,8 +294,6 @@ Buzz::Buzz(SceneNode& parent, Assets& a, const glm::vec3& position, float headin
 		const float s = static_cast<float>(side);
 		wings->AddShape(side < 0 ? "WingRight" : "WingLeft", &cube, &white, { 0.45f * s, 0.02f, -0.02f }, { 0.75f, 0.06f, 0.22f }, { 0, 0, 8.0f * s });
 		wings->AddShape(side < 0 ? "WingTipRight" : "WingTipLeft", &cube, &red, { 0.85f * s, 0.08f, -0.02f }, { 0.1f, 0.07f, 0.23f }, { 0, 0, 8.0f * s });
-		for (int stripe = 0; stripe < 5; ++stripe) wings->AddShape("WingStripe", &cube, &red,
-			{(0.30f + stripe * 0.10f) * s, 0.048f, -0.02f}, {0.042f, 0.012f, 0.22f}, {0, 0, 8.0f * s});
 	}
 
 	// Wrist laser + beam (beam along the arm's -Y, i.e. out of the hand)

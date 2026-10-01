@@ -11,9 +11,22 @@ void Assets::Load()
 {
 	plane = std::make_unique<Mesh>("Plane", PrimitiveType::Plane, Primitives::Plane());
 	cube = std::make_unique<Mesh>("Cube", PrimitiveType::Cube, Primitives::Cube());
-	sphere = std::make_unique<Mesh>("Sphere", PrimitiveType::Sphere, Primitives::Sphere(32, 48));
-	cylinder = std::make_unique<Mesh>("Cylinder", PrimitiveType::Cylinder, Primitives::Cylinder());
-	cone = std::make_unique<Mesh>("Cone", PrimitiveType::Cone, Primitives::Cone());
+	// Full detail is used only for objects that are large on screen; smooth shading and textures
+	// carry the surface detail, so 24 x 36 is already round at full-window size (1,656 triangles,
+	// was 32 x 48 = 2,976). Small and distant copies use the coarser levels below.
+	sphere = std::make_unique<Mesh>("Sphere", PrimitiveType::Sphere, Primitives::Sphere(24, 36));
+	cylinder = std::make_unique<Mesh>("Cylinder", PrimitiveType::Cylinder, Primitives::Cylinder(32));
+	cone = std::make_unique<Mesh>("Cone", PrimitiveType::Cone, Primitives::Cone(32));
+	auto level = [&](const char* name, PrimitiveType type, MeshData data) {
+		detailLevels.push_back(std::make_unique<Mesh>(name, type, std::move(data)));
+		return detailLevels.back().get();
+	};
+	sphere->SetDetailLevels(level("Sphere (medium)", PrimitiveType::Sphere, Primitives::Sphere(12, 18)),
+		level("Sphere (low)", PrimitiveType::Sphere, Primitives::Sphere(6, 10)));
+	cylinder->SetDetailLevels(level("Cylinder (medium)", PrimitiveType::Cylinder, Primitives::Cylinder(16)),
+		level("Cylinder (low)", PrimitiveType::Cylinder, Primitives::Cylinder(8)));
+	cone->SetDetailLevels(level("Cone (medium)", PrimitiveType::Cone, Primitives::Cone(16)),
+		level("Cone (low)", PrimitiveType::Cone, Primitives::Cone(8)));
 
 	namespace PT = ProceduralTextures;
 	white = AddTexture("white", PT::White());
