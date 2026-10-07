@@ -115,7 +115,8 @@ std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore) con
 		const glm::vec3 half = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
 		list.push_back({b.node->local.position - half, b.node->local.position + half, b.node});
 	}
-	for (const Actor& a : actors) if (a.enabled && a.node != ignore) list.push_back(ActorBounds(a));
+	for (const Actor& a : actors) if (a.enabled && a.node != ignore &&
+		!(ignore && ignore!=independentActor && a.node==independentActor)) list.push_back(ActorBounds(a));
 	return list;
 }
 
@@ -123,7 +124,7 @@ glm::vec3 PhysicsWorld::Move(const glm::vec3& from, const glm::vec3& to, const g
 {
 	const auto obstacles = Obstacles(ignore);
  const auto clamp = [&](glm::vec3 p, const glm::vec3& extent) {
-  if (hallway && ignore && p.x > RoomSize::HalfWidth - extent.x - Skin
+  if (hallway && p.x > RoomSize::HalfWidth - extent.x - Skin
    && p.z >= RoomSize::DoorLow + extent.z + 0.1f && p.z <= RoomSize::DoorHigh - extent.z - 0.1f
    && p.y + extent.y < RoomSize::DoorHeight - 0.1f) {
    return glm::clamp(p, glm::vec3(-RoomSize::HalfWidth+extent.x+Skin,extent.y+Skin,RoomSize::DoorLow+extent.z+0.1f),

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <stdexcept>
 
 #include "Assets.h"
 #include "Renderer.h"
@@ -90,6 +91,8 @@ void RayTracer::EnsureTarget(int w, int h)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		throw std::runtime_error("Ray tracing framebuffer is incomplete");
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -119,9 +122,8 @@ void RayTracer::Render(const std::vector<DrawItem>& items, const FrameInfo& fram
 	nodes.push_back({});
 	if (!order.empty()) {
 		// Build() sorts `order` and needs each item's box: index boxes by position in `order`.
-		std::vector<int> slot(items.size(), -1);
-		for (size_t k = 0; k < order.size(); ++k) slot[static_cast<size_t>(order[k])] = static_cast<int>(k);
-		boxLookup = std::move(slot);
+		boxLookup.assign(items.size(), -1);
+		for (size_t k = 0; k < order.size(); ++k) boxLookup[static_cast<size_t>(order[k])] = static_cast<int>(k);
 		Build(0, 0, static_cast<int>(order.size()));
 	}
 
@@ -187,10 +189,9 @@ void RayTracer::Render(const std::vector<DrawItem>& items, const FrameInfo& fram
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_BUFFER, instanceTexture);
 	shader.SetInt("uInstances", 0);
-	for (int slot = 0; slot < Assets::SlotCount; ++slot) {
-		assets->SlotTexture(slot)->Bind(static_cast<GLuint>(slot + 1));
-		shader.SetInt("uTex" + std::to_string(slot), slot + 1);
-	}
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, assets->SurfaceArray());
+	shader.SetInt("uSurfaceMaps", 1);
 
 	glBindVertexArray(emptyVao);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -199,9 +200,9 @@ void RayTracer::Render(const std::vector<DrawItem>& items, const FrameInfo& fram
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, width, height);
 	presentShader.Activate();
-	glActiveTexture(GL_TEXTURE0 + Assets::SlotCount + 1);
+	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, colorTexture);
-	presentShader.SetInt("uImage", Assets::SlotCount + 1);
+	presentShader.SetInt("uImage", 2);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
 	glActiveTexture(GL_TEXTURE0);

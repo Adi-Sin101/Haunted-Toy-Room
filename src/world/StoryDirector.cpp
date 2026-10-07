@@ -1,5 +1,6 @@
 #include "StoryDirector.h"
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include "characters/Humanoid.h"
 #include "characters/Bullseye.h"
@@ -17,13 +18,14 @@ void StoryDirector::Init(Humanoid* w, Humanoid* j, Bullseye* h, Buzz* b, RCCar* 
 }
 void StoryDirector::Pause()
 {
- for (Character* c : std::vector<Character*>{woody,jessie,horse,buzz,car}) c->Stop();
+ for (Character* c : std::array<Character*,5>{woody,jessie,horse,buzz,car}) c->Stop();
  if (buzz->LaserOn()) buzz->Special();
 }
 void StoryDirector::Restart(bool mounted)
 {
+ controlled=nullptr; attached=nullptr;
  if (mounted) dismount();
- for (Character* c : std::vector<Character*>{woody,jessie,horse,buzz,car}) {
+ for (Character* c : std::array<Character*,5>{woody,jessie,horse,buzz,car}) {
   c->StartTransition(c->HomePosition(),c->HomeHeading(),0.01f);
   c->Animate(0.02f,0);
   c->RestoreRestPose();
@@ -35,10 +37,34 @@ void StoryDirector::Restart(bool mounted)
  environment->StopBall(); enabled=true; activated=false; dismountRequested=false; obstacleHit=false;
  Enter(Scene::Discovery);
 }
-void StoryDirector::Routes(std::vector<Route> next) { routes=std::move(next); }
+void StoryDirector::SetControlled(Character* actor,Character* passenger)
+{
+ if (actor==controlled && passenger==attached) return;
+ controlled=actor; attached=passenger;
+ if (actor) controlledProgress=actor->Root()->local.position;
+ for (Route& r:routes) r.progress=Controls(r.actor) ? controlledProgress : r.actor->Root()->local.position;
+ std::cout << "Live control: " << (actor ? actor->Name() : "released to simulation") << "\n";
+}
+void StoryDirector::Routes(std::vector<Route> next)
+{
+ routes=std::move(next);
+ for (Route& r:routes) r.progress=Controls(r.actor) ? controlledProgress : r.actor->Root()->local.position;
+}
 bool StoryDirector::Move(Character* c,float dt)
 {
  for (Route& r : routes) if (r.actor==c) {
+  // Advance the owned actor's scheduled route without writing to its real transform.
+  // Other actors retain their normal routes and the scene gate never waits for user input.
+  if (Controls(c)) {
+   if (r.next==r.points.size()) return true;
+   glm::vec3 delta=r.points[r.next]-r.progress;
+   if (!c->CanFly()) delta.y=0;
+   const float distance=glm::length(delta);
+   if (distance<0.06f) ++r.next;
+   else r.progress+=delta*(std::min(distance,(c==car ? 2.0f : 1.8f)*dt)/distance);
+   if (c==controlled) controlledProgress=r.progress;
+   return r.next==r.points.size();
+  }
   if (r.next==r.points.size()) { c->Stop(); return true; }
   if (c->FollowWaypoint(r.points[r.next],dt,c==car ? 2.0f : 1.8f)) ++r.next;
   return r.next==r.points.size();
@@ -78,16 +104,25 @@ void StoryDirector::Update(float dt,bool mounted,bool interact)
  elapsed+=dt;
  switch (phase) {
  case Scene::Discovery:
-  horse->Root()->local.rotation.y=0;
-  environment->hour=0; woody->TurnTowardsHeading(75,dt);
+  if (!Controls(horse)) horse->Root()->local.rotation.y=0;
+  environment->hour=0; if (!Controls(woody)) woody->TurnTowardsHeading(75,dt);
   if (elapsed>4) Enter(Scene::Departure); break;
  case Scene::Departure: {
   const bool w=Move(woody,dt),b=Move(buzz,dt);
   bool j=mounted;
-  if (!mounted && Move(jessie,dt)) { mount(); j=true; }
-  if (w && b && j && !jessie->InTransition()) Enter(Scene::ClearPath);
+  if (!mounted && Move(jessie,dt)) {
+   if (!Controls(jessie) && !Controls(horse)) mount();
+   j=true;
+  }
+  if (w && b && j && (Controls(jessie) || !jessie->InTransition())) Enter(Scene::ClearPath);
   break; }
  case Scene::ClearPath:
+  if (Controls(buzz)) {
+   // A cinematic gate opens independently when the ranger is user-owned.
+   // Do not change the user's laser state, aim, flight or position.
+   if (elapsed>3) { obstacle->visible=false; physics->StopBlock(obstacle); Enter(Scene::ReachCar); }
+   break;
+  }
   buzz->AimAt(obstacle->WorldPosition());
   if (!buzz->LaserOn()) buzz->Special();
   if (physics->LastLaserHit()==obstacle) obstacleHit=true;
@@ -100,21 +135,24 @@ void StoryDirector::Update(float dt,bool mounted,bool interact)
  case Scene::ActivateCar:
   // Enter activates immediately; unattended playback performs the interaction after a beat.
   if (elapsed>3) activated=true;
-  if (activated) { car->SetHeadlights(true); if (Move(car,dt)) Enter(Scene::ReturnHome); }
+  if (activated) { if (!Controls(car)) car->SetHeadlights(true); if (Move(car,dt)) Enter(Scene::ReturnHome); }
   break;
  case Scene::ReturnHome: {
   const bool h=Move(horse,dt),w=Move(woody,dt),b=Move(buzz,dt);
   if (h && mounted && !dismountRequested) { dismount(); dismountRequested=true; }
-  const bool j=!mounted && !jessie->InTransition() && Move(jessie,dt);
+  // If the horse is detached for live control, keep the rider's home route last;
+  // her idle home footprint otherwise obstructs Woody's still-active return route.
+  const bool riderReady=!Controls(horse) || (h && w && b);
+  const bool j=!mounted && !jessie->InTransition() && riderReady && Move(jessie,dt);
   if (h && w && b && j) {
    bool facing=true;
-   for (Character* c : std::vector<Character*>{woody,jessie,horse,buzz}) facing=c->TurnTowardsHeading(c->HomeHeading(),dt) && facing;
+   for (Character* c : std::array<Character*,4>{woody,jessie,horse,buzz}) if (!Controls(c)) facing=c->TurnTowardsHeading(c->HomeHeading(),dt) && facing;
    if (facing) Enter(Scene::Morning);
   } break; }
  case Scene::Morning:
   environment->hour=5+std::min(1.0f,elapsed/12)*3;
   environment->lampManual=true; environment->lampPower=false;
-  for (Character* c : std::vector<Character*>{woody,jessie,horse,buzz,car}) c->Stop();
+  for (Character* c : std::array<Character*,5>{woody,jessie,horse,buzz,car}) if (!Controls(c)) c->Stop();
   if (elapsed>=12) Enter(Scene::End); break;
  case Scene::End: environment->hour=8; break;
  }

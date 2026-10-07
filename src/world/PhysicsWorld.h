@@ -22,6 +22,8 @@ public:
 	void EnableActor(SceneNode* node, bool enabled);
 	void SetActorShape(SceneNode* node, glm::vec3 half, glm::vec3 offset);
 	void EnableHallway(bool on) { hallway = on; }
+	// Live takeover retains scenery contacts without blocking another actor's scripted route.
+	void SetIndependentActor(SceneNode* node) { independentActor = node; }
 	void Update(float dt);
 	void ResetBlocks();
 	void PushBlock(SceneNode* node, const glm::vec3& impulse);
@@ -47,4 +49,5 @@ private:
 	float accumulator = 0.0f, laserCooldown = 0.0f;
 	bool hallway = false;
 	SceneNode* lastLaserHit = nullptr;
+	SceneNode* independentActor = nullptr;
 };

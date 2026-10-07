@@ -12,8 +12,11 @@ constexpr float Eps = 1e-4f;
 template <typename Accept>
 float SolveQuadratic(float a, float b, float c, Accept&& accept)
 {
-	if (std::abs(a) < 1e-8f)
-		return -1.0f;
+	if (std::abs(a) < 1e-8f) {
+		if (std::abs(b) < 1e-8f) return -1.0f;
+		const float t = -c / b;
+		return t > Eps && accept(t) ? t : -1.0f;
+	}
 	const float disc = b * b - 4.0f * a * c;
 	if (disc < 0.0f)
 		return -1.0f;
@@ -73,6 +76,8 @@ RayHit Cube(const Ray& r)
 	float tFar = std::numeric_limits<float>::max();
 	int nearAxis = 0;
 	float nearSign = 1.0f;
+	int farAxis = 0;
+	float farSign = 1.0f;
 	for (int axis = 0; axis < 3; ++axis) {
 		const float o = r.origin[axis], d = r.direction[axis];
 		if (std::abs(d) < 1e-8f) {
@@ -84,7 +89,7 @@ RayHit Cube(const Ray& r)
 		float sign = -1.0f; // entering through the -side face
 		if (t1 > t2) { std::swap(t1, t2); sign = 1.0f; }
 		if (t1 > tNear) { tNear = t1; nearAxis = axis; nearSign = sign; }
-		tFar = std::min(tFar, t2);
+		if (t2 < tFar) { tFar=t2; farAxis=axis; farSign=-sign; }
 		if (tNear > tFar || tFar < Eps)
 			return hit;
 	}
@@ -92,6 +97,11 @@ RayHit Cube(const Ray& r)
 		hit.t = tNear;
 		hit.normal = glm::vec3(0.0f);
 		hit.normal[nearAxis] = nearSign;
+	}
+	else if (tFar > Eps) {
+		hit.t=tFar;
+		hit.normal=glm::vec3(0.0f);
+		hit.normal[farAxis]=farSign;
 	}
 	return hit;
 }

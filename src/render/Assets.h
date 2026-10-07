@@ -15,11 +15,16 @@
 // (heads, eyes, hands, the ball...) is drawn from the SAME vertex buffer.
 class Assets {
 public:
-	// Texture slots understood by the ray tracer (it can only sample a fixed set of samplers).
+	// Layers in the ray tracer's shared surface texture array.
 	enum TextureSlot : int { FloorSlot = 0, WallSlot, RugSlot, BallSlot, BlockSlot, PosterSlot, StarsSlot,
-		MoonSlot, FabricSlot, DenimSlot, LeatherSlot, PlaidSlot, CowSlot, BookSlot, PicketSlot, SlotCount };
+		MoonSlot, FabricSlot, DenimSlot, LeatherSlot, PlaidSlot, CowSlot, BookSlot, PicketSlot,
+		SidingSlot, ShingleSlot, BrickSlot, GrassSlot, WindowSlot, FlowerSlot, SlotCount };
 
 	void Load();
+	~Assets();
+	GLuint SurfaceArray() const { return surfaceArray; }
+	int NamedSlot(const std::string& name) const;
+	void ExportTextures(const std::string& directory) const;
 
 	const Mesh& Plane() const { return *plane; }
 	const Mesh& Cube() const { return *cube; }
@@ -29,7 +34,7 @@ public:
 	std::vector<const Mesh*> AllMeshes() const { return { plane.get(), cube.get(), sphere.get(), cylinder.get(), cone.get() }; }
 
 	const Texture& WhiteTexture() const { return *white; }
-	// Textures without a ray-tracer slot (the house exterior), looked up by name; nullptr if unknown.
+	// Named surface textures, including the house exterior; nullptr if unknown.
 	const Texture* Named(const std::string& name) const;
 	const Texture* SlotTexture(int slot) const { return slotTextures[static_cast<size_t>(slot)]; }
 
@@ -45,6 +50,9 @@ private:
 	std::vector<std::unique_ptr<Texture>> textures;
 	std::array<const Texture*, SlotCount> slotTextures{};
 	const Texture* white = nullptr;
+	GLuint surfaceArray = 0;
+	std::map<std::string, Image> sourceImages;
+	std::map<std::string, int> namedSlots;
 	std::map<std::string, const Texture*> named;
 	std::map<std::string, std::unique_ptr<Material>> materials;
 };

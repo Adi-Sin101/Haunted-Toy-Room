@@ -66,6 +66,8 @@ void Environment::Update(float dt, float time, bool lampSelected, bool ballSelec
 		Scrub(dt * timeScale * 24.0f / dayLengthSeconds);
 	UpdateSky();
 	UpdateLamp(dt, time, lampSelected);
+	if (rig.clockHour) rig.clockHour->local.rotation.z = -30.0f * std::fmod(hour,12.0f);
+	if (rig.clockMinute) rig.clockMinute->local.rotation.z = -360.0f * (hour - std::floor(hour));
 	UpdateBall(dt, time, ballSelected);
 	UpdateGhost(dt, time, ghostSelected);
 }
