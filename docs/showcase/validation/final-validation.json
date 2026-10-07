@@ -10,8 +10,8 @@
   "unaffected_route_comparison": "passed",
   "captures": 42,
   "story": "The End",
-  "report_pages": 31,
-  "figures": 19,
+  "report_pages": 38,
+  "figures": 31,
   "tables": 11,
   "scene_nodes": 699,
   "slides": 10,
@@ -30,5 +30,14 @@
   "identity": true,
   "report_engine": "pdfLaTeX",
   "missing_glyphs": 0,
-  "unresolved_references": 0
+  "unresolved_references": 0,
+  "chapter_start_pages": [
+    5,
+    8,
+    18,
+    28
+  ],
+  "contents_start_page": 3,
+  "contents_includes_sections": true,
+  "contents_section_entries": 32
 }

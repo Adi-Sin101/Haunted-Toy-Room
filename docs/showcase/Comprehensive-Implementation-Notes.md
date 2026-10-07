@@ -246,9 +246,13 @@ HumanoidStyle configures a reusable builder. A pelvis joint owns the torso, head
 
 ![Woody: hat, plaid shirt, cow-print vest, denim trousers and articulated limbs.](figures/woody.png)
 
+Woody's silhouette comes from separately scaled hat brim, crown, torso and boots, rather than a single imported mesh. The plaid, cow-print and denim maps are selected per shape, so one shared primitive mesh can represent different garment surfaces. Shoulder and hip pivots rotate their descendants without changing the body root. His root position and heading are the quantities transferred to user control during live takeover.
+
 ![Jessie: the same humanoid hierarchy with different garments, red hair, braid and hat.](figures/jessie.png)
 
-Drive computes the forward vector from heading, accelerates toward the requested speed and changes yaw with turn input. Animate advances the walk phase with travelled distance, not only wall-clock time. Opposite hips swing out of phase and shoulders swing against the legs. Motion blend approaches zero when the toy stops. Mounted Jessie blends to a seated pose and stops independent driving; selecting her while mounted delegates movement to Bullseye.
+Jessie retains the same joint layout but changes the visible hat, hair, garment colours and boot proportions. The braid is assembled from rounded primitive sections under the head, so it follows head orientation. The saddle attachment changes the root parent while preserving the world transform; a seated pose then bends the existing legs. Dismounting restores an independent character root instead of duplicating the model.
+
+Drive computes the forward vector from heading, accelerates toward the requested speed and changes yaw with turn input. Animate advances the walk phase with travelled distance, not only wall-clock time. Opposite hips swing out of phase and shoulders swing against the legs. Motion blend approaches zero when the toy stops. Mounted Jessie blends to a seated pose and stops independent driving; selecting a mounted actor detaches Jessie for independent control. Voluntary remounting drives the connected pair.
 
 forward = (sin(heading),0,cos(heading))
 v += clamp(vTarget-v,-acceleration dt,+acceleration dt)
@@ -323,15 +327,25 @@ The desk uses a box top, four legs, drawer and a spherical brass knob. A sketchb
 
 ![Desk, chair, lamp, sketchbook, pencils and drawer. Primitive construction leaves the structure easy to inspect.](figures/desk.png)
 
+Desk and chair: box faces provide flat normals at the tabletop, drawer and leg edges; the brass knob uses a sphere with a stronger specular response. The three pencil cylinders and thin sketchbook remain decorative parts. Chair seat, back and four legs share the same wood material. Repeated wood UVs add grain without additional triangles, while solid furniture bounds keep driven characters outside the structure.
+
 ![Bed frame, mattress, orange plaid blanket, headboard, pillows and Penny.](figures/bed.png)
 
+Bed: the frame and headboard establish the solid silhouette, while separate mattress and blanket boxes permit different surface materials. Two flattened spheres form soft pillows. The fabric pattern uses the existing face UVs and repeat scale, so the checked blanket is coloured surface detail. The bed also supplies the final arrival target for Penny; the jump and sleeping pose use her original rig.
+
 ![Four book rows are represented by textured boxes rather than many separately drawn books.](figures/bookcase.png)
+
+Bookcase: uprights, backing and shelves are independent scaled boxes. Each shelf contains one textured book-row box; coloured spine bands suggest many books with fewer draw calls than individual book meshes. This is a deliberate surface-detail approximation. The frame retains geometric depth and cast-shadow structure, while the texture provides fine repetition that would otherwise require many small objects.
 
 A repeated fabric pattern covers eight curtain-fold cylinders. A wall poster is an independently UV-mapped plane. The rug uses concentric square colour bands on a plane just above the floor. Toy blocks are six cubes arranged as a tower; a larger doorway crate is a mission obstacle. Their star/bevel texture adds surface identity without adding bevel geometry. All leaf transforms and material assignments are recorded in objects.csv and the comprehensive construction notes; Appendix A indexes the complete scene groups.
 
 ![The room poster uses the custom BMP-loading path; the adjacent shelf uses procedural book-spine detail.](figures/poster.png)
 
+Poster, curtains and rug: the poster is a plane with a single BMP image, giving a clear demonstration of file loading rather than procedural generation. Curtain folds use eight cylinders to produce an actual curved silhouette and changing normals. The rug is a slightly elevated plane with concentric colour bands. Small offsets prevent coincident surfaces from competing in the depth buffer.
+
 ![The six-block tower and doorway crate. Boxes participate in gravity, separation and laser impulses.](figures/blocks.png)
+
+Blocks and doorway crate: each rigid box has its own translation and orientation, allowing gravity, separation and laser impulses to act independently. The star-and-border map identifies the faces, but its apparent bevel is a colour pattern rather than extra edge polygons. The crate is the story obstacle; the small tower provides a visible test of falling and tumbling objects after an impulse.
 
 ## 3.9 Fan, clock and haunted props
 
@@ -367,7 +381,9 @@ BuildHouse constructs a two-storey facade, pitched roof, gables, trim, porch, ga
 
 ![The full house exterior, porch, garage, fence, trees, lawn, pavement and street at the start of the arrival.](figures/house.png)
 
-Three door systems connect the route: a front door, double toy-room door and stair door. Their meshes belong to hinge roots so a yaw change swings the complete door and handle. Penny's proximity/arrival stage drives the hinge angles with exponential easing. Downstairs geometry is retained in the scene inventory even when cinematic visibility removes it from later frames. Exterior textures are available in both raster and ray-traced rendering through the shared array layers.
+Exterior groups: scaled boxes form the house walls, porch, garage and pavement, with roof and trim elements preserving the architectural outline. Fence pickets use alpha coverage to cut holes in a textured surface; their silhouette is not a separate mesh for every opening. Grass, siding, shingles and brick have distinct UV repeats. Trees and garden elements give depth to the arrival view and remain selectable or inspectable through their scene-node records.
+
+The front door, double toy-room door and stair door use hinge roots: yaw rotates the door and handle together. Arrival stage and Penny's proximity drive exponentially eased opening. Cinematic visibility hides downstairs geometry after arrival while retaining its inventory records. The shared texture array supplies exterior maps to both raster and ray-traced rendering.
 
 # CHAPTER IV — Implementation, Results and Discussion
 

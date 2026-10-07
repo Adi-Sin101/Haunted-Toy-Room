@@ -6,7 +6,7 @@ Adiba Tahsin | Roll 2107031 | CSE-4102
 
 | File | Purpose |
 | --- | --- |
-| [Project-Report.pdf](Project-Report.pdf) | Finished illustrated academic report: 31-page LaTeX report with one combined cover, four chapters, references and object/material summaries |
+| [Project-Report.pdf](Project-Report.pdf) | Finished illustrated academic report: 38-page LaTeX report with one combined cover, a separate complete contents, four chapters starting on new pages, references and object/material summaries |
 | [Project-Report.tex](Project-Report.tex) | Editable LaTeX report source |
 | [Comprehensive-Implementation-Notes.md](Comprehensive-Implementation-Notes.md) | Complete theory and implementation notes, with every scene node and material |
 | [Requirements-Coverage.md](Requirements-Coverage.md) | Teacher requirement mapping to implementations and demonstration evidence |
@@ -35,7 +35,7 @@ F2 selects raster rendering and cycles Flat/Gouraud/Phong/Blinn. F4 switches ana
 
 ## What is documented
 
-The report contains 19 numbered figure groups, 11 tables and 28 numbered equation groups in 31 pages. It explains all five primitive families, the scene hierarchy, transformations, camera/projection, directional/point/spot lights, illumination equations, four raster shading models, 21 surface maps plus the white fallback, lamp shadow mapping, BVH/analytic ray tracing, animation, collision and independent input ownership. The report appendices summarise the object families and representative materials; the comprehensive implementation notes and CSV exports record all 699 scene nodes and every material in detail. Actual exports are in [inventory](inventory/objects.csv); full-resolution illustrations are in `figures/`, `diagrams/` and `inventory/textures/`.
+The report contains 31 numbered figures, 11 tables and 28 numbered equation groups in 38 pages. It explains all five primitive families, the scene hierarchy, transformations, camera/projection, directional/point/spot lights, illumination equations, four raster shading models, 21 surface maps plus the white fallback, lamp shadow mapping, BVH/analytic ray tracing, animation, collision and independent input ownership. The report appendices summarise the object families and representative materials; the comprehensive implementation notes and CSV exports record all 699 scene nodes and every material in detail. Actual exports are in [inventory](inventory/objects.csv); full-resolution illustrations are in `figures/`, `diagrams/` and `inventory/textures/`.
 
 ## Verification and reproduction
 

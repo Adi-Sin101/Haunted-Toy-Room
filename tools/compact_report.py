@@ -7,12 +7,14 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 def compact_blocks(blocks, objects, materials, textures, texture_rules, out, path_for):
     diagrams=out/'diagrams'
     groups=[
-        ('scene-overview',['room-night','house','garden','stairs'],2,'Room, house, garden and stair connection: rendered views of the complete environment.'),
+        ('scene-overview',['room-night'],1,'The furnished toy room under moonlight, with the coordinated cast, furniture and animated props.'),
         ('mesh-comparison',['wireframe','normals'],2,'Unit primitive construction, triangulated Buzz and transformed normals. Indexed triangles approximate curved surfaces in raster rendering.'),
-        ('humanoid-cast',['woody','jessie','buzz'],3,'Woody, Jessie and Buzz: shared primitive families with distinct clothing, armour, limbs and articulated joints.'),
-        ('rider-vehicle-cat',['bullseye','mounted','car','penny'],2,'Bullseye, the mounted hierarchy, the RC car and Penny. Each model uses independently transformed primitive instances.'),
-        ('room-furniture',['window','desk','bed','bookcase','poster','blocks'],2,'Window and curtains; desk and chair; bed; bookcase; BMP poster; dynamic blocks. Labels identify the distinct object groups.'),
-        ('animated-props',['fan','clock','ball','ghost','lamp','laser'],2,'Fan, clock, rolling ball, translucent ghost, articulated lamp and laser impact. Parent transforms, scene time and physical motion drive these effects.'),
+        ('arrival-route',['garden','stairs'],2,'The garden approach and stair connection used by Penny during the arrival sequence.'),
+        ('rider-hierarchy',['bullseye','mounted'],2,'Bullseye and the mounted rider: ellipsoid anatomy, saddle attachment and articulated legs.'),
+        ('desk-bed',['desk','bed'],2,'Desk and chair construction beside the bed frame, mattress, blanket and pillows.'),
+        ('bookcase-poster',['bookcase','poster'],2,'Bookcase geometry with textured book rows, and the independently mapped wall poster.'),
+        ('fan-clock',['fan','clock'],2,'Ceiling fan rotor and clock hands: distinct parent joints driven by scene time.'),
+        ('ball-ghost',['ball','ghost'],2,'Rolling beach ball and translucent ghost: spherical UVs, accumulated rotation and time-dependent opacity.'),
         ('light-comparison',['directional','point','spot','ambient','diffuse','specular'],2,'Isolated directional, point and spot sources (top rows), followed by ambient, diffuse and specular terms. All views are captured from the application.'),
         ('shading-comparison',['flat','gouraud','phong','blinn'],2,'Matched Flat, Gouraud, Phong and Blinn-Phong views. The shading model changes while geometry, material and camera remain fixed.'),
         ('ray-comparison',['ray-zero','room-ray','house-ray'],2,'Zero-continuation room view, two-continuation reflections and ray-traced exterior texture coverage.'),

@@ -61,7 +61,7 @@ PREAMBLE=r"""\documentclass[12pt,a4paper]{article}
 \setcounter{topnumber}{3}
 \setcounter{bottomnumber}{3}
 \setcounter{totalnumber}{5}
-\setcounter{tocdepth}{1}
+\setcounter{tocdepth}{2}
 \begin{document}
 \begin{titlepage}
 \centering
@@ -113,12 +113,14 @@ def build():
         if kind=='heading':
             _,title,level=b
             if title.startswith('CHAPTER I ') and not contents:
-                tex.extend([r'\tableofcontents',r'\clearpage']);contents=True
+                tex.extend([r'\clearpage',r'\tableofcontents',r'\clearpage']);contents=True
             if level<=1:
+                if title.startswith('CHAPTER ') and not title.startswith('CHAPTER I '):tex.append(r'\clearpage')
                 tex.append(r'\section*{'+escape(title)+'}')
-                if title!='Abstract':tex.append(r'\addcontentsline{toc}{section}{'+escape(title)+'}')
+                tex.append(r'\addcontentsline{toc}{section}{'+escape(title)+'}')
             else:
                 tex.append(r'\subsection*{'+escape(title)+'}')
+                tex.append(r'\addcontentsline{toc}{subsection}{'+escape(title)+'}')
         elif kind=='paragraph':tex.extend([escape(b[1]),''])
         elif kind=='equation':
             assert equation<len(EQUATIONS)
@@ -126,7 +128,7 @@ def build():
             equation+=1
         elif kind=='figure':
             _,name,caption=b;path=source.path_for(name).relative_to(OUT).as_posix();figures+=1
-            limit='0.39' if name in ['room-furniture','animated-props','light-comparison','texture-atlas'] else '0.30'
+            limit='0.39' if name in ['room-furniture','animated-props','light-comparison','texture-atlas'] else ('0.22' if name in ['woody','jessie','buzz','car','penny','lamp','laser','window','blocks','house','scene-overview'] else '0.30')
             tex.extend([r'\begin{figure}[H]',r'\centering',r'\includegraphics[width=\linewidth,height='+limit+r'\textheight,keepaspectratio]{'+path+'}',
                         r'\caption{'+escape(caption)+r'}\label{fig:'+name+'}',r'\end{figure}'])
         elif kind=='table':tables+=1;tex.append(table(b[1],b[2],b[3],tables))
@@ -139,18 +141,32 @@ def build():
     env['PATH']=os.pathsep.join(p for p in env.get('PATH','').split(os.pathsep) if Path(p).is_dir())
     for run in range(3):
         proc=subprocess.run([engine,'--enable-installer','-interaction=nonstopmode','-halt-on-error','Project-Report.tex'],cwd=OUT,env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=240)
-        (OUT/f'validation/latex-pass-{run+1}.log').write_text(proc.stdout+proc.stderr,encoding='utf-8')
+        (OUT/f'validation/latex-pass-{run+1}.log').write_text('\n'.join(line.rstrip() for line in (proc.stdout+proc.stderr).splitlines())+'\n',encoding='utf-8')
         if proc.returncode:raise RuntimeError((proc.stdout+proc.stderr)[-4500:])
     doc=pymupdf.open(OUT/'Project-Report.pdf')
     assert len(doc)<40,f'Page limit exceeded: {len(doc)}'
     body='\n'.join(p.get_text() for p in doc)
     assert all(s in body for s in [AUTHOR,ROLL,COURSE,'Gouraud','Phong','Appendix A','Appendix B'])
     for banned in ['template','acknowledgement','hardware specifications','CHAPTER V ','CHAPTER VI ']:assert banned.lower() not in body.lower()
+    chapter_starts=[]
+    for number,page in enumerate(doc,1):
+        for block in page.get_text('dict')['blocks']:
+            for line in block.get('lines',[]):
+                for span in line['spans']:
+                    if span['text'].startswith('CHAPTER ') and span['size']>16:
+                        assert span['bbox'][1]<90, 'Chapter does not begin a new page'
+                        chapter_starts.append(number)
+    assert len(chapter_starts)==4,chapter_starts
+    contents_pages=[i+1 for i,p in enumerate(doc) if any(s['text']=='Contents' and s['size']>16 for b in p.get_text('dict')['blocks'] for l in b.get('lines',[]) for s in l['spans'])]
+    assert len(contents_pages)==1 and contents_pages[0]>2
+    toc='\n'.join(doc[i].get_text() for i in range(contents_pages[0]-1,chapter_starts[0]-1))
+    sections=[b[1].split()[0] for b in blocks if b[0]=='heading' and b[2]>1]
+    assert all(re.search(r'\b'+re.escape(section)+r'\s',toc) for section in sections), 'Incomplete contents entries'
     log=(OUT/'Project-Report.log').read_text(encoding='utf8',errors='replace')
     assert 'Overfull' not in log, 'Content extends beyond the layout'
     assert 'Missing character:' not in log, 'Missing font glyph'
     assert 'undefined references' not in log, 'Unresolved references'
-    summary={'report_pages':len(doc),'figures':figures,'tables':tables,'equation_groups':equation,'scene_nodes':len(objects),'engine':'pdfLaTeX','page_limit':39,'content_scan':'passed','overfull_boxes':len(re.findall('Overfull',log))}
+    summary={'report_pages':len(doc),'figures':figures,'tables':tables,'equation_groups':equation,'scene_nodes':len(objects),'engine':'pdfLaTeX','page_limit':39,'content_scan':'passed','overfull_boxes':len(re.findall('Overfull',log)),'chapter_start_pages':chapter_starts,'contents_start_page':contents_pages[0],'contents_includes_sections':True,'contents_section_entries':len(sections)}
     (OUT/'validation/latex-report.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
     for number,page in enumerate(doc,1):page.get_pixmap(matrix=pymupdf.Matrix(.9,.9)).save(str(OUT/f'validation/latex-page-{number:02d}.png'))
     print(json.dumps(summary,indent=2))
