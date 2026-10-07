@@ -16,7 +16,7 @@ the selected object, edit mode, camera mode, render mode and FPS. The console re
 | 6 | Beach ball |
 | 7 | Desk lamp |
 | 8 | Ghost |
-| 0 | clear selection (N resumes the paused mission) |
+| 0 | release live ownership; the mission continues |
 | Left click | the object under the mouse (ray picking) |
 
 The selected object pulses with a golden rim light. F11 toggles its local axes. The on-screen toolbar also selects toys; Ctrl+B or the Blocks button cycles block selection even when the blocks are outside the current view. H opens the guide and G hides the interface.
@@ -91,7 +91,7 @@ pausing the mission. **G** hides the interface and center aiming marker.
 | Key | Action |
 |---|---|
 | F1 | wireframe (shows every triangle) |
-| F2 | shading: Flat → Gouraud → Phong → Blinn-Phong |
+| F2 | select raster rendering; shading: Flat → Gouraud → Phong → Blinn-Phong |
 | F3 | textures on/off |
 | F4 | **ray tracing** on/off |
 | - / = | ray tracing resolution down / up |
@@ -134,6 +134,7 @@ driven by the arrival.
 | [ / ] | time speed ×½ / ×2 |
 | , / . | scrub time backward / forward (brightness instead when the lamp is selected) |
 | N | switch manual control / coordinated Midnight Mission playback |
+| O | toggle haunted ambience outside edit mode: ghost, rolling ball and moving/flickering lamp |
 | Shift+N | replay all seven scenes from the beginning |
 | Enter | activate the car in Scene 5; its return route runs automatically |
 | H | expand / close the compact corner guide |
@@ -163,3 +164,22 @@ in a scripted capture (captures skip it otherwise). Example: `--intro --no-hud -
 
 `--benchmark N` turns v-sync off, skips 60 warm-up frames, times the next N frames and prints the
 average frame time, draw calls and triangles, then exits (see [17 - Performance](17-performance.md)).
+
+Additional reproducible showcase options:
+
+```
+--seek seconds                 advance the simulation before capture (0–600)
+--haunt                        enable independent haunted ambience
+--record file.rgb --record-fps 24 --frames 240
+--export directory             export all nodes, materials and source maps
+--no-textures --no-lighting --no-ambient --no-diffuse --no-specular
+--light-only 0..7               isolate one light
+--bounces 0..4 --ray-scale 0.2..1
+--drive -1..1 --turn -1..1 --fly -1..1
+```
+
+Recording writes bottom-up RGB24 frames at the requested fixed simulation rate. `tools/make_showcase.py` flips the frames, adds captions and encodes the ready two-minute MP4. Ordinary scripted captures use a fixed timestep; `--story-step` explicitly overrides it. Debug geometry keys F1/F9/F10/F11 also choose raster mode so their overlays remain visible. The exported `.rgba` source maps retain cutout alpha; companion BMP maps are convenient colour previews.
+
+## Live takeover during simulation
+
+Select any toy during playback to control that actor while the others continue. Press 0 to release it to its remaining route. N retains full manual/story switching. Route gates use independent virtual progress for an owned actor; Buzz takeover opens the cinematic doorway after three seconds without overriding his laser. Scripted actors ignore the owned actor as a movement obstacle. Owned actors retain wall/furniture contacts. Selecting mounted Jessie or Bullseye detaches Jessie; voluntarily remounting controls the connected pair. Penny can be clicked and driven after her arrival. Tab edits the selected object without globally stopping the mission.

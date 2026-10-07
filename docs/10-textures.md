@@ -204,9 +204,4 @@ poster.
 
 ## 5. Textures in the ray tracer
 
-The ray tracer computes uv analytically from the object-space hit point with formulas that match the mesh
-UVs exactly (`primitiveUV` in `raytrace.frag`), then samples one of 15 fixed texture slots
-(`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars, moon, cotton, denim, leather, plaid,
-cow print, book spines, pickets). The house textures (siding, shingles, brick, grass, window pane, flower
-bed) are raster-only: they have no slot, so in ray-traced mode those surfaces show their plain colours. GLSL 3.30 cannot index an array of
-samplers with a run-time value, so each slot is a separate uniform and the shader selects with `if`.
+The ray tracer computes UV analytically from the object-space hit point using formulas matching the primitive mesh. All 21 mapped surfaces, including the six exterior maps, occupy layers of one 512-by-512 texture array. Source maps are bilinearly resampled, mipmaps are generated, and a runtime layer index is legal with sampler2DArray in GLSL 3.30. This uses one surface-map binding instead of 15 individually selected samplers. Cutout alpha is sampled at level zero so neighbouring rays on unrelated surfaces do not blur coverage holes. The source `.rgba` exports retain alpha; BMP exports are colour previews.

@@ -1,0 +1,36 @@
+[
+  {
+    "owned": "Woody",
+    "mission": "The End",
+    "owned_pose_preserved": true,
+    "other_actors_home": true
+  },
+  {
+    "owned": "Jessie",
+    "mission": "The End",
+    "owned_pose_preserved": true,
+    "other_actors_home": true
+  },
+  {
+    "owned": "Bullseye",
+    "mission": "The End",
+    "owned_pose_preserved": true,
+    "other_actors_home": true
+  },
+  {
+    "owned": "Buzz",
+    "mission": "The End",
+    "owned_pose_preserved": true,
+    "other_actors_home": true
+  },
+  {
+    "owned": "RC Car",
+    "mission": "The End",
+    "owned_pose_preserved": true,
+    "other_actors_home": true
+  },
+  {
+    "comparison": "8-second replay with and without Woody takeover",
+    "other_actors_match": true
+  }
+]

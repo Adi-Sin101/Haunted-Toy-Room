@@ -1,0 +1,80 @@
+[
+  {
+    "start": 0,
+    "end": 10,
+    "title": "Welcome home",
+    "narration": "Penny's route links the garden, doorway, stairs and toy room."
+  },
+  {
+    "start": 10,
+    "end": 20,
+    "title": "A furnished world",
+    "narration": "Five reusable primitives build the house, furniture and articulated toys."
+  },
+  {
+    "start": 20,
+    "end": 32,
+    "title": "Hierarchy in motion",
+    "narration": "Jessie attaches to Bullseye's saddle; one parent transform moves both."
+  },
+  {
+    "start": 32,
+    "end": 44,
+    "title": "Flight, laser and collision",
+    "narration": "Buzz aims at the obstacle. The nearest ray hit receives an impulse."
+  },
+  {
+    "start": 44,
+    "end": 56,
+    "title": "Rescue and return",
+    "narration": "The car follows waypoints. Wheel rotation uses distance divided by radius."
+  },
+  {
+    "start": 56,
+    "end": 66,
+    "title": "Live character takeover",
+    "narration": "Woody follows your controls while Jessie and Buzz continue the mission; 0 releases him, N enters full manual."
+  },
+  {
+    "start": 66,
+    "end": 74,
+    "title": "Directional, point and spot",
+    "narration": "Moonlight is directional. The lamp adds a point source and a soft cone."
+  },
+  {
+    "start": 74,
+    "end": 80,
+    "title": "Gouraud shading",
+    "narration": "Light is evaluated at vertices; the rasterizer interpolates the result."
+  },
+  {
+    "start": 80,
+    "end": 86,
+    "title": "Phong shading",
+    "narration": "Interpolated normals are normalized; the reflection-vector highlight is per pixel."
+  },
+  {
+    "start": 86,
+    "end": 94,
+    "title": "Procedural textures",
+    "narration": "UVs map grain, wallpaper, fabric and lunar craters onto shared geometry."
+  },
+  {
+    "start": 94,
+    "end": 106,
+    "title": "Ray tracing",
+    "narration": "A BVH finds analytic hits; shadow rays and mirror bounces reveal the polished floor."
+  },
+  {
+    "start": 106,
+    "end": 112,
+    "title": "A quiet morning",
+    "narration": "The lamp turns off, the toys return home and Penny falls asleep."
+  },
+  {
+    "start": 112,
+    "end": 120,
+    "title": "Thank you",
+    "narration": "Adiba Tahsin | Roll 2107031 | CSE-4102"
+  }
+]

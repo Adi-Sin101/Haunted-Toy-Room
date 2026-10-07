@@ -18,13 +18,13 @@ stairs and into the toy room, and jumps onto the bed to watch; the sun sets on t
 
 ## Taking control
 
-- Select any toy with its number, the compact buttons or a scene click to pause the coordinated story and enter manual mode.
+- Select a toy with its number, the compact buttons or a scene click for live control while other actors continue. Press **0** to release it. **N** selects full manual mode.
 - **N** switches story/manual mode. Resuming continues the saved stage and waypoints. **Shift+N** restores the mission setup and replays from Discovery.
 - **P** pauses the mission clock. **Enter** activates the car in Scene 5. In manual mode, select the car or bring the driven toy within three units to interact; its route then runs without steering input.
 - Existing walking, riding, flying, laser, editing and camera controls remain available. Camera input overrides cinematic shots without stopping the story; N resumes cinematic camera control.
 - **H** expands the guide within the same corner panel. **G** hides all interface text, including the guide. Neither key affects the scene.
 
-The room camera remains constrained to its original boundaries. Toys can cross the right-side doorway into the hallway, whose walls, ceiling and far end remain solid. Story paths use the same character animation and collision system as manual movement.
+The camera can inspect the connected hallway while preserving closed wall boundaries. Toys can cross the right-side doorway into the hallway, whose walls, ceiling and far end remain solid. Story paths use the same character animation and collision system as manual movement.
 
 ## Implementation
 

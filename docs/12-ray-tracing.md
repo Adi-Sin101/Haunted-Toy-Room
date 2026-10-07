@@ -63,7 +63,9 @@ each axis the ray is inside the slab for t between
 
 ```
 tNear = max over axes of min(t₁, t₂)        tFar = min over axes of max(t₁, t₂)
-hit  ⟺  tNear ≤ tFar  and  tNear > ε ;      the axis that produced tNear is the face hit, normal = −sign(d'_a)·e_a
+hit  ⟺  tNear ≤ tFar  and  tFar > ε
+use tNear when tNear > ε; otherwise use tFar (the exit face for an inside origin)
+entry normal = −sign(d'_a)·e_a; exit normal = sign(d'_a)·e_a, using the chosen face axis
 ```
 
 **Sphere** (|p| = ½). Substitute the ray: `|o' + t·d'|² = ¼` →
@@ -94,6 +96,8 @@ b = 2( o'x d'x + o'z d'z + k² h d'y )
 c = o'x² + o'z² − k² h²                    roots accepted only if −½ ≤ y ≤ ½ (one nappe of the double cone)
 normal = ∇F = ( 2x, 2k²(½ − y), 2z )        then normalised;  base cap as for the cylinder (y = −½, normal −Y)
 ```
+
+When `|a|` is nearly zero the side equation becomes linear: use `t = -c/b` when `|b|` is nonzero. This handles rays parallel to a cone generator without division by a vanishing quadratic coefficient.
 
 ### 3.2 The world normal
 
@@ -298,12 +302,7 @@ For the sphere: the mesh puts ring i at latitude `φ = 90° − i·180°/stacks`
 and `y = ½ sin φ` → `φ = asin(2y)`; longitude `θ = atan2(x, z)` because `x = r cos φ sin θ`,
 `z = r cos φ cos θ`.
 
-The sample is `texture(slot, uv · uvScale)`. GLSL 3.30 cannot index an array of samplers with a run-time
-value, so the 15 texture slots (`Assets::TextureSlot`: floor, wall, rug, ball, block, poster, stars, moon,
-cotton, denim, leather, plaid, cow print, book spines, pickets) are 15 separate uniforms selected with
-`if` (together with the instance buffer that is 16 samplers, the minimum every GL 3.3 GPU provides). The
-house's raster-only textures (siding, shingles, brick, grass, window panes, flower bed) have no slot, so in
-ray-traced mode those surfaces show their plain colours.
+The sample is `texture(uSurfaceMaps, vec3(uv * uvScale, slot))`. A single `sampler2DArray` contains 21 surface layers: floor, wall, rug, ball, block, poster, stars, moon, cotton, denim, leather, plaid, cow print, book spines, pickets, siding, shingles, brick, grass, window panes and flower bed. Source maps are bilinearly resampled to 512 × 512 per layer and mipmaps are generated. Array-layer selection is legal in GLSL 3.30 and avoids a branch ladder and the previous 15 separate sampler bindings. Exterior maps therefore also appear in ray-traced views. The instance buffer uses texture unit 0, the surface array unit 1 and presentation unit 2.
 
 **Cut-outs.** The picket fence and the porch railings are single boxes whose texture has alpha = 0
 between the pickets ([10](10-textures.md)). For a shape with the cut-out flag, every candidate hit — in

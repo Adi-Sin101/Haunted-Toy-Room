@@ -1,0 +1,10 @@
+# Preserve generated media bytes on every platform.
+*.pdf binary
+*.pptx binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.bmp binary
+*.mp4 binary
+*.zip binary
+*.rgba binary

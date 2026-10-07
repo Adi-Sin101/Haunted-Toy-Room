@@ -1,0 +1,14 @@
+{
+  "report_pages": 31,
+  "figures": 19,
+  "tables": 11,
+  "equation_groups": 28,
+  "scene_nodes": 699,
+  "engine": "pdfLaTeX",
+  "page_limit": 39,
+  "content_scan": "passed",
+  "overfull_boxes": 0,
+  "slides": 10,
+  "embedded_video": true,
+  "identity": true
+}

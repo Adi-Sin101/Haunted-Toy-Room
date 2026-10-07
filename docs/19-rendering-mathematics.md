@@ -52,10 +52,12 @@ from scene nodes.
 For every visible shape with world matrix M (axis columns a₀, a₁, a₂, translation c):
 
 ```
-bounding radius  r = ½ · sqrt(|a₀|² + |a₁|² + |a₂|²)          encloses the scaled unit cube, hence every primitive
+bounding radius  r = ½ · max |a₀ ± a₁ ± a₂|   (four sign combinations; opposite corners have equal length)
 view distance    d = |c − eye|
 level of detail  s = r / d:   s < 0.012 → low,  s < 0.06 → medium,  else full
 ```
+
+This corner bound encloses the transformed unit cube even under shear. The sum-of-squared-column shortcut is valid only for orthogonal columns and can underestimate a sheared object's extent.
 
 ## 6. Camera ([05](05-camera.md), [09 §1](09-shading.md))
 

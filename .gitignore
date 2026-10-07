@@ -15,3 +15,33 @@ Release/
 
 # Runtime output
 screenshots/
+
+# Python tooling cache
+__pycache__/
+*.pyc
+
+# Generated showcase intermediates and local submission archive
+docs/showcase/Submission-Package.zip
+docs/showcase/video/clip-*
+docs/showcase/video/caption-*
+docs/showcase/video/clips.txt
+docs/showcase/slides/
+docs/showcase/validation/*.png
+docs/showcase/validation/*.jpg
+docs/showcase/validation/*.bmp
+docs/showcase/validation/package-runtime/
+docs/showcase/validation/package.json
+docs/showcase/inventory/textures/*.bmp
+docs/showcase/inventory/textures/*.rgba
+docs/showcase/Project-Report.docx
+docs/showcase/*.aux
+docs/showcase/*.log
+docs/showcase/*.out
+docs/showcase/*.toc
+
+# Local reference documents supplied for preparation
+docs/report/*.pdf
+docs/report/KUET-LOGO.png
+
+# Duplicate capture before PNG conversion
+docs/showcase/figures/baseline.bmp
