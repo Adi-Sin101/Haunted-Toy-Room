@@ -169,6 +169,8 @@ void Renderer::UploadLights(const Shader& shader, const FrameInfo& frame, const 
 		shader.SetFloat(n.inner, l.innerCutoff);
 		shader.SetFloat(n.outer, l.outerCutoff);
 	}
+	shader.SetVec3("uFogColor",{0.055f,0.065f,0.095f});
+	shader.SetFloat("uFogDensity",frame.fogDensity);
 	shader.SetVec3("uAmbientLight", frame.ambientLight);
 	shader.SetInt("uLightingEnabled", settings.lighting ? 1 : 0);
 	shader.SetInt("uShadingEnabled", settings.shadingEnabled ? 1 : 0);

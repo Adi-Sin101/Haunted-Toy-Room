@@ -6,6 +6,7 @@
 //   (Gouraud uses gouraud.vert/frag; Blinn vs Phong specular is selected by uBlinn)
 
 #include "lighting.glsl"
+#include "fog.glsl"
 
 in vec3 vWorldPos;
 in vec3 vNormal;
@@ -29,12 +30,12 @@ void main()
 	vec3 albedo = uMaterial.color * texColor;
 
 	if (uMaterial.unlit == 1) {
-		FragColor = vec4(uMaterial.emissive + albedo, uMaterial.opacity);
+		FragColor = vec4(applyFog(uMaterial.emissive + albedo,length(vWorldPos-uCameraPos)), uMaterial.opacity);
 		return;
 	}
 	if (uLightingEnabled == 0 || uShadingEnabled == 0) {
 		vec3 illumination = uLightingEnabled == 1 ? basicIllumination(vWorldPos, uMaterial.ka, uMaterial.kd) : vec3(1.0);
-		FragColor = vec4(albedo * illumination + uMaterial.emissive, uMaterial.opacity);
+		FragColor = vec4(applyFog(albedo * illumination + uMaterial.emissive,length(vWorldPos-uCameraPos)), uMaterial.opacity);
 		return;
 	}
 
@@ -55,5 +56,5 @@ void main()
 	float rim = pow(1.0 - max(dot(N, V), 0.0), 2.0);
 	color += uHighlight * (0.12 + 0.6 * rim) * vec3(1.0, 0.8, 0.2);
 
-	FragColor = vec4(color, uMaterial.opacity);
+	FragColor = vec4(applyFog(color,length(vWorldPos-uCameraPos)), uMaterial.opacity);
 }

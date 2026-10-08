@@ -26,6 +26,7 @@ public:
 	Cat(SceneNode& parent, Assets& assets, const glm::vec3& position, float headingDeg);
 	void Animate(float dt, float time) override;
 
+	void EnableArrivalMotion(bool on) { canFly=on; }
 	void SetPose(Pose p) { pose = p; }
 	Pose CurrentPose() const { return pose; }
 	// Turns the head (within +-70 degrees) toward a world point; the body stays put.

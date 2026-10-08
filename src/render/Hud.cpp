@@ -127,17 +127,17 @@ void Hud::Render(int width, int height, const HudInfo& info)
 	bodyVertices.clear(); titleVertices.clear();
 	const float scale = Scale(width, height), w = width / scale, h = height / scale;
  const float panelWidth=390, x=16, y=16;
- Rect(x,y,panelWidth,info.help ? 468.0f : (info.puzzleStage || info.puzzleNotice) ? 242.0f : 218.0f,Ink);
+ Rect(x,y,panelWidth,info.help ? 510.0f : 270.0f,Ink);
  Text("HAUNTED TOY ROOM",x+14,y+10,0.61f,Gold);
  Text(info.clock + " / " + (info.story ? "STORY" : "MANUAL"),x+14,y+32,0.55f,Muted);
  Text(info.selection,x+14,y+54,0.58f,Cream,panelWidth-28,true);
  Text(info.description,x+14,y+82,0.56f,Muted,panelWidth-28);
- Text(info.puzzleStage ? info.controls : info.arrival ? "Y skip the arrival / Shift+N replay" : info.story ? "N manual / Enter activate / Shift+N replay" : info.controls,
+ Text(info.arrival ? "Y skip the arrival / Shift+N replay" : info.controls,
   x+14,y+119,0.55f,Cream,panelWidth-28);
  if (info.puzzleStage) {
   Text(info.puzzleCode,x+14,y+140,0.55f,Gold,panelWidth-28);
  }
-	if ((info.puzzleStage || info.puzzleNotice) && !info.status.empty())
+	if (!info.status.empty())
 		Text(info.status,x+14,y+218,0.50f,Cream,panelWidth-28);
  for (int i=0;i<9;++i) {
   const float bx=x+14+i*40;
@@ -148,7 +148,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
  if (info.help) {
   const char* lines[]={
    "1 Woody / 2 Jessie / 3 Bullseye / 4 Buzz / 5 Car",
-   "6 Ball / 7 Lamp / 8 Ghost / Ctrl+B blocks",
+   "6 Ball / 7 Lamp / 8 Ghost / Ctrl+0 Penny",
    "Selection: live control / 0 release / N full manual",
    "W/S move / A/D turn / Shift run / Space stop",
    "Jessie + Bullseye: R mount or dismount nearby",
@@ -162,7 +162,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
    "F12 screenshot / H close this guide",
    "` settings / Scroll zoom / Shift+F2 shading on-off"
   };
-  float lineY=y+227;
+  float lineY=y+270;
   for (const char* line:lines) { Text(line,x+14,lineY,0.50f,Muted,panelWidth-28); lineY+=17; }
  }
  const float settingsX=w-226;
@@ -217,5 +217,5 @@ bool Hud::Covers(glm::vec2 mouse,int width,int height,bool help,bool settingsOpe
  mouse/=Scale(width,height);
  if (mouse.x>=w-128 && mouse.x<=w-16 && mouse.y>=16 && mouse.y<=44) return true;
  if (settingsOpen && mouse.x>=w-226 && mouse.x<=w-16 && mouse.y>=50 && mouse.y<=226) return true;
- return mouse.x>=16 && mouse.x<=406 && mouse.y>=16 && mouse.y<=16+(help ? 468 : 218);
+ return mouse.x>=16 && mouse.x<=406 && mouse.y>=16 && mouse.y<=16+(help ? 510 : 270);
 }

@@ -61,6 +61,8 @@ struct LaunchOptions {
 	int windowWidth = 1600, windowHeight = 900;
 	bool pauseClock = false;
 	bool story = false;     // keep the story running during a capture
+	bool demo = false;
+    bool rehearsalStop = false;
 	bool manual = false;    // full manual control without coordinated actor routes
 	bool hasCamera = false;
 	glm::vec3 cameraPos{ 0.0f }, cameraTarget{ 0.0f };
@@ -97,6 +99,7 @@ protected:
 private:
 	void BuildScene();
 	void StepScene(float dt);
+	void DemoMission(float dt);
 	void AddSelectable(const std::string& name, SceneNode* node, Character* character, int key, float focusHeight, float focusDistance);
 
 	// Input handling
@@ -143,6 +146,8 @@ private:
 	HallwayPuzzle hallwayPuzzle;
 	std::unique_ptr<Cat> penny; // not in `characters`: the story and the collision solver ignore her
 	int pennyId = -1;
+	int demoPhase=0, demoLeg=0;
+	float demoWait=0, endingTime=0;
 	PhysicsWorld physics;
 	Hud hud;
 	std::vector<SceneNode*> contactShadows;

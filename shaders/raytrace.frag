@@ -21,6 +21,7 @@
 // ============================================================================================
 
 #include "lighting.glsl"
+#include "fog.glsl"
 
 in vec2 vNdc;
 out vec4 FragColor;
@@ -307,9 +308,11 @@ void main()
 	vec3 color = vec3(0.0);
 	vec3 throughput = vec3(1.0);
 
+	float fogDistance=0.0;
 	for (int bounce = 0; bounce <= uMaxBounces; ++bounce) {
 		float t; vec3 op, on;
 		int hit = traceClosest(ro, rd, t, op, on);
+		if (bounce==0 && hit>=0) fogDistance=t;
 		if (hit < 0) { color += throughput * uBackground; break; }
 
 		// 2. Surface data
@@ -370,5 +373,5 @@ void main()
 		if (max(throughput.r, max(throughput.g, throughput.b)) < 0.02) break;
 	}
 
-	FragColor = vec4(color, 1.0);
+	FragColor = vec4(applyFog(color,fogDistance), 1.0);
 }

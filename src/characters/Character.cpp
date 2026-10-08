@@ -50,7 +50,7 @@ void Character::Drive(const ControlInput& in, float dt)
 	root->local.position += Forward() * speed * dt;
 
 	if (canFly) {
-		root->local.position.y = std::clamp(root->local.position.y + in.vertical * 2.0f * dt, 0.0f, RoomSize::Height - 2.2f);
+		root->local.position.y = std::clamp(root->local.position.y + in.vertical * 2.0f * dt, root->local.position.y<RoomSize::Slab ? RoomSize::Ground : 0.0f, RoomSize::Height - 2.2f);
 	}
 
 	if (clampToRoom) {

@@ -3,6 +3,7 @@
 // material colour and texture. No lighting maths happens per pixel.
 
 #include "lighting.glsl"
+#include "fog.glsl"
 
 in vec3 vLight;
 in vec3 vSpecular;
@@ -27,12 +28,12 @@ void main()
 	vec3 albedo = uMaterial.color * texColor;
 
 	if (uMaterial.unlit == 1) {
-		FragColor = vec4(uMaterial.emissive + albedo, uMaterial.opacity);
+		FragColor = vec4(applyFog(uMaterial.emissive + albedo,length(vWorldPos-uCameraPos)), uMaterial.opacity);
 		return;
 	}
 	if (uLightingEnabled == 0 || uShadingEnabled == 0) {
 		vec3 illumination = uLightingEnabled == 1 ? basicIllumination(vWorldPos, uMaterial.ka, uMaterial.kd) : vec3(1.0);
-		FragColor = vec4(albedo * illumination + uMaterial.emissive, uMaterial.opacity);
+		FragColor = vec4(applyFog(albedo * illumination + uMaterial.emissive,length(vWorldPos-uCameraPos)), uMaterial.opacity);
 		return;
 	}
 
@@ -43,5 +44,5 @@ void main()
 	float rim = pow(1.0 - abs(dot(N, V)), 2.0);
 	color += uHighlight * (0.12 + 0.6 * rim) * vec3(1.0, 0.8, 0.2);
 
-	FragColor = vec4(color, uMaterial.opacity);
+	FragColor = vec4(applyFog(color,length(vWorldPos-uCameraPos)), uMaterial.opacity);
 }

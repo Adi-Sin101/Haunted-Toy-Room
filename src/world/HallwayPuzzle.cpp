@@ -82,6 +82,8 @@ void BuildTrain(SceneNode& world, Assets& assets)
 	AddTrainWheels(*train, assets, coal, -0.62f);
 	AddTrainWheels(*train, assets, coal, -0.15f);
 
+    auto* badge=world.AddChild("TrainClueDigit"); badge->local.position={15.3f,0.48f,5.35f};
+    SevenSegment(*badge,assets,trim,2,0,0,0.8f,0.03f);
 	// The locomotive pulls exactly two distinct toy cars.
 	for (int car = 0; car < 2; ++car) {
 		const float z = 0.36f + static_cast<float>(car) * 0.65f;
@@ -128,9 +130,12 @@ void BuildClock(SceneNode& world, Assets& assets)
 	face.ka = 1.0f;
 	face.kd = 0.9f;
 	face.ks = 0.1f;
+    face.uvScale={1,-1};
 	// The cylinder provides a real circular silhouette and its planar cap maps the provided square image 1:1.
 	clock->AddShape("ClockBlueCircularCase", &assets.Cylinder(), &clockCase, {0, 0, 0}, {1.50f, 0.18f, 1.50f});
-	clock->AddShape("ClockToyStoryPrintedFace", &assets.Cylinder(), &face, {0, 0.095f, 0}, {1.38f, 0.025f, 1.38f});
+	auto* print=world.AddChild("ClueClockPrint");print->local.position=ClockPosition+glm::vec3(0,0,0.12f);
+    print->AddShape("ClockToyStoryPrintedFace",&assets.Cylinder(),&face,{0,0,0},{1.27f,0.012f,1.27f},{90,0,0});
+    SevenSegment(*print,assets,clockCase,5,0,-0.95f,0.7f,0.02f);
 }
 
 void BuildKeypad(SceneNode& world, Assets& assets)

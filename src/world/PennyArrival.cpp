@@ -19,7 +19,7 @@ float Smooth(float t)
 }
 
 // Waypoint indices that mark story beats along the route.
-constexpr size_t GateIndex = 2, FrontDoorIndex = 6, StairFootIndex = 9, StairTopIndex = 10, RoomDoorIndex = 12;
+constexpr size_t GateIndex = 2, FrontDoorIndex = 6, StairFootIndex = 9, StairTopIndex = 10;
 }
 
 void PennyArrival::Init(Cat* penny, const HouseRig& rig)
@@ -49,6 +49,7 @@ void PennyArrival::Init(Cat* penny, const HouseRig& rig)
 
 void PennyArrival::Restart()
 {
+	cat->EnableArrivalMotion(true);
 	stage = Stage::Walk;
 	next = 1;
 	time = stageTime = travelled = 0.0f;
@@ -58,7 +59,7 @@ void PennyArrival::Restart()
 	cat->SetSlope(0);
 	cat->StopLooking();
 	exteriorVisible = true;
-	hour = 16.3f;
+	hour = 20.5f;
 	frontDoorAngle = roomDoorAngle = stairDoorAngle = 0.0f;
 	ApplyDoors(0.0f, true);
 	cameraPos = {0.0f, 9.0f, 52.0f};
@@ -75,10 +76,10 @@ void PennyArrival::Skip()
 	cat->SetSlope(0);
 	exteriorVisible = false;
 	frontDoorAngle = 85.0f;
-	roomDoorAngle = 90.0f;
+	roomDoorAngle = 0.0f;
 	stairDoorAngle = 0.0f;
 	ApplyDoors(0.0f, true);
-	hour = 0.0f;
+	hour = 20.5f;
 }
 
 void PennyArrival::ApplyDoors(float dt, bool instant)
@@ -90,10 +91,8 @@ void PennyArrival::ApplyDoors(float dt, bool instant)
 		const glm::vec3 p = cat->Root()->local.position;
 		// Open for Penny as she approaches and crosses the threshold, then close behind her.
 		ease(frontDoorAngle, glm::distance(p, glm::vec3(12.0f, Ground, 9.2f)) < 4.0f ? 85.0f : 0.0f);
-		ease(roomDoorAngle, next > StairFootIndex && p.z > -2.0f ? 90.0f : 0.0f);
-		if (next > RoomDoorIndex) roomDoorAngle = std::max(roomDoorAngle, 89.0f); // never swings back
-		// The stair door is open while she climbs and swings shut once she is in the toy room.
-		ease(stairDoorAngle, next >= StairFootIndex && next <= RoomDoorIndex + 1 && stage == Stage::Walk ? 90.0f : 0.0f);
+        ease(roomDoorAngle,0.0f); // The combination door is locked throughout the arrival.
+        ease(stairDoorAngle,next>=StairFootIndex ? 90.0f : 0.0f);
 	}
 	house.frontDoor->local.rotation.y = frontDoorAngle;
 	house.roomDoorLeft->local.rotation.y = roomDoorAngle;
@@ -122,26 +121,11 @@ void PennyArrival::Update(float dt)
 		cat->SetSlope(next == StairTopIndex ? glm::degrees(std::atan2(-Ground, StairTopZ - StairBottomZ)) : 0.0f);
 		if (next >= StairFootIndex) exteriorVisible = false;
 	}
-	else if (stage == Stage::Jump) {
-		// Ballistic-looking hop: straight-line interpolation plus a sine arc, 0.7 s.
-		const float t = std::min(1.0f, stageTime / 0.7f);
-		glm::vec3 p = glm::mix(jumpFrom, BedSpot(), Smooth(t));
-		p.y += std::sin(t * glm::pi<float>()) * 1.0f;
-		root->local.position = p;
-		cat->Stop();
-		if (t >= 1.0f) { stage = Stage::Settle; stageTime = 0.0f; cat->SetPose(Cat::Pose::Sit); }
-	}
-	else if (stage == Stage::Settle) {
-		// Turn to face the middle of the room, sit and look around for a moment.
-		root->local.rotation.y += WrapDegrees(-45.0f - root->local.rotation.y) * k;
-		cat->LookAt({0.0f, 1.0f, 1.0f});
-		if (stageTime > 2.0f) stage = Stage::Done;
-	}
 	ApplyDoors(dt, false);
 
-	// Sunset while she walks: 16:18 on the street, dusk at the door, night upstairs.
+	// Stay at night as the route progresses from 20:30 to about 23:00.
 	const float total = routeDistance.back();
-	hour = std::fmod(16.3f + 7.6f * Smooth(travelled / total) + (stage != Stage::Walk ? 0.1f : 0.0f), 24.0f);
+	hour = std::fmod(20.5f + 2.5f * Smooth(travelled / total) + (stage != Stage::Walk ? 0.1f : 0.0f), 24.0f);
 
 	// Camera: establishing push-in for 5 s, then a chase camera; inside the toy room a fixed vantage.
 	const glm::vec3 p = root->local.position;
@@ -149,15 +133,9 @@ void PennyArrival::Update(float dt)
 	const glm::vec3 forward(std::sin(h), 0.0f, std::cos(h));
 	glm::vec3 desiredPos, desiredTarget;
 	const bool outside = next <= FrontDoorIndex;
-	if (next > RoomDoorIndex || stage != Stage::Walk) {
-		desiredPos = {3.2f, 3.4f, 2.6f};
-		desiredTarget = cat->HeadPosition();
-	}
-	else {
-		const float back = outside ? 4.2f : 2.4f, up = outside ? 1.9f : 1.3f;
-		desiredPos = p - forward * back + glm::vec3(0.0f, up, 0.0f);
-		desiredTarget = p + forward * 1.2f + glm::vec3(0.0f, 0.6f, 0.0f);
-	}
+    const float back=outside ? 4.2f : 2.4f, up=outside ? 1.9f : 1.3f;
+    desiredPos=p-forward*back+glm::vec3(0,up,0);
+    desiredTarget=p+forward*1.2f+glm::vec3(0,0.6f,0);
 	const float establishing = Smooth((time - 3.0f) / 4.0f);           // 0 for 3 s, then blends over 4 s
 	const glm::vec3 shotPos = glm::mix(glm::vec3(0.0f, 9.0f, 52.0f), glm::vec3(6.0f, 4.0f, 36.0f), Smooth(time / 6.0f));
 	const glm::vec3 shotTarget(3.5f, 3.0f, 0.0f);
@@ -168,9 +146,8 @@ void PennyArrival::Update(float dt)
 
 std::string PennyArrival::Caption() const
 {
-	if (next <= GateIndex) return "Late afternoon. Penny the cat comes home along the quiet street.";
+	if (next <= GateIndex) return "Night. Penny approaches the haunted house; the toys need help.";
 	if (next <= FrontDoorIndex) return "Through the garden gate and up the porch. The front door swings open for her.";
-	if (next <= StairFootIndex) return "Inside, the hall leads to the stairs. The sun is setting.";
-	if (next <= RoomDoorIndex) return "Up the stairs to the toy room. Its double door opens.";
-	return "Penny jumps onto the bed to watch. At midnight, the toys come alive...";
+	if (next <= StairFootIndex) return "Inside, the hall leads to the stairs. The entrance has closed behind her.";
+	return "The note says the toys need help. Inspect the three hallway clues to open the toy-room door.";
 }

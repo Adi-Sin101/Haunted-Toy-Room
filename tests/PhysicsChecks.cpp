@@ -151,6 +151,10 @@ void Run()
 	world.SetIndependentActor(nullptr);
 	actor->local.position={0,0,2}; world.ConstrainActor(actor,{-4,0,2});
 	Require(actor->local.position.x<-2.70f,"releasing live ownership restores actor collision");
+    world.SetScriptedActors(true);
+    actor->local.position={0,0,2}; world.ConstrainActor(actor,{-4,0,2});
+    Require(actor->local.position.x>-0.1f,"scripted routes do not depend on another actor's collision or ownership");
+    world.SetScriptedActors(false);
 	actor->local.position = {-4, 0, 0}; actor->local.scale = glm::vec3(100);
 	world.ConstrainActor(actor, {-4, 0, 0});
 	Require(actor->local.scale.x < 4.0f, "oversized edited actors fit the room");
@@ -187,6 +191,49 @@ void Run()
 	const auto sealedCamera=world.MoveCamera({9.5f,2,-4},{14,2,-4});
 	Require(sealedCamera.x<RoomSize::HalfWidth,"hallway access preserves the closed wall boundaries");
 }
+void CheckConnectedHouse()
+{
+    // Connected multi-level movement and a real static entrance laser hit.
+    SceneNode connected("ConnectedHouse");
+    SceneNode* walker=connected.AddChild("HouseWalker");walker->local.position={15,0.012f,2};
+    PhysicsWorld housePhysics;connected.UpdateWorld(glm::mat4(1));housePhysics.Init(connected,{});
+    housePhysics.EnableHouse(true);housePhysics.EnableHallway(true);
+    housePhysics.AddActor(walker,{0.3f,0.5f,0.3f},{0,0.5f,0});
+    for (int step=0;step<200;++step) {
+        const auto previous=walker->local.position;walker->local.position.z-=0.05f;
+        housePhysics.ConstrainActor(walker,previous);
+    }
+    Require(walker->local.position.y<RoomSize::Ground+0.1f && walker->local.position.z<-7.3f,"grounded actor walks down all eighteen stairs to the landing");
+    walker->local.position={15,RoomSize::Ground+0.02f,-7.5f};
+    for(int step=0;step<200;++step) {
+        const auto previous=walker->local.position;walker->local.position.z+=0.05f;
+        housePhysics.ConstrainActor(walker,previous);
+    }
+    Require(walker->local.position.y>=0 && walker->local.position.z>1.7f,"grounded actor climbs the stairs and crosses the stair-head threshold");
+    Require(std::abs(PhysicsWorld::FloorHeight({15,0,-6.9f})-(RoomSize::Ground+0.25f))<1e-5f,"stair support agrees with the first rendered tread");
+    Require(std::abs(PhysicsWorld::FloorHeight({15,0,0.9f}))<1e-5f,"last rendered tread reaches the upper floor");
+    Mesh entryMesh("EntryMesh",PrimitiveType::Cube,Primitives::Cube());
+    walker->local.position={15,0.02f,0};
+    housePhysics.SetActorShape(walker,{1.6f,0.5f,0.3f},{0,0.5f,0});
+    housePhysics.ConstrainActor(walker,{15,0.02f,0});
+    Require(std::isfinite(walker->local.position.x) && std::abs(walker->local.position.x-15)<1e-5f,"wide turning actor stays centred in the stair flight without reversed clamp limits");
+    SceneNode entrance("Entrance");
+    SceneNode* entryLeaf=entrance.AddShape("EntranceLeaf",&entryMesh,nullptr,{12,-3.0f,9.2f},{1.56f,2.96f,0.1f});entryLeaf->solid=true;
+    SceneNode* cat=entrance.AddChild("CatProxy");cat->local.position={12,RoomSize::Ground+0.02f,7};
+    entrance.UpdateWorld(glm::mat4(1));PhysicsWorld entryPhysics;entryPhysics.Init(entrance,{});
+    entryPhysics.EnableHouse(true);entryPhysics.EnableHallway(true);entryPhysics.SetExteriorAccess(true);
+    entryPhysics.AddActor(cat,{0.3f,0.48f,0.3f},{0,0.48f,0});
+    cat->local.position.z=12;entryPhysics.ConstrainActor(cat,{12,RoomSize::Ground+0.02f,7});
+    Require(cat->local.position.z<9.0f,"closed entrance physically blocks an exterior-access actor");
+    const float doorDistance=entryPhysics.FireLaser({12,-2.8f,7},{0,0,1},1.0f/60,nullptr);
+    Require(entryPhysics.LastLaserHit()==entryLeaf && std::abs(doorDistance-2.15f)<0.02f,"ground-floor laser reports the real static entrance as its nearest hit");
+    entryLeaf->visible=false;entryPhysics.Update(1.0f/60);
+    cat->local.position={12,RoomSize::Ground+0.02f,12};entryPhysics.ConstrainActor(cat,{12,RoomSize::Ground+0.02f,7});
+    Require(cat->local.position.z>11,"hidden broken entrance no longer blocks the exterior path");
+    const auto grounded=cat->local.position;cat->local.position.y=2;
+    entryPhysics.ConstrainActor(cat,grounded);
+    Require(cat->local.position.y<RoomSize::Slab,"ground-floor overlap recovery cannot move an actor through the upper slab");
+}
 }
 int main()
 {
@@ -199,7 +246,8 @@ int main()
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL()) { glfwDestroyWindow(window); glfwTerminate(); return 1; }
 	int result = 0;
-	try { Run(); std::cout << checks << " physics checks passed.\n"; }
+	try { Run(); CheckConnectedHouse();
+std::cout << checks << " physics checks passed.\n"; }
 	catch (const std::exception& e) { std::cerr << "FAIL " << e.what() << '\n'; result = 1; }
 	glfwDestroyWindow(window); glfwTerminate(); return result;
 }

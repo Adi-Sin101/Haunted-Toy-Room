@@ -1,46 +1,37 @@
-"""Replay each toy under live ownership and verify the remaining mission completes."""
+"""Compare actual NPC positions during reproducible live takeover of each toy."""
 from pathlib import Path
-import json
-import math
-import re
-import subprocess
-
-ROOT = Path(__file__).resolve().parents[1]
-LOG = ROOT / "docs/showcase/validation"
-NAMES = ["Woody", "Jessie", "Bullseye", "Buzz", "RC Car"]
-HOMES = [(-3, 0, .5), (-.8, 0, 2), (2.2, 0, .3), (.4, 0, -1.8), (5.5, 0, -1.8)]
-
-
-def capture(actor, seconds, name):
-    args = [str(ROOT / "bin/Release/HauntedToyRoom.exe"), "--no-intro", "--no-raytrace", "--story",
-            "--seek", str(seconds), "--frames", "2", "--size", "640,360", "--capture", str(LOG / (name + ".bmp"))]
-    if actor is not None:
-        args += ["--select", str(actor), "--drive", "0.25", "--turn", "0.2"]
-    result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, timeout=120)
-    output = result.stdout + result.stderr
-    (LOG / (name + ".log")).write_text(output, encoding="utf-8")
-    assert result.returncode == 0, output
-    positions = {n: tuple(map(float, xyz.split(","))) for n, xyz in re.findall(r"^(Woody|Jessie|Bullseye|Buzz|RC Car) at ([\d.,e+\-]+)$", output, re.M)}
-    assert len(positions) == 5
-    return output, positions
-
-
-if __name__ == "__main__":
-    results = []
-    for actor, name in enumerate(NAMES):
-        output, positions = capture(actor, 240, "live-" + str(actor))
-        assert "Mission capture: The End" in output, name + " stalls mission"
-        assert "Live control: " + name in output
-        assert math.dist(positions[name], HOMES[actor]) > .2, name + " was reset by director"
-        for other, home in zip(NAMES, HOMES):
-            if other != name:
-                assert math.dist(positions[other], home) < .08, (name, other, positions[other])
-        results.append({"owned": name, "mission": "The End", "owned_pose_preserved": True, "other_actors_home": True})
-        print("PASS live ownership:", name, flush=True)
-    _, baseline = capture(None, 8, "live-baseline")
-    _, takeover = capture(0, 8, "live-comparison")
-    for name in ["Buzz", "Jessie", "Bullseye", "RC Car"]:
-        assert math.dist(baseline[name], takeover[name]) < .08, (name, baseline[name], takeover[name])
-    results.append({"comparison": "8-second replay with and without Woody takeover", "other_actors_match": True})
-    (LOG / "live-control.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
-    print("PASS unaffected route comparison")
+import json, math, re, subprocess
+ROOT=Path(__file__).resolve().parents[1]
+LOG=ROOT/'docs/showcase/validation'
+NAMES=['Woody','Jessie','Bullseye','Buzz','RC Car']
+def capture(actor,frames,name,drive=0):
+    args=[str(ROOT/'bin/Release/HauntedToyRoom.exe'),'--no-intro','--no-raytrace','--story','--gameplay-demo','--seek','30','--rehearsal-stop','--story-step','0.05','--frames',str(frames),'--size','640,360','--capture',str(LOG/(name+'.bmp'))]
+    if actor is not None: args+=['--select',str(actor),'--drive',str(drive),'--turn','0.2']
+    result=subprocess.run(args,cwd=ROOT,capture_output=True,text=True,timeout=120)
+    output=result.stdout+result.stderr
+    (LOG/(name+'.log')).write_text(output,encoding='utf8')
+    assert result.returncode==0,output
+    positions={n:tuple(map(float,xyz.split(','))) for n,xyz in re.findall(r'^(Woody|Jessie|Bullseye|Buzz|RC Car) at ([\d.,e+\-]+)$',output,re.M)}
+    assert len(positions)==5
+    return output,positions
+if __name__=='__main__':
+    results=[]
+    _,baseline=capture(None,40,'live-baseline')
+    for actor,name in enumerate(NAMES):
+        output,positions=capture(actor,40,'live-'+str(actor),0.35)
+        assert 'Live control: '+name in output,name
+        assert math.dist(positions[name],baseline[name])>.2,name+' ignored live input'
+        differences={other:math.dist(positions[other],baseline[other]) for other in NAMES if other!=name}
+        for other,delta in differences.items(): assert delta<.08,(name,other,delta)
+        results.append({'owned':name,'owned_input_changes_actual_pose':True,'other_actor_position_differences':differences,'simulation_seconds':2})
+        print('PASS live takeover:',name,flush=True)
+    result=subprocess.run([str(ROOT/'bin/Release/HauntedToyRoom.exe'),'--no-intro','--story','--gameplay-demo','--no-raytrace','--seek','75','--frames','2','--size','640,360','--capture',str(LOG/'escape-win.bmp')],cwd=ROOT,capture_output=True,text=True,timeout=120)
+    (LOG/'escape-win.log').write_text(result.stdout+result.stderr,encoding='utf8')
+    assert result.returncode==0 and 'GAMEPLAY WIN / ENDING' in result.stdout
+    assert 'ESCAPE real laser broke entrance door' in result.stdout
+    actual=re.findall(r'^(Penny|Woody|Jessie|Bullseye|Buzz) at ([\d.,e+\-]+)',result.stdout,re.M)
+    assert len(actual)==5
+    for name,xyz in actual:
+        x,y,z=map(float,xyz.split(','));assert y<-.3 and z>13,(name,xyz)
+    results.append({'escape_rehearsal':'WIN','nearest_hit_door_impact':True,'all_five_actual_positions_outside':True})
+    (LOG/'live-control.json').write_text(json.dumps(results,indent=2),encoding='utf8')

@@ -76,8 +76,23 @@ void PhysicsWorld::Init(SceneNode& scene, const std::vector<SceneNode*>& blocks)
 
 void PhysicsWorld::RefreshScenery()
 {
-	sceneryBounds.clear();
-	for (SceneNode* n : scenery) sceneryBounds.push_back(ShapeBounds(n));
+    sceneryBounds.clear();
+    for (SceneNode* n : scenery) {
+        bool visible=n->solid;
+        for (auto* parent=n; parent && visible; parent=parent->Parent()) visible=parent->visible;
+        if (visible) sceneryBounds.push_back(ShapeBounds(n));
+    }
+}
+
+float PhysicsWorld::FloorHeight(const glm::vec3& feet)
+{
+    using namespace RoomSize;
+    if (feet.x>=StairLeft && feet.x<=StairRight && feet.z<StairTopZ && feet.z>=StairBottomZ) {
+        const float cell=(feet.z-StairBottomZ)/(StairTopZ-StairBottomZ)*18.0f;
+        return Ground+(-Ground/18.0f)*std::clamp(std::floor(cell)+1.0f,1.0f,18.0f);
+    }
+    if (feet.z<StairBottomZ || feet.z>HouseFront || feet.y<Slab) return Ground+0.02f;
+    return 0.0f;
 }
 
 void PhysicsWorld::AddActor(SceneNode* node, glm::vec3 half, glm::vec3 offset)
@@ -88,6 +103,7 @@ void PhysicsWorld::EnableActor(SceneNode* node, bool enabled)
 {
 	for (auto& a : actors) if (a.node == node) a.enabled = enabled;
 }
+void PhysicsWorld::SetActorGrounded(SceneNode* node,bool grounded) { for(auto& actor:actors) if(actor.node==node) actor.grounded=grounded; }
 void PhysicsWorld::SetActorShape(SceneNode* node, glm::vec3 half, glm::vec3 offset)
 {
 	for (auto& a : actors) if (a.node == node) { a.half = half; a.offset = offset; }
@@ -102,7 +118,7 @@ bool PhysicsWorld::IsBlock(SceneNode* node) const
 {
 	return std::any_of(bodies.begin(), bodies.end(), [&](const Body& b) { return b.node == node; });
 }
-std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore) const
+std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore,bool actorContacts) const
 {
 	std::vector<Bounds> list;
 	list.reserve(scenery.size() + actors.size() + bodies.size());
@@ -115,15 +131,32 @@ std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore) con
 		const glm::vec3 half = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
 		list.push_back({b.node->local.position - half, b.node->local.position + half, b.node});
 	}
-	for (const Actor& a : actors) if (a.enabled && a.node != ignore &&
+	for (const Actor& a : actors) if (actorContacts && a.enabled && a.node != ignore &&
 		!(ignore && ignore!=independentActor && a.node==independentActor)) list.push_back(ActorBounds(a));
 	return list;
 }
 
 glm::vec3 PhysicsWorld::Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore) const
 {
-	const auto obstacles = Obstacles(ignore);
+	const auto obstacles = Obstacles(ignore,!(scriptedActors && ignore && ignore!=independentActor));
  const auto clamp = [&](glm::vec3 p, const glm::vec3& extent) {
+  if (houseSpace) {
+   using namespace RoomSize;
+   if (p.z>HouseFront-extent.z-0.2f && exteriorAccess) return glm::clamp(p,glm::vec3(-12+extent.x,Ground+extent.y,HouseFront-extent.z-0.2f),glm::vec3(20-extent.x,Height-extent.y,28-extent.z));
+   if (p.x>=StairLeft && p.x<=StairRight && p.z<StairTopZ+extent.z+0.2f && p.z>=StairBottomZ) {
+    const float left=StairLeft+extent.x+Skin,right=StairRight-extent.x-Skin;
+    // A conservative rotated proxy can briefly exceed the flight width while turning.
+    // Centre it instead of passing reversed bounds to std::clamp.
+    p.x=left<=right ? std::clamp(p.x,left,right) : 0.5f*(StairLeft+StairRight);
+    p.y=std::max(p.y,FloorHeight({p.x,p.y-extent.y,p.z})+extent.y+Skin);
+    return p;
+   }
+   if (from.y<Slab || p.y<Slab || (p.z<StairBottomZ && p.x>HalfWidth)) {
+    const float right=p.z<StairBottomZ ? StairRight : CorridorRight;
+    return glm::clamp(p,glm::vec3(CorridorLeft+extent.x+Skin,Ground+extent.y+Skin,-9.05f+extent.z),
+      glm::max(glm::vec3(CorridorLeft+extent.x+Skin,Ground+extent.y+Skin,-9.05f+extent.z),glm::vec3(right-extent.x-Skin,Slab-extent.y-Skin,HouseFront-extent.z+0.2f)));
+   }
+  }
   // Once an actor/camera is in the connected hallway, keep it in that corridor even
   // when a requested step crosses a side boundary. Falling back to RoomClamp here
   // teleports it through the connected doorway into the room at the corridor corner.
@@ -195,7 +228,12 @@ void PhysicsWorld::ConstrainActor(SceneNode* node, const glm::vec3& previous)
 		node->local.scale *= fit;
 		const glm::mat4 m = node->local.Matrix();
 		const glm::vec3 half = Extent(m, a.half), offset = glm::vec3(m * glm::vec4(a.offset, 0.0f));
-		node->local.position = Move(previous + offset, node->local.position + offset, half, node) - offset;
+        if (houseSpace) {
+            const float floor=FloorHeight({node->local.position.x,previous.y,node->local.position.z});
+            const bool stairs=node->local.position.x>=RoomSize::StairLeft && node->local.position.z<RoomSize::StairTopZ;
+            if ((a.grounded && (stairs || previous.y<RoomSize::Slab)) || node->local.position.y<floor) node->local.position.y=floor;
+        }
+        node->local.position = Move(previous + offset, node->local.position + offset, half, node) - offset;
 		return;
 	}
 }
@@ -217,9 +255,9 @@ void PhysicsWorld::ResetBlocks()
 	lastLaserHit = nullptr;
 	for (Body& b : bodies) { b.node->local = b.initial; b.velocity = b.angular = glm::vec3(0.0f); }
 }
-void PhysicsWorld::PushBlock(SceneNode* node, const glm::vec3& impulse)
+void PhysicsWorld::PushBlock(SceneNode* node, const glm::vec3& impulse,const glm::vec3& angular)
 {
-	for (Body& b : bodies) if (b.node == node) b.velocity += impulse;
+	for (Body& b : bodies) if (b.node == node) { b.velocity += impulse; b.angular+=angular; }
 }
 void PhysicsWorld::StopBlock(SceneNode* node)
 {
@@ -261,8 +299,9 @@ void PhysicsWorld::Update(float dt)
 			b.angular *= std::exp(-step * 1.7f);
 			halves[i] = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
 			Bounds box = bounds(i);
-			if (box.low.y < 0.0f) {
-				b.node->local.position.y -= box.low.y;
+			const float floor=houseSpace && b.initial.position.y<RoomSize::Slab ? RoomSize::Ground : 0.0f;
+			if (box.low.y < floor) {
+				b.node->local.position.y += floor-box.low.y;
 				if (b.velocity.y < 0) b.velocity.y = -b.velocity.y * 0.14f;
 				b.velocity.x *= std::exp(-step * 5.0f); b.velocity.z *= std::exp(-step * 5.0f);
 				b.angular *= std::exp(-step * 7.0f);
@@ -272,7 +311,8 @@ void PhysicsWorld::Update(float dt)
 				}
 			}
 			const glm::vec3& half = halves[i];
-			const glm::vec3 clamped = RoomClamp(b.node->local.position, half);
+			const glm::vec3 clamped = floor<0 ? glm::clamp(b.node->local.position,
+                glm::vec3(-12.0f+half.x,RoomSize::Ground+half.y,6.0f+half.z),glm::vec3(20.0f-half.x,RoomSize::Slab-half.y,26.0f-half.z)) : RoomClamp(b.node->local.position,half);
 			for (int axis : {0, 2}) if (clamped[axis] != b.node->local.position[axis]) b.velocity[axis] *= -0.25f;
 			b.node->local.position.x = clamped.x; b.node->local.position.z = clamped.z;
 			if (b.node->local.position.y > clamped.y && b.velocity.y > 0) b.velocity.y *= -0.15f;
@@ -315,14 +355,15 @@ void PhysicsWorld::Update(float dt)
 		for (size_t i = 0; i < bodies.size(); ++i) {
 			if (!bodies[i].node->visible) continue;
 			const Bounds box = bounds(i);
-			if (box.low.y < 0) bodies[i].node->local.position.y -= box.low.y;
+			const float floor=houseSpace && bodies[i].initial.position.y<RoomSize::Slab ? RoomSize::Ground : 0.0f;
+			if (box.low.y < floor) bodies[i].node->local.position.y += floor-box.low.y;
 		}
 	}
 }
 
 float PhysicsWorld::FireLaser(const glm::vec3& origin, const glm::vec3& direction, float /*dt*/, SceneNode* shooter)
 {
-	float closest = 24.0f; Body* hitBody = nullptr;
+	float closest = 24.0f; Body* hitBody = nullptr; lastLaserHit=nullptr;
 	Ray ray{origin, direction};
 	for (const Bounds& b : Obstacles(shooter)) {
 		float distance = -1.0f;
@@ -339,17 +380,17 @@ float PhysicsWorld::FireLaser(const glm::vec3& origin, const glm::vec3& directio
 			});
 		}
 		if (distance < 0 || distance >= closest) continue;
-		closest = distance; hitBody = nullptr;
+		closest = distance; hitBody = nullptr; lastLaserHit=b.node;
 		for (Body& body : bodies) if (body.node == b.node) hitBody = &body;
 	}
 	// Room faces stop the beam; the connected doorway admits it into the hallway.
 	const glm::vec3 roomLow(-RoomSize::HalfWidth, 0, -RoomSize::HalfDepth), roomHigh(RoomSize::HalfWidth, RoomSize::Height, RoomSize::HalfDepth);
-	for (int axis = 0; axis < 3; ++axis) if (std::abs(direction[axis]) > 1e-6f) {
+	for (int axis = 0; axis < 3; ++axis) if ((!houseSpace || (origin.y>=0 && origin.x<RoomSize::HalfWidth)) && std::abs(direction[axis]) > 1e-6f) {
 		const float wall = ((direction[axis] > 0 ? roomHigh[axis] : roomLow[axis]) - origin[axis]) / direction[axis];
 		const glm::vec3 contact = origin + direction * wall;
 		const bool doorway = hallway && axis==0 && direction.x>0 && contact.z>RoomSize::DoorLow
 			&& contact.z<RoomSize::DoorHigh && contact.y>0 && contact.y<RoomSize::DoorHeight;
-		if (wall > 0 && wall < closest && !doorway) { closest = wall; hitBody = nullptr; }
+		if (wall > 0 && wall < closest && !doorway) { closest = wall; hitBody = nullptr; lastLaserHit=nullptr; }
 	}
 	if (hitBody && laserCooldown <= 0.0f) {
 		const glm::vec3 contact = origin + direction * closest;

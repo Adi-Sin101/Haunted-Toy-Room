@@ -38,6 +38,7 @@ struct FrameInfo {
 	const std::vector<Light>* lights = nullptr;
 	glm::vec3 ambientLight{ 0.1f };
 	glm::vec3 clearColor{ 0.0f };
+	float fogDensity=0.0f;
 	int selectedOwner = -1;
 	float time = 0.0f;
 };
