@@ -21,22 +21,27 @@ EXE = ROOT / "bin/Release/HauntedToyRoom.exe"
 LOG = OUT / "validation"
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 ROOM = ["--cam", "-6,4.8,7,1,1.8,-2"]
+BUZZ = ["--cam", "-2.0,1.5,2.4,-3.4,1.15,0.4"]
+STORY = ["--story", "--gameplay-demo", "--no-intro", "--no-raytrace"]
+CHEST = ["--cam", "4.0,3.0,6.6,0.5,0.9,0.9"]
+BEDROOM = ["--cam", "8.5,-1.2,-2.4,3.0,-3.0,-5.3"]
+ENTRANCE = ["--cam", "12.9,-1.3,0.5,12,-2.8,8.5"]
 SHOTS = {
     "room-night": ["--no-raytrace", *ROOM],
-    "live-control": ["--no-raytrace", "--story", "--gameplay-demo", "--seek", "30", "--rehearsal-stop", "--select", "0", "--drive", "0.35", "--turn", "0.12", *ROOM],
+    "live-control": [*STORY, "--seek", "50", "--rehearsal-stop", "--select", "0", "--drive", "0.35", "--turn", "0.12"],
     "room-day": ["--no-raytrace", "--hour", "12", *ROOM],
     "room-ray": ["--ray-scale", "1", *ROOM],
     "ray-zero": ["--ray-scale", "1", "--bounces", "0", *ROOM],
-    "house": ["--intro", "--story", "--seek", "0.1", "--no-raytrace"],
-    "house-ray": ["--intro", "--story", "--seek", "0.1", "--ray-scale", "1"],
-    "garden": ["--intro", "--story", "--seek", "10", "--no-raytrace"],
-    "stairs": ["--intro", "--story", "--seek", "26", "--no-raytrace"],
-    "woody": ["--no-raytrace", "--select", "0", "--cam", "-3,1.5,3.4,-3,1.15,0.5"],
-    "jessie": ["--no-raytrace", "--select", "1", "--cam", "0.8,2.2,4.1,-0.8,1.3,2"],
-    "bullseye": ["--no-raytrace", "--select", "2", "--cam", "2.5,2.8,4.6,2.2,1.35,0.3"],
-    "buzz": ["--no-raytrace", "--select", "3", "--cam", "0,1.5,-4.5,0,1.15,-6.6"],
+    "house": ["--intro", "--story", "--seek", "3.5", "--no-raytrace"],
+    "house-ray": ["--intro", "--story", "--seek", "3.5", "--ray-scale", "1"],
+    "garden": [*STORY, "--seek", "2.5"],
+    "stairs": [*STORY, "--seek", "8.5", "--cam", "15.0,-1.4,-8.7,15,-2.4,-4.0"],
+    "woody": ["--no-raytrace", "--select", "0", "--cam", "-3.4,1.6,5.8,-1.6,1.15,3.4"],
+    "jessie": ["--no-raytrace", "--select", "1", "--cam", "0.5,2.0,6.6,0.7,1.3,3.7"],
+    "bullseye": ["--no-raytrace", "--select", "2", "--cam", "5.65,2.3,-0.9,3.4,1.3,3.1"],
+    "buzz": ["--no-raytrace", "--select", "3", *BUZZ],
     "car": ["--no-raytrace", "--select", "4", "--cam", "7.4,1.7,0.8,5.5,0.45,-1.8"],
-    "mounted": ["--no-raytrace", "--select", "2", "--mount", "--seek", "1.5", "--cam", "3.8,3.4,2.5,2.2,1.8,0.3"],
+    "mounted": ["--no-raytrace", "--select", "2", "--mount", "--seek", "1.5", "--cam", "5.65,3.0,-0.9,3.4,1.8,3.1"],
     "ball": ["--no-raytrace", "--select", "5", "--orbit", "20,20,1.6"],
     "lamp": ["--no-raytrace", "--select", "6", "--orbit", "30,10,3.5"],
     "ghost": ["--haunt", "--select", "7", "--seek", "2", "--orbit", "20,10,3", "--ray-scale", "1"],
@@ -48,8 +53,8 @@ SHOTS = {
     "clock": ["--no-raytrace", "--cam", "-1.2,5,-6,-1.2,5.1,-9"],
     "fan": ["--no-raytrace", "--cam", "-1.5,4.7,2,-1.5,6.8,0"],
     "poster": ["--no-raytrace", "--cam", "-6.5,4.3,3.8,-10,3.8,2.2"],
-    "blocks": ["--no-raytrace", "--cam", "7.2,2.8,5.8,5.3,0.8,3.8"],
-    "laser": ["--no-raytrace", "--laser-demo", "--story-step", "0.05", "--frames", "45", "--cam", "2,3.8,6,5.1,1,2"],
+    "blocks": ["--no-raytrace", "--cam", "7.2,2.8,3.6,5.3,0.8,6.9"],
+    "laser": ["--no-raytrace", "--laser-demo", "--story-step", "0.05", "--frames", "45", "--cam", "7.8,3.2,2.0,4.9,1.0,4.5"],
     "no-textures": ["--no-raytrace", "--no-textures", *ROOM],
     "ambient": ["--no-raytrace", "--no-diffuse", "--no-specular", *ROOM],
     "diffuse": ["--no-raytrace", "--no-ambient", "--no-specular", *ROOM],
@@ -57,29 +62,32 @@ SHOTS = {
     "directional": ["--no-raytrace", "--no-ambient", "--light-only", "0", *ROOM],
     "point": ["--no-raytrace", "--no-ambient", "--light-only", "1", *ROOM],
     "spot": ["--no-raytrace", "--no-ambient", "--light-only", "2", *ROOM],
-    "wireframe": ["--no-raytrace", "--select", "3", "--cam", "0,1.5,-4.5,0,1.15,-6.6", "--wireframe"],
-    "normals": ["--no-raytrace", "--select", "3", "--cam", "0,1.5,-4.5,0,1.15,-6.6", "--normals"],
-    "story-end": ["--story", "--gameplay-demo", "--no-intro", "--seek", "75", "--no-raytrace"],
+    "wireframe": ["--no-raytrace", "--select", "3", *BUZZ, "--wireframe"],
+    "normals": ["--no-raytrace", "--select", "3", *BUZZ, "--normals"],
+    "story-end": [*STORY, "--seek", "90", "--cam", "6.5,-1.2,27,12,-3.2,15"],
 }
 SHOTS.update({
-    "hallway-puzzle":["--story","--gameplay-demo","--seek","0.1","--no-raytrace","--cam","13,3,4,13.5,1.5,1.8"],
-    "train-clue":["--no-raytrace","--cam","15,1.8,4.6,15.7,0.35,5.85"],
-    "clock-clue":["--no-raytrace","--cam","13.3,2.5,4.8,13.3,2.4,1.2"],
-    "block-clue":["--no-raytrace","--cam","11.8,2,4.9,11.8,0.1,2.5"],
-    "keypad":["--no-raytrace","--cam","12.3,1.5,4.8,12.3,1.45,6.82"],
-    "rescue-switches":["--story","--gameplay-demo","--seek","8","--no-raytrace","--cam","6,3,7,4,1.4,3.5"],
-    "high-switch":["--story","--gameplay-demo","--seek","13.8","--no-raytrace","--cam","0.5,3.5,7,2.5,2.2,4.5"],
-    "buzz-barrier":["--story","--gameplay-demo","--seek","14.8","--no-raytrace","--cam","0,2.3,-1,0,1.5,-5"],
-    "ghost-chase":["--story","--gameplay-demo","--seek","20","--no-raytrace",*ROOM],
-    "stair-descent":["--story","--gameplay-demo","--seek","23.5","--no-raytrace","--cam","16,-1,-5,15,-2,-3"],
-    "entrance-lock":["--story","--gameplay-demo","--seek","35","--no-raytrace","--cam","12,-2.8,6.6,12,-3.1,9.2"],
-    "door-impact":["--story","--gameplay-demo","--seek","51.9","--no-raytrace","--cam","10,-1.8,6,12,-2.9,9.2"],
-    "door-debris":["--story","--gameplay-demo","--seek","53.05","--no-raytrace","--cam","8,-2.2,14,11.5,-3.6,10"],
+    "hallway-puzzle": [*STORY, "--seek", "12", "--cam", "16.2,2.8,6.3,12.5,0.8,3.0"],
+    "train-clue": ["--no-raytrace", "--cam", "15,1.8,4.6,15.7,0.35,5.85"],
+    "clock-clue": ["--no-raytrace", "--cam", "13.3,2.6,4.6,13.3,2.4,1.1"],
+    "block-clue": ["--no-raytrace", "--cam", "11.8,2,4.9,11.8,0.1,2.5"],
+    "keypad": ["--no-raytrace", "--cam", "12.3,1.5,4.8,12.3,1.45,6.82"],
+    "chest-closed": [*STORY, "--seek", "13", "--cam", "3.0,2.1,4.7,0.5,0.9,0.9"],
+    "chest-open": [*STORY, "--seek", "19.6", *CHEST],
+    "toys-alive": [*STORY, "--seek", "23", *CHEST],
+    "buzz-room": [*STORY, "--seek", "33", "--cam", "9.6,-1.2,-3.0,3.0,-3.0,-5.5"],
+    "wardrobe": [*STORY, "--seek", "30", "--cam", "6.6,-2.0,-5.3,2.2,-2.6,-5.3"],
+    "rescue-jump": [*STORY, "--seek", "42.1", *BEDROOM],
+    "buzz-flight": [*STORY, "--seek", "43.6", "--cam", "6.6,-1.6,-7.8,3.0,-3.0,-5.0"],
+    "entrance-lock": [*STORY, "--seek", "55.6", *ENTRANCE],
+    "door-impact": [*STORY, "--seek", "57.8", *ENTRANCE],
+    "door-debris": [*STORY, "--seek", "59.3", "--cam", "13.5,-2.4,15.0,12,-3.8,10.5"],
+    "morning": [*STORY, "--seek", "74.5"],
 })
 for name,args in SHOTS.items():
     if "--story" not in args and "--intro" not in args: args.append("--manual")
 for i, name in enumerate(["flat", "gouraud", "phong", "blinn"]):
-    SHOTS[name] = ["--no-raytrace", "--shading", str(i), "--select", "3", "--cam", "0,1.5,-4.5,0,1.15,-6.6"]
+    SHOTS[name] = ["--no-raytrace", "--shading", str(i), "--select", "3", *BUZZ, "--manual"]
 
 
 def app(name, args):
@@ -116,26 +124,26 @@ def capture():
                 for y in range(0,image.height,16):
                     for x in range(0,image.width,16):draw.rectangle((x,y,x+15,y+15),fill=(140,150,165) if (x//16+y//16)%2 else (230,232,235))
                 checker.paste(image,mask=image.getchannel("A"));checker.save(path.with_name("pickets-coverage.png"))
-    summary = {"captures": len(SHOTS), "dimensions": [1600, 900], "story_completed": "GAMEPLAY WIN / ENDING" in (LOG / "story-end.log").read_text()}
-    assert summary["story_completed"], "Escape rehearsal failed to reach WIN"
+    summary = {"captures": len(SHOTS), "dimensions": [1600, 900], "story_completed": "GAMEPLAY STAGE 7 / FREE EXPLORATION" in (LOG / "story-end.log").read_text()}
+    assert summary["story_completed"], "Story rehearsal failed to reach free exploration"
     (LOG / "captures.json").write_text(json.dumps(summary, indent=2))
 
 
 # Each clip is a real rendered sequence. Time captions form a narration cue sheet.
 CLIPS = [
-    (10,"The haunted house","Penny enters at night through hinged doors and the connected staircase.",["--intro","--story","--no-raytrace","--seek","0"]),
-    (10,"A furnished world","Five indexed primitive families form furniture and articulated toys.",["--manual","--no-raytrace",*ROOM]),
-    (10,"Inspect the three clues","Train 2, clock 5, blocks 7. The code opens the real toy-room doors.",["--story","--gameplay-demo","--seek","0","--no-raytrace"]),
-    (12,"Rescue through hierarchy","Penny activates two switches. Jessie rides Bullseye and dismounts onto the high platform.",["--story","--gameplay-demo","--seek","7","--no-raytrace","--cam","1,4,7,3,1.5,3"]),
-    (10,"Buzz and the pursuit","The release removes a translucent barrier. The ghost follows Penny to the stairs.",["--story","--gameplay-demo","--seek","15","--no-raytrace"]),
-    (10,"Live character takeover","Woody follows your input while the others continue. Zero releases ownership; N enters full manual mode.",["--story","--gameplay-demo","--seek","30","--rehearsal-stop","--select","0","--drive","0.35","--turn","0.12","--no-raytrace",*ROOM]),
-    (8,"Directional, point and spot","Moonlight is directional; the lamp adds a point source and soft spotlight.",["--manual","--haunt","--no-raytrace",*ROOM]),
-    (6,"Gouraud shading","Lighting is evaluated at vertices and interpolated across triangles.",["--manual","--no-raytrace","--shading","1","--cam","0,1.5,-4.5,0,1.15,-6.6"]),
-    (6,"Phong shading","Interpolated normals are normalised before per-fragment illumination.",["--manual","--no-raytrace","--shading","2","--cam","0,1.5,-4.5,0,1.15,-6.6"]),
-    (8,"Texture coordinates","UVs map wood, wallpaper, fabric and lunar craters onto shared geometry.",["--manual","--no-raytrace","--cam","2.5,4,-3,2.5,4,-9"]),
+    (8,"Night outside the house","Penny arrives at the abandoned house. The camera cranes down from the street.",["--intro","--story","--gameplay-demo","--no-raytrace","--seek","0"]),
+    (10,"In through the open door","Penny walks in; the main door closes and locks. She climbs the eighteen-step stair.",[*STORY,"--seek","3"]),
+    (8,"Three clues: 257","Train 2, clock 5, blocks 7. The keypad opens the real Toy Room doors.",[*STORY,"--seek","11","--cam","13,3,4,13.5,1.5,1.8"]),
+    (10,"The toy chest","The red wind-up button opens the lid. Woody, Jessie and Bullseye climb out alive.",[*STORY,"--seek","15.5",*CHEST]),
+    (10,"Downstairs together","The toys follow Penny through a graph of doorway nodes and down the stairs.",[*STORY,"--seek","25"]),
+    (12,"Cupboard rescue","Jessie mounts Bullseye, he jumps, she opens the wardrobe and Buzz flies out.",[*STORY,"--seek","34",*BEDROOM]),
+    (12,"The locked main door","Penny tries the door. Buzz flies into position; L fires a nearest-hit laser and the door breaks.",[*STORY,"--seek","47.5",*ENTRANCE]),
+    (12,"Morning escape","Everyone leaves the house. The fog thins, the sun rises and the camera pulls back.",[*STORY,"--seek","58"]),
+    (8,"Free exploration","The story stays open in daylight. Adiba Tahsin / 2107031 / CSE-4102.",[*STORY,"--seek","76","--cam","6.5,-1.2,27,12,-3.2,15"]),
+    (8,"Live character takeover","Woody follows your input while the others keep accompanying Penny. Zero releases ownership.",[*STORY,"--seek","50","--rehearsal-stop","--select","0","--drive","0.35","--turn","0.12","--cam","10.0,-1.4,-3.0,6.4,-3.8,-7.5"]),
+    (6,"Gouraud shading","Lighting is evaluated at vertices and interpolated across triangles.",["--manual","--no-raytrace","--shading","1",*BUZZ]),
+    (6,"Phong shading","Interpolated normals are normalised before per-fragment illumination.",["--manual","--no-raytrace","--shading","2",*BUZZ]),
     (10,"Analytic ray tracing","A BVH accelerates exact primitive hits, shadows, mirror paths and straight transparency.",["--manual","--ray-scale","1",*ROOM]),
-    (12,"The entrance breaks","Buzz flies and aims. Only a nearest-hit laser impact releases six physical wood fragments.",["--story","--gameplay-demo","--seek","45","--no-raytrace","--cam","10,-1.8,6,12,-2.9,9.2"]),
-    (8,"The toys are safe","Every character is physically outside. The cast idles in the garden. Adiba Tahsin / 2107031 / CSE-4102.",["--story","--gameplay-demo","--seek","75","--no-raytrace"]),
 ]
 
 
@@ -148,7 +156,7 @@ def video():
     cues, elapsed, encoded = [], 0, []
     executable_digest=hashlib.sha256(EXE.read_bytes()).hexdigest()
     for i, (seconds, title, caption, args) in enumerate(CLIPS):
-        clip_signature=json.dumps([seconds,title,caption,args,"escape-v1",executable_digest])
+        clip_signature=json.dumps([seconds,title,caption,args,"story-v2",executable_digest])
         signature=video_dir / f"clip-{i:02d}.json"
         cached=video_dir / f"clip-{i:02d}.mp4"
         if cached.exists() and signature.exists() and signature.read_text()==clip_signature:

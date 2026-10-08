@@ -2,9 +2,11 @@ name,width,height,ray_layer
 beach-ball,256,128,3
 book-spines,256,256,13
 brick,256,256,17
+chest-paint,512,256,22
 cow-print,256,256,12
 denim,256,256,9
 flower-bed,256,256,20
+football,256,128,26
 grass,256,256,18
 lunar-surface,1024,512,7
 night-sky,1024,512,6
@@ -14,6 +16,9 @@ rug,256,256,2
 shingles,256,256,16
 shirt-plaid,256,256,11
 siding,256,256,15
+star-decal,128,128,25
+star-quilt,256,256,24
+star-wallpaper,256,256,23
 toy-block,128,128,4
 toy-story-clock,447,447,21
 wallpaper,256,256,1

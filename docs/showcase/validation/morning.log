@@ -1,0 +1,88 @@
+Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
+GAMEPLAY STAGE 0 / NIGHT OUTSIDE THE HOUSE
+
+====================== HAUNTED TOY ROOM ======================
+MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser
+SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
+            0 nothing   |  left-click any object to select it
+LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
+CHARACTER   W/S move  A/D turn  Shift run  SPACE stop
+            R  Jessie mount / dismount Bullseye (must be close)
+            Q/E Buzz fly up/down   L Buzz laser / Car headlights
+LAMP        A/D swivel  W/S tilt  R power  ,/. brightness
+BALL        W/S/A/D push (camera relative)  SPACE stop
+CAMERA      C cycle Free/Orbit/Follow   F focus+orbit selected   Home reset
+            Free:  arrows move, PgUp/PgDn up/down, right-drag look, scroll = zoom (FOV)
+            Orbit: right-drag or arrows rotate, scroll/PgUp/PgDn distance, middle-drag pan
+            Numpad 1/3/7 (or Ctrl+1/3/7) front/side/top view
+EDIT MODE   Tab toggle   T op (Translate/Rotate/Scale/Shear)   J/L X  U/O Y  I/K Z
+            Ctrl = uniform scale   M mirror (reflect)   Backspace reset   Shift faster
+RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
+            F4 RAY TRACING  (-/= resolution, 9 bounces)
+            F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light
+            F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)
+            V list parts of selected object, Shift+V dump vertex/index tables
+WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay
+            H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit
+STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> morning
+            Y skips the opening shot, Shift+N replays the story from the street
+==========================================================
+
+Penny moving
+GAMEPLAY STAGE 1 / UPSTAIRS HALLWAY - 257 PUZZLE
+STORY the main door closed and locked behind Penny
+DEMO phase 1 time 4.9
+DEMO phase 2 time 4.95
+DEMO phase 3 time 11.7
+DEMO phase 4 time 12.7
+DEMO phase 5 time 13.25
+GAMEPLAY STAGE 2 / THE TOY CHEST
+DEMO phase 6 time 13.95
+Penny stopped
+Penny moving
+STORY chest button pressed
+INTERACT Penny presses the big red wind-up button. The chest springs open!
+DEMO phase 7 time 17.95
+Penny stopped
+STORY the toys are alive
+GAMEPLAY STAGE 3 / DOWNSTAIRS TO BUZZ'S ROOM
+DEMO phase 8 time 25.1
+Penny moving
+GAMEPLAY STAGE 4 / CUPBOARD RESCUE
+INTERACT Penny opens the door: an ordinary bedroom, with a big wooden wardrobe at the back.
+DEMO phase 9 time 32.25
+Penny stopped
+DEMO phase 10 time 33.5
+Penny moving
+DEMO phase 11 time 35.3
+Penny stopped
+STORY Jessie and Bullseye start the wardrobe rescue
+Jessie mounted Bullseye.
+STORY wardrobe opened
+STORY Buzz is free
+GAMEPLAY STAGE 5 / THE LOCKED MAIN DOOR
+DEMO phase 12 time 46.5
+Penny moving
+STORY main door is locked
+INTERACT Penny tries the main door. It is locked: there is no normal way out. Buzz looks at the door.
+DEMO phase 13 time 53
+DEMO phase 14 time 53.85
+Penny stopped
+STORY Buzz is in position
+ESCAPE laser fired at the entrance
+DEMO L laser
+DEMO phase 15 time 56.1
+ESCAPE real laser broke entrance door
+DEMO phase 16 time 57.35
+Penny moving
+GAMEPLAY STAGE 6 / MORNING ESCAPE
+DEMO phase 17 time 60.1
+Penny stopped
+Penny at 12.8878,-4.48,16.3973 / demo 17 leg 0
+Mission capture: STAGE 6 / MORNING ESCAPE / 06:59 Day
+Woody at 12.9691,-4.48,14.2433
+Jessie at 12.2021,-3.44,13.2096
+Bullseye at 12.2466,-4.2,13.2324
+Buzz at 10.8462,-3.08065,13.7718
+RC Car at 5.5,0.012,-1.8
+Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\figures\morning.bmp

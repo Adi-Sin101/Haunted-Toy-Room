@@ -78,7 +78,7 @@ in the toy room; then Stage 1 gameplay begins. **Y** skips the arrival.
 | Full camera control, zoom, close inspection of any object | [05](05-camera.md) |
 | Environment animation, Penny's arrival, and gameplay-state progression | [11](11-environment-animation.md) |
 
-- [16 - Haunted Toy Room gameplay](16-midnight-mission.md): explicit gameplay states, guarded transitions, and Phase 2 work.
+- [16 - Haunted Toy Room story](16-midnight-mission.md): the two layers (player and story) and the eight guarded story states.
 - [17 - Performance](17-performance.md): measured bottlenecks, level of detail, culling and why surface detail belongs in textures.
 - [18 - The house, Penny the cat and the arrival](18-house-and-penny.md): the house around the toy room, Penny's model and poses, the prologue's route, doors, camera and sunset.
 - [19 - Rendering mathematics](19-rendering-mathematics.md): one frame formula by formula, from input to pixel, with links to every worked example.
@@ -88,4 +88,4 @@ in the toy room; then Stage 1 gameplay begins. **Y** skips the arrival.
 
 The final report, presentation, demo, study guide and validation records are linked from [START-HERE](showcase/START-HERE.md). Selection during mission playback now supports live takeover while other actors continue; 0 releases the actor, N retains full manual/story switching.
 
-- [20 - Escape gameplay](20-escape-gameplay.md): puzzle, rescue objects, stair contacts, live ownership, real laser impact and ending guards.
+- [20 - The eight-stage story](20-escape-gameplay.md): garden, 257 puzzle, toy chest, Buzz's bedroom and wardrobe, follower graph, Bullseye's jump, real laser impact and the morning.

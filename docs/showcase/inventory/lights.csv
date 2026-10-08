@@ -6,4 +6,4 @@ slot,name,type,enabled,shadows,intensity,r,g,b,kc,kl,kq,inner_degrees,outer_degr
 4,Headlight L,2,0,0,1.5,1,0.95,0.8,1,0.1,0.05,12,22
 5,Headlight R,2,0,0,1.5,1,0.95,0.8,1,0.1,0.05,12,22
 6,Laser glow,1,0,0,1.5,1,0.1,0.1,1,0.35,0.4,18.1949,31.7883
-7,Ghost glow,1,0,0,0,0.5,0.7,1,1,0.3,0.15,18.1949,31.7883
+7,Ghost glow,1,0,0,1,0.5,0.7,1,1,0.3,0.15,18.1949,31.7883

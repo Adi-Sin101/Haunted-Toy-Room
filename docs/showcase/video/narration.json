@@ -1,80 +1,80 @@
 [
   {
     "start": 0,
-    "end": 10,
-    "title": "The haunted house",
-    "narration": "Penny enters at night through hinged doors and the connected staircase."
+    "end": 8,
+    "title": "Night outside the house",
+    "narration": "Penny arrives at the abandoned house. The camera cranes down from the street."
   },
   {
-    "start": 10,
-    "end": 20,
-    "title": "A furnished world",
-    "narration": "Five indexed primitive families form furniture and articulated toys."
+    "start": 8,
+    "end": 18,
+    "title": "In through the open door",
+    "narration": "Penny walks in; the main door closes and locks. She climbs the eighteen-step stair."
   },
   {
-    "start": 20,
-    "end": 30,
-    "title": "Inspect the three clues",
-    "narration": "Train 2, clock 5, blocks 7. The code opens the real toy-room doors."
+    "start": 18,
+    "end": 26,
+    "title": "Three clues: 257",
+    "narration": "Train 2, clock 5, blocks 7. The keypad opens the real Toy Room doors."
   },
   {
-    "start": 30,
-    "end": 42,
-    "title": "Rescue through hierarchy",
-    "narration": "Penny activates two switches. Jessie rides Bullseye and dismounts onto the high platform."
+    "start": 26,
+    "end": 36,
+    "title": "The toy chest",
+    "narration": "The red wind-up button opens the lid. Woody, Jessie and Bullseye climb out alive."
   },
   {
-    "start": 42,
-    "end": 52,
-    "title": "Buzz and the pursuit",
-    "narration": "The release removes a translucent barrier. The ghost follows Penny to the stairs."
+    "start": 36,
+    "end": 46,
+    "title": "Downstairs together",
+    "narration": "The toys follow Penny through a graph of doorway nodes and down the stairs."
   },
   {
-    "start": 52,
-    "end": 62,
-    "title": "Live character takeover",
-    "narration": "Woody follows your input while the others continue. Zero releases ownership; N enters full manual mode."
+    "start": 46,
+    "end": 58,
+    "title": "Cupboard rescue",
+    "narration": "Jessie mounts Bullseye, he jumps, she opens the wardrobe and Buzz flies out."
   },
   {
-    "start": 62,
+    "start": 58,
     "end": 70,
-    "title": "Directional, point and spot",
-    "narration": "Moonlight is directional; the lamp adds a point source and soft spotlight."
+    "title": "The locked main door",
+    "narration": "Penny tries the door. Buzz flies into position; L fires a nearest-hit laser and the door breaks."
   },
   {
     "start": 70,
-    "end": 76,
-    "title": "Gouraud shading",
-    "narration": "Lighting is evaluated at vertices and interpolated across triangles."
-  },
-  {
-    "start": 76,
     "end": 82,
-    "title": "Phong shading",
-    "narration": "Interpolated normals are normalised before per-fragment illumination."
+    "title": "Morning escape",
+    "narration": "Everyone leaves the house. The fog thins, the sun rises and the camera pulls back."
   },
   {
     "start": 82,
     "end": 90,
-    "title": "Texture coordinates",
-    "narration": "UVs map wood, wallpaper, fabric and lunar craters onto shared geometry."
+    "title": "Free exploration",
+    "narration": "The story stays open in daylight. Adiba Tahsin / 2107031 / CSE-4102."
   },
   {
     "start": 90,
-    "end": 100,
+    "end": 98,
+    "title": "Live character takeover",
+    "narration": "Woody follows your input while the others keep accompanying Penny. Zero releases ownership."
+  },
+  {
+    "start": 98,
+    "end": 104,
+    "title": "Gouraud shading",
+    "narration": "Lighting is evaluated at vertices and interpolated across triangles."
+  },
+  {
+    "start": 104,
+    "end": 110,
+    "title": "Phong shading",
+    "narration": "Interpolated normals are normalised before per-fragment illumination."
+  },
+  {
+    "start": 110,
+    "end": 120,
     "title": "Analytic ray tracing",
     "narration": "A BVH accelerates exact primitive hits, shadows, mirror paths and straight transparency."
-  },
-  {
-    "start": 100,
-    "end": 112,
-    "title": "The entrance breaks",
-    "narration": "Buzz flies and aims. Only a nearest-hit laser impact releases six physical wood fragments."
-  },
-  {
-    "start": 112,
-    "end": 120,
-    "title": "The toys are safe",
-    "narration": "Every character is physically outside. The cast idles in the garden. Adiba Tahsin / 2107031 / CSE-4102."
   }
 ]

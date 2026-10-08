@@ -669,10 +669,14 @@ void StoryDirector::UpdateFollowers(float dt, const std::vector<Character*>& exc
 	const glm::vec3 side(back.z, 0.0f, -back.x);
 	const int leadZone = Zone(lp);
 	for (const auto& [actor, i] : group) {
-		// Formation slots: pairs behind the leader, alternating left and right.
-		glm::vec3 target = lp + back * (1.7f + 1.3f * static_cast<float>(i / 2)) + side * (i % 2 == 0 ? -0.9f : 0.9f);
-		if (Zone(target) != leadZone) target = lp + back * 1.3f;
-		if (Zone(target) != leadZone) target = lp;
+		// Formation slots: pairs behind the leader, alternating left and right. When the space behind
+		// her is another room (she stands in a doorway), the formation turns to her side or front.
+		glm::vec3 target = lp;
+		for (const glm::vec3& d : {back, side, -side, -back}) {
+			const glm::vec3 across(d.z, 0.0f, -d.x);
+			const glm::vec3 spot = lp + d * (1.7f + 1.3f * static_cast<float>(i / 2)) + across * (i % 2 == 0 ? -0.9f : 0.9f);
+			if (Zone(spot) == leadZone) { target = spot; break; }
+		}
 		target.y = PhysicsWorld::FloorHeight({target.x, lp.y, target.z});
 		if (actor == buzz && state == GameplayState::MORNING) target.y += 1.4f; // Buzz flies out into the morning
 		Nav& n = nav[actor];

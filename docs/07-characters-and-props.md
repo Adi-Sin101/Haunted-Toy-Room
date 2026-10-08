@@ -243,6 +243,14 @@ position      p  += forward · v · dt
 * Waypoints (`FollowWaypoint`): `step = min(distance, speed·dt)`, `p += Δ · step/distance`; the animation
   speed is set to `step/dt`, so the walk cycle matches the story's speed.
 * Mount/dismount transitions use smoothstep easing `s = t²(3 − 2t)` with a hop arc `0.4·sin(πt)` added to y.
+* The same eased transition lifts the toys out of the toy chest: first to the rim, then a hop to the floor.
+* **Bullseye's jump** (L, or the story's wardrobe rescue) offsets the *body joint* by `0.75 sin(πt/0.9)`,
+  pitches it `−12 sin(2πt)` and folds the front legs `−55·arc` while the back legs push `+40·arc`. The
+  saddle and a mounted Jessie are descendants of the body joint and rise with it; the root stays on the floor.
+* **Gestures.** `Humanoid::SetReach` blends the right arm to `(−25°, 0, −140°)` (up and out, to a high knob);
+  `Cheer(seconds)` raises both arms to `±150°` roll with a `18° sin(9t)` wave. They blend over walking and riding.
+* **Toy chest and wardrobe** are story props built in `src/world/StoryProps.cpp`; see
+  [20 - The eight-stage story](20-escape-gameplay.md) for their part lists, hinges and textures.
 * The collision solver ([15](15-physics-and-interface.md)) then keeps every actor out of furniture and
   inside the room.
 
@@ -282,7 +290,7 @@ and beige pillows from the photos of Penny.
 |---|---|---|
 | 1 | Woody | W/S move, A/D turn, Shift run, SPACE stop |
 | 2 | Jessie | same + R mount/dismount Bullseye (when mounted, W/S/A/D drive Bullseye) |
-| 3 | Bullseye | same + R mount/dismount |
+| 3 | Bullseye | same + R mount/dismount, L jump |
 | 4 | Buzz | same + Q/E fly, L laser |
 | 5 | RC Car | same + L headlights |
 | 6 | Ball | W/S/A/D push, SPACE stop |

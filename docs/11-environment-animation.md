@@ -103,3 +103,16 @@ mounting, camera modes, and environment systems remain independent.
 **N** switches manual/progression control; **Shift+N** restarts; **Y** skips Penny's arrival.
 
 See [the gameplay state machine and Phase 2 work](16-midnight-mission.md).
+
+## Story clock and the morning
+
+While the story runs, `StoryDirector` owns the clock (the environment's own advance is paused). The hour
+eases through the night as stages pass: 20:45 outside, 21:15, 22:00, 22:45, 23:15 and 23:36 at the locked
+main door. When Penny steps outside after the door breaks, the MORNING stage drives
+
+    hour = (h0 + (31 - h0) * smoothstep(t / 16)) mod 24        h0 ~ 23.6, t in seconds
+
+so the clock passes midnight and reaches 07:00 after sixteen seconds. Everything that reads the hour
+follows automatically: the sun rises behind the house (`OutdoorSunPosition`), the sky, ambient and
+directional colours blend through the sunrise, the stars fade, and the garden fog density
+`0.011 (1 - daylight)` thins to zero. In free exploration the hour keeps easing toward 08:00.

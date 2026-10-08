@@ -53,3 +53,19 @@ bin\Release\HauntedToyRoom.exe --raytrace --frames 3 --capture screenshots\raytr
 ```
 
 `--no-hud` creates an unobstructed scene capture. Capture directories are created automatically.
+
+## House, garden and Buzz's bedroom bounds
+
+With the house enabled, the ground floor is a union of four boxes, each shrunk by the mover's rotated
+half-size: the corridor, the stair landing, Buzz's bedroom and the bedroom doorway. A point outside all
+of them moves to the nearest box. A solid divider wall (with the doorway in it) and the bedroom's door
+leaf decide where characters actually pass. Outdoors (story prologue, and after the main door breaks)
+the bounds cover the garden, pavement and street; the front walls, fence, gate posts, porch columns,
+railings, shrubs and tree trunks are solid. `FloorHeight` adds the porch deck and its three steps.
+
+While the story's followers are active, characters ignore one another's bodies so the group cannot jam
+in a doorway; walls, doors, furniture and blocks still stop everyone. The camera never collides with
+characters (they cannot hide the view), only with the house. Broken door boards come to rest on the
+porch and are pushed aside by characters rather than blocking them. Bullseye's footprint is a
+1.6 x 1.6 square so his rotated bounds fit the 3-unit corridor.
+

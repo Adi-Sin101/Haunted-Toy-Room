@@ -119,16 +119,17 @@ toggle textures and ray tracing. Lighting off shows plain material colours. Shad
 lighting, specular highlights and shadows, while enabled lighting can still supply light colour and
 distance attenuation. Textures off uses flat preview colours so room surfaces remain distinguishable.
 
-## Prologue (Penny's arrival)
+## Opening shot and the garden
 
 | Key | Action |
 |---|---|
-| Y | skip the arrival and begin the hallway puzzle with the entrance closed |
-| Shift+N | replay the arrival and the story from the start |
+| Y | skip the opening crane shot |
+| W / S, A / D | walk Penny through the garden gate, up the porch and in at the open front door |
+| Shift+N | replay the story from the street |
 | G / H | hide the interface / expand the guide (as always) |
 
-During the arrival the camera, selection and object controls are disabled; the clock and the camera are
-driven by the arrival.
+During the seven-second opening shot the camera is cinematic. Then Penny is the player character in
+the garden; only she can be selected until the toys come alive. The front door locks behind her.
 
 ## Penny's hallway puzzle
 
@@ -160,7 +161,7 @@ another attempt. Character selection is available again after entering the Toy R
 | [ / ] | time speed ×½ / ×2 |
 | , / . | scrub time backward / forward (brightness instead when the lamp is selected) |
 | N | switch manual control / gameplay progression |
-| Shift+N | replay Penny's arrival and reset the gameplay state machine |
+| Shift+N | replay the story from the street (resets every door, prop and toy) |
 | Enter | inspect clues, submit the keypad or activate a nearby rescue/escape mechanism |
 | O | toggle haunted ambience outside edit mode: ghost, rolling ball and moving/flickering lamp |
 | H | expand / close the compact corner guide |
@@ -184,9 +185,9 @@ HauntedToyRoom.exe --hour 12 --select 2 --mount --orbit 60,15,5 --capture mounte
 ```
 
 `--no-raytrace` starts in raster mode (ray tracing is on by default, like lighting, shading and
-textures). `--no-intro` starts directly with the story (Penny is at the upper hallway); `--intro` keeps Penny's arrival
-in a scripted capture (captures skip it otherwise). Example: `--intro --no-hud --story-step 0.05 --frames 160
---capture garden.bmp` shows Penny on the garden path 8 s into the arrival.
+textures). `--no-intro` skips the opening shot (Penny waits on the pavement); `--intro` keeps it in a scripted
+capture (captures skip it otherwise). Scripted captures without `--story`, and `--manual`, use the sandbox:
+every toy stands in the Toy Room and every door is open.
 
 `--benchmark N` turns v-sync off, skips 60 warm-up frames, times the next N frames and prints the
 average frame time, draw calls and triangles, then exits (see [17 - Performance](17-performance.md)).
@@ -208,21 +209,26 @@ Recording writes bottom-up RGB24 frames at the requested fixed simulation rate. 
 
 ## Live takeover during simulation
 
-After the puzzle, select a character while the other actors continue. The owned actor retains wall
-and furniture contact. Its virtual route cursor never writes its actual pose or special action.
-Press 0 to release; the route rejoins on the current floor without teleporting. The ending requires
-all five actual characters outside. Buzz's manually aimed laser follows the same real-door-hit rule.
+## The rest of the story
+
+| Where | Key | Action |
+|---|---|---|
+| Toy Room | ENTER near the chest | press the red wind-up button: the toys come alive |
+| Ground-floor corridor | ENTER at the left door | open Buzz's bedroom |
+| Buzz's bedroom | ENTER at the wardrobe | the knob is too high: Jessie and Bullseye help |
+| (as Jessie) | 2, R, W/S/A/D, L | mount Bullseye, ride beside the wardrobe, jump to open it |
+| Entrance | ENTER at the main door | try the door: it is locked |
+| Entrance | L | fire Buzz's laser once he is in position |
+| Outside | any | morning comes; then free exploration with every character |
+
+Two layers: you control one character, and the story layer drives the others. Freed toys follow
+Penny (through the house's doorway nodes) and keep their own formation slots, so taking one over never
+moves the others. Toys still inside the chest or wardrobe cannot be selected. Press 0 to release the
+current character; N switches to full manual mode (story paused); Shift+N replays the story.
 Selecting a mounted rider or horse detaches Jessie; remounting deliberately controls the pair.
-N pauses all coordinated routes for full manual control and resumes the saved stage.
-
-## Complete rescue sequence
-
-Penny activates the two low red switches. Select Jessie (2), approach Bullseye and press R, ride to
-the high platform, R dismounts onto it, then Enter activates the high switch. Ctrl+0 returns to Penny.
-The rear red release frees Buzz. Descend the stairs, approach the sealed entrance and press Enter.
-Keep Buzz's laser line clear, exit when the wood breaks, and wait for the other toys outside.
-See [the illustrated escape explanation](20-escape-gameplay.md).
+Buzz's manually aimed laser follows the same real-door-hit rule as the story's.
+See [the illustrated story explanation](20-escape-gameplay.md).
 
 `--gameplay-demo` runs the physical rehearsal. `--seek seconds` advances it before capture.
-`--rehearsal-stop` stops only the rehearsal's player input after the seek, leaving NPC routes active;
+`--rehearsal-stop` stops only the rehearsal's player input after the seek, leaving the story layer active;
 `--select`, `--drive`, `--turn` and `--fly` then support reproducible live takeover checks.

@@ -1,9 +1,8 @@
 Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
-GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
-GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
+GAMEPLAY STAGE 0 / NIGHT OUTSIDE THE HOUSE
 
 ====================== HAUNTED TOY ROOM ======================
-MISSION     Ctrl+0 Penny / Enter inspect, switch or final action / code 257 / R ride
+MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
@@ -25,15 +24,15 @@ RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
             V list parts of selected object, Shift+V dump vertex/index tables
 WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay
             H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit
-PROLOGUE    Penny arrives at the house; Y skips arrival, Shift+N replays the prologue
+STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> morning
+            Y skips the opening shot, Shift+N replays the story from the street
 ==========================================================
 
-GAMEPLAY STAGE 1 / ENTRANCE - PUZZLE
 Penny at 13.3,0.012,4.5 / demo 0 leg 0
-Mission capture: STAGE 1 / ENTRANCE - PUZZLE / 20:30 Night
-Woody at -3,0.012,0.5
-Jessie at -0.8,0.012,2
-Bullseye at 2.2,0.012,0.3
-Buzz at 0,0.012,-6.6
+Mission capture: SANDBOX / FREE PLAY / 20:30 Night
+Woody at -1.6,0.012,3.4
+Jessie at 0.7,0.012,3.7
+Bullseye at 3.4,0.012,3.1
+Buzz at -3.4,0.012,0.4
 RC Car at 5.5,0.012,-1.8
 Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\figures\jessie.bmp

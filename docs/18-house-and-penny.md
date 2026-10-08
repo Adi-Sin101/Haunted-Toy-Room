@@ -4,12 +4,13 @@ Files: `src/world/House.*` (the house), `src/characters/Cat.*` (Penny), `src/wor
 prologue), `src/world/Room.h` (`RoomSize` dimensions), `src/render/ProceduralTextures.cpp` (siding,
 shingles, brick, grass), `Environment::OutdoorSunPosition`.
 
-The project opens at night. Penny walks through the garden, front door, corridor and staircase,
-then stops at the upper hallway before the combination-locked toy-room door. Y skips the arrival;
-Shift+N restarts it. The downstairs remains connected for the final escape.
+The project opens at night with a crane shot over the street. Then the player walks Penny through
+the garden gate, up the porch and in at the open front door, which locks behind her. Y skips the shot;
+Shift+N restarts the story. The house now has a second furnished room downstairs, Buzz's bedroom
+(see [20](20-escape-gameplay.md)), and a wider 2.2 x 3.6 main door.
 
 ![Night exterior](showcase/figures/house.png)
-![Connected staircase](showcase/figures/stair-descent.png)
+![Connected staircase](showcase/figures/stairs.png)
 
 ## 1. The house around the toy room
 
@@ -96,7 +97,7 @@ nose, pink inner ears and white whiskers. Her closed eyes are thin dark lines.
 
 ![Asleep in the morning](images/penny-asleep.png)
 
-*The end of the story: the toys are back in place and Penny is asleep on her side on the orange bed.*
+*Penny's sleeping pose (the rig still supports it; the current story ends outside in the morning).*
 
 ```
 Root (paws on the ground, heading)
@@ -144,28 +145,28 @@ head      yaw = clamp( wrap( atan2(dx, dz) − heading ), −70°, 70° ), eased
 eyes      closed when sleepBlend > 0.5, plus a 0.13 s blink every 4.1 s
 ```
 
-During the story she sits on the bed and her head follows the action — Buzz while his laser is on, else
-Bullseye while Jessie rides him, else Woody. When the story reaches **Morning** she lies down and sleeps.
+Whenever the player drives another character and Penny is not walking, she sits and her head follows
+the action — Buzz while his laser is on, else Bullseye while Jessie rides him, else Woody.
 
 ## 3. Night arrival and connected movement
 
-`PennyArrival` follows twelve 3D waypoints from the pavement through the gate, porch, entrance,
-ground-floor corridor, landing and stairs to `(13.3,0,4.5)`. Arrival uses the cat's temporary vertical
-route movement; completion restores grounded character input. The toy-room door stays locked;
-the front door closes behind Penny and the stair door stays open.
+`PennyArrival` is a seven-second crane shot: the camera moves from high above the street to a chase
+position behind Penny, who sits on the pavement looking up at the house. The player then controls her
+outside. The garden is part of the physics bounds; the front walls, fence, gate posts, porch column
+bases, railings, shrubs and tree trunks are solid; the porch deck and steps have their own support
+heights. Once she is inside the corridor the front door eases shut and its padlock appears.
 
 The 4.5-unit stair rise over an 8-unit run gives pitch `atan2(4.5,8)=29.36 degrees`. Gameplay support
 matches eighteen steps, each 0.25 high. The whole cast uses the same stair contacts during escape.
 See [the support equation and floor guards](20-escape-gameplay.md).
 
 ```
-q = distanceWalked / totalRouteLength
-hour = 20.5 + 2.5 * q*q*(3-2*q)
-angle += (target-angle) * (1-exp(-2.5*dt))
-camera += (desired-camera) * (1-exp(-2.6*dt))
+s = smoothstep(t / 6.5)
+camera = mix(street (-4,14,48), behindPenny, s); target = mix(house, Penny, s*s)
+angle += (target-angle) * (1-exp(-2.5*dt))          front door: 80 degrees open, then 0
+porch support = Ground + 0.45; steps 0.15 lower each
 ```
 
-The establishing camera blends to a chase view. The route clock stays at night; manual clock
-controls still demonstrate daylight. The entrance note and arrival objective introduce the rescue.
-At the hallway, the normal follow camera and Penny's controls take over. The exterior is hidden
-indoors and restored when the front door breaks; the downstairs is kept visible and traversable.
+The story clock eases from 20:45 to about 23:36 as the stages pass and then runs to 07:00 for the
+morning ending; manual clock controls still demonstrate daylight. The exterior is hidden indoors and
+restored when the front door breaks; the downstairs is always visible and traversable.

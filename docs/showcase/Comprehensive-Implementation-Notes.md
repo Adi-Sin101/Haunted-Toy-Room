@@ -1,6 +1,6 @@
 # Abstract
 
-Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project in which a furnished toy room becomes the setting for a coordinated rescue story. Penny, a white cat with ginger patches, walks from the garden into a two-storey house and upstairs. Penny solves a hallway combination puzzle, frees the toys using three switches and releases Buzz from a rear holding area. A ghost pursues Penny downstairs. Buzz's actual laser impact breaks the locked entrance, and all five characters escape into the garden.
+Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project told as an eight-stage story. At night Penny, a white cat with ginger patches, explores the garden of an abandoned house and walks in; the main door locks behind her. Upstairs she reads three clues and enters 257 to open the Toy Room, where a glowing red button on an old painted toy chest brings Woody, Jessie and Bullseye to life. Together they go down to an ordinary bedroom: the wardrobe knob is too high, so Jessie rides Bullseye, he jumps, she opens it and Buzz flies out. Buzz's laser breaks the locked main door, everyone escapes, the night turns into morning and the world stays open for free exploration. The player controls any one character; the story layer drives the others.
 
 The implementation uses C++ and an OpenGL 3.3 core pipeline. Five indexed primitive families form the complete environment and articulated models. Hand-authored homogeneous transformations support a scene hierarchy, multiple camera modes and an object inspector. A shared illumination model supplies ambient, diffuse and specular terms for directional, point and spot lights. Flat, Gouraud, Phong and Blinn-Phong shading can be compared in the raster path. Procedural surface maps and a custom BMP loader provide texture detail. The optional GPU ray tracer intersects transformed analytic primitives through a median-split bounding volume hierarchy, then evaluates shadow rays, mirror reflection and straight-through transparency. The project combines cinematic playback, live character takeover and full manual control so each graphics concept can be demonstrated independently.
 
@@ -18,20 +18,20 @@ The objectives are to construct a complete scene from reusable indexed geometry;
 
 ## 1.3 Proposed features and final implementation
 
-The recorded concept specifies a child's toy room that comes alive at night, primitive-built controllable characters, Jessie riding Bullseye through a parent-child hierarchy, and a quiet ending. The final implementation realises these features and adds a connected house, Penny's arrival, collision-aware movement, detailed textures and two rendering paths. Table 1 maps the proposed functionality to the corresponding final modules.
+The recorded concept specifies a child's toy room that comes alive at night, primitive-built controllable characters, Jessie riding Bullseye through a parent-child hierarchy, and a morning return. The final implementation realises these features inside a connected two-storey house with a garden, a second furnished bedroom and an eight-stage story with a morning ending. Table 1 maps the proposed functionality to the corresponding final modules.
 
 Proposal-to-implementation coverage
 
 | Proposed functionality | Final implementation | Principal code |
 | --- | --- | --- |
-| A toy room becomes alive at night and quiet in the morning | Night arrival, clue puzzle, two rescues, pursuit and outdoor escape; daylight remains available for comparison | StoryDirector / PennyArrival / Environment |
+| A haunted house story at night that ends in the morning | Eight stages: garden, 257 puzzle, toy chest, Buzz's room, wardrobe rescue, laser escape, morning, free exploration | StoryDirector / StoryProps / PennyArrival / Environment |
 | Recognisable primitive-built toys | Woody, Jessie, Bullseye, Buzz and RC car; Penny and a ghost | Humanoid / Bullseye / RCCar / Cat |
 | At least four independently controlled objects | Five driveable toys, controllable ball and lamp; click-based inspection | Select / HandleObjectControl |
 | Jessie mounts and follows Bullseye | Saddle reparenting, a smooth seat transition and world-space dismount | Mount / Dismount / SceneNode |
 | Translation, rotation, scale and hierarchy | TRS, shear, reflection, normal correction and parent-child motion | Transform3D / Transform / SceneNode |
 | Lighting and shading | Directional, point and spot lights; Flat, Gouraud, Phong and Blinn-Phong | lighting.glsl / Renderer |
 | Moving environment | Lamp swivel/flicker, rolling ball, ghost motion, ceiling fan and clock hands | Environment / StepScene |
-| Texturing and bonus ray tracing | 22 mapped surfaces, own BMP loader, analytic GPU tracing with BVH, shadows and reflection | Assets / ProceduralTextures / RayTracer |
+| Texturing and bonus ray tracing | 27 mapped surfaces, own BMP loader, analytic GPU tracing with BVH, shadows and reflection | Assets / ProceduralTextures / RayTracer |
 
 ## 1.4 Project workflow and organisation
 
@@ -125,8 +125,8 @@ oObject = M^-1(oWorld,1); dObject = M^-1(dWorld,0)
 The project uses the Phong reflection model [3] as a local surface model. At a visible surface point, N is the unit normal, L points toward the light and V toward the eye. The RGB albedo C is material colour multiplied by a texture sample. Ambient light supplies a constant scene term; diffuse light depends on the surface orientation; specular light depends on the viewing direction and shininess. Emissive E is added independently for a glowing bulb, laser or sky. Emission alone does not illuminate nearby surfaces, so a separate light is attached where that effect is required.
 
 I = C [ka Ia + Σ visibility_i attenuation_i cone_i Il_i kd max(N·L_i,0)]
-    + Σ visibility_i attenuation_i cone_i Il_i ks max(R_i·V,0)^n + E
-R = 2(N·L)N - L;  C = materialRGB × textureRGB
+  + Σ visibility_i attenuation_i cone_i Il_i ks max(R_i·V,0)^n + E
+R = 2(N·L)N - L; C = materialRGB × textureRGB
 
 Directional lights use parallel rays and unit attenuation. Point lights radiate from a position and diminish with distance. Spotlights add a cone factor between inner and outer half-angles. smoothstep gives a gradual cone edge; its arguments are cosine values, so the outer-angle cosine is the smaller bound. F5, F6 and F7 independently disable the ambient, diffuse and specular terms.
 
@@ -162,7 +162,7 @@ F2 cycles the raster modes and automatically selects raster rendering. The ray t
 
 ## 2.7 Texture mapping and procedural detail
 
-Each primitive stores UV coordinates. A material's uvScale repeats its pattern over the model. Cube faces have separate rectangular charts, sphere UVs follow longitude and latitude, and cylinder/cone sides wrap their angular coordinate while caps use planar coordinates. Multiplying texture RGB by material RGB allows the same wood or greyscale siding pattern to take several colours. The raster textures preserve their native dimensions; all 22 ray-traced maps are bilinearly resampled into 512 × 512 layers of one texture array.
+Each primitive stores UV coordinates. A material's uvScale repeats its pattern over the model. Cube faces have separate rectangular charts, sphere UVs follow longitude and latitude, and cylinder/cone sides wrap their angular coordinate while caps use planar coordinates. Multiplying texture RGB by material RGB allows the same wood or greyscale siding pattern to take several colours. The raster textures preserve their native dimensions; all 27 ray-traced maps are bilinearly resampled into 512 × 512 layers of one texture array.
 
 uvSample = uv × uvScale; repeated coordinate = fract(uvSample)
 Bilinear sample = (1-a)(1-b) C00 + a(1-b) C10 + (1-a)b C01 + ab C11
@@ -285,7 +285,7 @@ L toggles the laser; Z/X changes its aim and Alt+click aims at a visible surface
 
 ## 3.5 RC car: wheels, headlights and route
 
-The car combines box chassis/body pieces, cabin, bumpers and grille with four cylinder wheels, hubs, axle details and an antenna. Wheel joints align cylinders with the axle and accumulate an angle equal to travelled distance divided by tyre radius. Two headlight anchors follow the car's world transform and emit forward/downward spotlights. L toggles manual headlights. The car remains an independently driveable demonstration prop with moving headlights and distance-driven wheels.
+The car combines box chassis/body pieces, cabin, bumpers and grille with four cylinder wheels, hubs, axle details and an antenna. Wheel joints align cylinders with the axle and accumulate an angle equal to travelled distance divided by tyre radius. Two headlight anchors follow the car's world transform and emit forward/downward spotlights. L toggles manual headlights. The car remains an independently driveable prop with moving headlights and distance-driven wheels.
 
 wheelAngle += travelledDistance / wheelRadius
 headlightPosition = MworldAnchor[3].xyz
@@ -297,13 +297,13 @@ headlightDirection = normalize(anchor +Z axis + downward tilt)
 
 Penny is built from ellipsoids for the body, head, muzzle, cheeks and paws; pointed ears combine curved/triangular primitive forms, and the tail uses a separate curved arrangement of primitive sections. White material and ginger patch shapes identify the coat. Eye, nose, mouth and whisker details belong to the head hierarchy. Walking alternates the legs; sitting and sleeping reconfigure the existing rig. Head orientation follows the active toy during the mission.
 
-![Penny's white coat, ginger patches, rounded head and seated pose on the bed.](figures/penny.png)
+![Penny's white coat, ginger patches, rounded head and ears, standing in the upstairs hallway.](figures/penny.png)
 
-PennyArrival follows twelve waypoints from the pavement through the gate, porch, ground-floor corridor, stairs and room. Each door is a child of a hinge joint and opens when Penny reaches the relevant part of the route. The stair flight has a 4.5-unit rise over an 8-unit run; the body pitch follows that slope. The arrival ends at the upper hallway, before the locked puzzle door. Route progress keeps the arrival between 20:30 and 23:00. The exterior is culled indoors and returns after the entrance breaks; the downstairs remains connected for the escape. Grounded actors use support heights matching all eighteen rendered treads.
+The story opens with PennyArrival: a seven-second crane shot from high above the street to a chase position behind Penny, who sits on the pavement looking at the house. The player then controls her in the garden. The physics bounds include the lawn, path, pavement and street; the front walls, fence, gate posts, column bases, railings, shrubs and tree trunks are solid. The porch deck and its three steps have their own support heights. The front door stands open; once Penny is inside the corridor it eases shut and a padlock appears. The stair flight has a 4.5-unit rise over an 8-unit run.
 
 stairAngle = atan2(4.5,8) = 29.36 degrees
-jumpPosition = mix(start,bed,q²(3-2q)) + (0,sin(pi q),0)
-arrivalHour = 20.5 + 2.5 smoothstep(travelledDistance/routeLength)
+stairSupport = -4.5 + 0.25 clamp(floor(18(z+7)/8)+1,1,18)
+camera = mix(street, behindPenny, smoothstep(t/6.5)); porch support = -4.05
 
 ![Penny's approach through the gate, porch and textured garden.](figures/garden.png)
 
@@ -331,19 +331,19 @@ Desk and chair: box faces provide flat normals at the tabletop, drawer and leg e
 
 ![Bed frame, mattress, orange plaid blanket, headboard, pillows and Penny.](figures/bed.png)
 
-Bed: the frame and headboard establish the solid silhouette, while separate mattress and blanket boxes permit different surface materials. Two flattened spheres form soft pillows. The fabric pattern uses the existing face UVs and repeat scale, so the checked blanket is coloured surface detail. The bed also supplies the final arrival target for Penny; sitting and walking poses reuse her original rig.
+Bed: the frame and headboard establish the solid silhouette, while separate mattress and blanket boxes permit different surface materials. Two flattened spheres form soft pillows. The fabric pattern uses the existing face UVs and repeat scale, so the checked blanket is coloured surface detail. Penny's sitting, walking and sleeping poses all belong to her own rig.
 
 ![Four book rows are represented by textured boxes rather than many separately drawn books.](figures/bookcase.png)
 
 Bookcase: uprights, backing and shelves are independent scaled boxes. Each shelf contains one textured book-row box; coloured spine bands suggest many books with fewer draw calls than individual book meshes. This is a deliberate surface-detail approximation. The frame retains geometric depth and cast-shadow structure, while the texture provides fine repetition that would otherwise require many small objects.
 
-A repeated fabric pattern covers eight curtain-fold cylinders. A wall poster is an independently UV-mapped plane. The rug uses concentric square colour bands on a plane just above the floor. Toy blocks are six cubes arranged as a tower; a larger crate provides a collision demonstration clear of the hallway route. Their star/bevel texture adds surface identity without adding bevel geometry. All leaf transforms and material assignments are recorded in objects.csv and the comprehensive construction notes; Appendix A indexes the complete scene groups.
+A repeated fabric pattern covers eight curtain-fold cylinders. A wall poster is an independently UV-mapped plane. The rug uses concentric square colour bands on a plane just above the floor. Toy blocks are six cubes arranged as a tower; a larger crate stands against the left wall as a collision demonstration. Their star/bevel texture adds surface identity without adding bevel geometry. All leaf transforms and material assignments are recorded in objects.csv and the comprehensive construction notes; Appendix A indexes the complete scene groups.
 
 ![The room poster uses the custom BMP-loading path; the adjacent shelf uses procedural book-spine detail.](figures/poster.png)
 
 Poster, curtains and rug: the poster is a plane with a single BMP image, giving a clear demonstration of file loading rather than procedural generation. Curtain folds use eight cylinders to produce an actual curved silhouette and changing normals. The rug is a slightly elevated plane with concentric colour bands. Small offsets prevent coincident surfaces from competing in the depth buffer.
 
-![The six-block tower and doorway crate. Boxes participate in gravity, separation and laser impulses.](figures/blocks.png)
+![The six-block tower near the front wall. Boxes participate in gravity, separation and laser impulses.](figures/blocks.png)
 
 Blocks and doorway crate: each rigid box has its own translation and orientation, allowing gravity, separation and laser impulses to act independently. The star-and-border map identifies the faces, but its apparent bevel is a colour pattern rather than extra edge polygons. The crate is a movable demonstration prop; the small tower provides a visible test of falling and tumbling objects after an impulse.
 
@@ -379,38 +379,27 @@ The lamp has a cylinder base, arm pivot, cylinder arm, elbow sphere, head pivot,
 
 BuildHouse constructs a two-storey facade, pitched roof, gables, trim, porch, garage and ground-floor corridor around the upper play room. A rotated, stretched cube supplies each gable silhouette; box sections form roof slopes. Siding, shingles and brick detail are tinted procedural maps. The porch has supports, railings and steps; transparent cutout picket maps replace repeated fence and railing geometry. The garden includes lawn, path, street, pavement, driveway, shrubs, five trees, flower details, mailbox and gate posts. The visible external sun contains an emissive core and translucent halo.
 
-![The full house exterior, porch, garage, fence, trees, lawn, pavement and street at the start of the arrival.](figures/house.png)
+![The full house exterior at night as the story opens: porch, garage, fence, trees, lawn, pavement and street.](figures/house.png)
 
-Exterior groups: scaled boxes form the house walls, porch, garage and pavement, with roof and trim elements preserving the architectural outline. Fence pickets use alpha coverage to cut holes in a textured surface; their silhouette is not a separate mesh for every opening. Grass, siding, shingles and brick have distinct UV repeats. Trees and garden elements give depth to the arrival view and remain selectable or inspectable through their scene-node records.
+Exterior groups: scaled boxes form the house walls, porch, garage and pavement, with roof and trim elements preserving the architectural outline. Fence pickets use alpha coverage to cut holes in a textured surface; their silhouette is not a separate mesh for every opening. Grass, siding, shingles and brick have distinct UV repeats. Trees and garden elements give depth to the opening shot and the morning view and remain selectable or inspectable through their scene-node records.
 
-The front door, double toy-room door and stair door use hinge roots: yaw rotates the door and handle together. Arrival stage and Penny's proximity drive exponentially eased opening. The downstairs remains connected; the stair door stays open, the toy-room door opens after the puzzle and the front door remains solid until laser impact. The shared texture array supplies exterior maps to both raster and ray-traced rendering.
+The front door, double toy-room door, stair door, Buzz's bedroom door, the chest lid and both wardrobe doors use hinge roots: one rotation turns the leaf and every attached part together. Each angle eases exponentially toward its story target. The exterior is drawn outdoors and again after the main door breaks. The ground floor is a union of boxes: corridor, stair landing, Buzz's bedroom and its doorway, so the solid divider and the door leaf decide where a character can pass.
 
-## 3.12 Puzzle, rescue and escape objects
+## 3.12 Story objects: puzzle, toy chest, Buzz's room and wardrobe
 
-The wooden train uses box chassis and cab pieces, a horizontal cylindrical boiler, chimney and cylinder wheels. Two separate cars and a raised seven-segment 2 identify its clue. Seven coloured cubes form the block clue's 7. The hallway clock has a circular cylinder case and a thin cylinder face. The provided BMP uses planar cap UVs; a negative v repeat corrects printed orientation after rotation. A raised 5 below the face keeps the clue readable. The combination keypad has a solid wood housing, steel plate, ten raised buttons, box-strip digit glyphs and a cylinder confirmation button. Its editable three-digit display is also exposed in the HUD.
+The wooden train uses box chassis and cab pieces, a horizontal cylindrical boiler, chimney and cylinder wheels. Two separate cars and a raised seven-segment 2 identify its clue. Seven coloured cubes form the block clue's 7. The hallway clock is wall-sized: a 0.8-unit circular cylinder case hung at eye height and a thin cylinder face. The provided BMP uses planar cap UVs; a negative v repeat corrects printed orientation after rotation. A small brass plate below the face carries a raised 5. The combination keypad has a solid wood housing, steel plate, ten raised buttons, box-strip digit glyphs and a cylinder confirmation button. Its editable three-digit display is also exposed in the HUD.
 
 ![Train, printed circular clock, seven coloured blocks and raised combination keypad.](diagrams/puzzle-objects.png)
 
-The rescue gate combines nine thin cylinders and a box rail. Its parent joint raises after two low switches and becomes hidden after the high switch. Each switch has a box backplate and a cylinder lever rotating from 20 to -45 degrees. Jessie's support platform is a solid 2.0 by 1.3 by 1.6 box; dismounting uses the existing eased rig transition. Buzz's holding area reuses the rear room floor, two box partitions and a cyan translucent barrier. Its red box release switch removes the barrier from drawing and contact tests. The entrance note is a thin paper box, accompanied by the arrival objective explaining that the toys need help.
+The toy chest is hollow (floor board and four solid walls) with iron brackets and bands, brass rivets, a keyhole plate and a front panel carrying a procedural painted texture: worn red planks, stars, clouds and a rocket. Its lid is a hinge joint holding a deep frame box and a cylinder dome whose lower half lies inside the frame, so the lid stays curved when open. The red wind-up button pulses and a red story light follows it. Pressing it swings the lid to -105 degrees; Woody, Jessie and Bullseye climb to the rim and hop out with the eased transition (a 0.4 sin(pi t) arc), then cheer. Buzz's bedroom under the Toy Room is ordinary: star wallpaper, a patchwork star quilt, a bookcase with a globe, rocket and teddy bear, a nightstand lamp (the room's light), a star rug and a football. The wardrobe has a hollow carcass, an arched crown with finials and two hinged doors with arched panels, cut-out gold stars and knobs 2.65 units up, too high for Penny; a green glow leaks from the gap while Buzz is inside.
 
-The front-door padlock belongs to the existing hinge: one metal body box, two upright cylinders and a rotated cylinder crown move with the door. Laser impact hides this assembly and activates six wood-textured box fragments. Gravity, contact separation and angular impulses use the existing fixed-step solver. The eighteen rendered stair treads each rise 0.25 units; the support function matches each tread rather than letting a character sink through a ramp. Grounded actors remain on the correct floor, while Buzz retains vertical flight. Final rest-pose restoration preserves each root transform so the ending cannot move the cast back indoors.
+![The closed toy chest, its opening lid, the toys alive, Buzz's bedroom, the closed wardrobe and Bullseye's jump.](diagrams/story-objects.png)
 
-![Rescue platform, holding barrier, physical padlock, laser contact, debris and connected stair treads.](diagrams/escape-objects.png)
+Bullseye's jump lifts his body joint, and so the saddle and a mounted Jessie, by 0.75 sin(pi t) over 0.9 s while his root stays on the floor; Jessie's reach pose raises her right arm. Buzz then flies out on four waypoints. At the entrance the padlock rides on the door hinge; the laser hides the door and releases six wood boards that the fixed-step solver drops onto the porch deck.
 
-Interaction and contact conditions
+![Buzz flying out of the wardrobe, the locked main door, the nearest-hit laser impact and the board debris on the porch.](diagrams/escape-objects.png)
 
-| Mechanism | Location / value | Required condition |
-| --- | --- | --- |
-| Low switches | (7.1,0.75,2) and (7.1,0.75,5.8) | Penny within 1.7 horizontal units |
-| High switch | (2.5,3.25,4.5); platform top y=1.3 | Jessie: mounted approach, dismounted, y>1, within 1.5 units; transition finished |
-| Buzz release | (2.8,0.8,-3) | Penny within 1.8 horizontal units |
-| Entrance | (12,-4.5,9.2) | Penny nearby and downstairs; Buzz laser's nearest hit is the door for >0.65 s |
-| Stair flight | 18 treads; rise 0.25; width 3 | Support matches geometry; oversized rotated proxy centres safely |
-| Escape completion | Door broken; z>13 and y<-0.3 | All five actual character positions pass; virtual progress cannot substitute |
-
-Exponential depth fog blends rendered RGB with (0.055,0.065,0.095). Transmission is exp(-density times distance): density is 0.008 during pursuit, 0.010 outdoors at night and zero otherwise. Raster uses eye-to-surface distance; analytic tracing uses primary-hit distance after accumulating local, reflected and transmitted colour. This is a depth cue rather than participating-medium transport.
-
-T = exp(-density*d); Cfogged = T Crendered + (1-T) Cfog
+Fog: T = exp(-density*d); Cfogged = T Crendered + (1-T)(0.055,0.065,0.095); density = 0.011 (1 - daylight) outdoors
 
 # CHAPTER IV — Implementation, Results and Discussion
 
@@ -598,6 +587,36 @@ Native size: 447 × 447 texels. Ray layer: 21. Use: Hallway clock face. Construc
 
 ![Exported toy-story-clock pattern. Material tint and UV repeat count determine its final scene appearance.](inventory/textures/toy-story-clock.png)
 
+### Surface map: chest-paint
+
+Native size: 512 × 256 texels. Ray layer: 22. Use: Toy chest front. Construction: Worn red planks, chipped paint, folded five-point stars, circle clouds, ellipse rocket.
+
+![Exported chest-paint pattern. Material tint and UV repeat count determine its final scene appearance.](inventory/textures/chest-paint.png)
+
+### Surface map: star-wallpaper
+
+Native size: 256 × 256 texels. Ray layer: 23. Use: Bedroom walls and rug. Construction: Blue stripes; two folded five-point stars per tile.
+
+![Exported star-wallpaper pattern. Material tint and UV repeat count determine its final scene appearance.](inventory/textures/star-wallpaper.png)
+
+### Surface map: star-quilt
+
+Native size: 256 × 256 texels. Ray layer: 24. Use: Patchwork quilt. Construction: 4 x 4 patches: navy with a gold star or blue/white plaid; dark seams.
+
+![Exported star-quilt pattern. Material tint and UV repeat count determine its final scene appearance.](inventory/textures/star-quilt.png)
+
+### Surface map: star-decal
+
+Native size: 128 × 128 texels. Ray layer: 25. Use: Wardrobe stars. Construction: Gold star; alpha = 0 outside it (cut-out).
+
+![Exported star-decal pattern. Material tint and UV repeat count determine its final scene appearance.](inventory/textures/star-decal.png)
+
+### Surface map: football
+
+Native size: 256 × 128 texels. Ray layer: 26. Use: Football. Construction: Black within 17 degrees of the 12 icosahedron vertices.
+
+![Exported football pattern. Material tint and UV repeat count determine its final scene appearance.](inventory/textures/football.png)
+
 ![With colour textures disabled, flat material preview colours reveal the geometric construction. Cutout coverage still preserves fence holes.](figures/no-textures.png)
 
 ## 4.4 Raster and ray-traced results
@@ -620,26 +639,28 @@ Story states and visible graphics operations
 
 | Stage | Action | Graphics concept |
 | --- | --- | --- |
-| Prologue | Penny enters the house at night | Waypoints, hinges, stair slope and camera |
-| Puzzle | Inspect train 2, clock 5, blocks 7; enter 257 | Proximity input, digit geometry, cap UVs, door yaw |
-| Toy rescue | Two low switches; mounted Jessie reaches the high platform | Hierarchy, pose transitions, lever rotation, raised gate |
-| Buzz rescue | Activate the rear holding-area release | Translucent barrier and collision removal |
-| Escape | Descend; ghost follows; Buzz breaks the entrance | Ground support, flight, nearest-hit laser, debris |
-| Win | All five are outside and idle in a night view | Actual-position guard; rest pose preserves placement |
+| 0 Night outside | Penny explores the garden and walks in; the main door locks behind her | Crane shot, player control, porch support heights, hinge easing, fog |
+| 1 257 puzzle | Train 2, clock 5, blocks 7; the keypad opens the Toy Room | Proximity input, digit geometry, cylinder-cap UVs, door yaw |
+| 2 Toy chest | Red wind-up button; Woody, Jessie and Bullseye climb out alive | Hinged lid, eased transitions with a hop arc, gestures |
+| 3 Buzz's room | The toys follow Penny downstairs; she opens the door on the left | Doorway-node navigation, stair support, hinge rotation |
+| 4 Cupboard rescue | Jessie rides Bullseye, he jumps, she opens the wardrobe; Buzz flies out | Re-parenting, body-joint jump arc, reach pose, flight |
+| 5 Locked main door | Penny tries the door; Buzz aims and the player fires L | Nearest-hit laser, rigid-body debris, collision removal |
+| 6 Morning escape | Everyone leaves; night turns into morning; the camera pulls back | Clock-driven sky, sun, fog density and a cinematic camera |
+| 7 Free exploration | The rescued toys stay outside; every control remains available | Independent ownership, flight, mounting in daylight |
 
-The keypad requires all three inspected clues and the code 257. A wrong code shows Incorrect Code and clears only the digits. Penny must approach both low switches. Jessie must have ridden Bullseye beneath the high switch, dismounted onto its platform and completed her transition before Enter activates it. The rear release belongs to Penny. At the ground-floor entrance, Enter starts Buzz's flight. The door breaks only after his nearest laser hit is the actual door for more than 0.65 seconds. Six preallocated boards receive impulses; the ghost pursues at 1.6 units per second. The ending requires the broken entrance and Penny plus all four rescued toys physically outside.
+Every stage advances only on its real condition. Penny must actually walk through the open front door before it locks. The keypad requires all three inspected clues and 257; a wrong code shows Incorrect Code and clears only the digits. The chest opens when Enter is pressed within 3.2 units of it. Buzz's door opens with Enter beside it on the ground floor. The wardrobe opens only when a mounted Bullseye is within 1.4 units of the spot beside it and his jump lift exceeds 0.45: Penny's Enter there asks Jessie and Bullseye for help, or the player can mount (R), ride and jump (L) themselves. The main door must be tried (Enter, or standing at it for one second). It breaks only after Buzz's nearest laser hit has been the real door leaf for more than 0.65 seconds. Morning starts when Penny steps outside; free exploration follows once the sixteen-second sunrise has finished and the camera has pulled back over the house.
 
-Selection transfers input ownership to one character while other actors continue their routes and actions. The director skips motion and special-state writes for the owned actor; a separate virtual cursor keeps route progress. The final escape guard still requires every character's actual position outside. Releasing ownership chooses a waypoint on the actor's current floor and steers there without teleporting. A manually aimed Buzz laser follows the same real-hit rule as his scripted flight. Scripted actors ignore the owned actor as a contact obstacle, while its furniture and wall contacts remain active. Selecting a mounted rider or horse detaches the pair; remounting deliberately controls them together. Press 0 to release, N for full manual mode, Ctrl+0 for Penny, Enter to interact, Y to skip arrival, and Shift+N to restart.
+Two layers run the game. The player controls one character (Penny or any freed toy); the story layer moves the rest. Freed toys accompany Penny in fixed formation slots, so taking one over never moves another; between floors they route through thirteen doorway nodes using Floyd-Warshall first steps. Followers do not block each other, but walls, doors, furniture and blocks still stop everyone. Selecting a mounted rider or horse detaches the pair. 0 releases control, N selects full manual mode, Enter interacts, L fires Buzz's laser once he is in position, Y skips the opening shot and Shift+N replays the story.
 
-![Live character takeover while the remaining actors continue their escape routes.](figures/live-control.png)
+![Live takeover of Woody while the other toys keep accompanying Penny.](figures/live-control.png)
 
-Owned route progress: delta = nextWaypoint - virtualPosition; d = length(delta)
-virtualPositionNext = virtualPosition + delta min(d, routeSpeed dt)/d
-Final escape gate = broken door AND every actual character outside
+slot i target = Penny + back (1.7 + 1.3 floor(i/2)) ± 0.9 side
+next node = firstStep[current][goal] (Floyd-Warshall)
+jump lift = 0.75 sin(pi t/0.9); hour = h0 + (31 - h0) smoothstep(t/16) mod 24
 
 ![The same room in daytime. The window, wall clock and material surfaces respond to the daylight setting.](figures/room-day.png)
 
-![The completed escape at night, with Penny and all four rescued toys physically outside.](figures/story-end.png)
+![Free exploration in the morning: Penny and all four rescued toys outside the house.](figures/story-end.png)
 
 ## 4.6 Collision and frame-time control
 
@@ -658,7 +679,7 @@ LOD ratio = boundingRadius / distanceToEye
 ratio < 0.012: low; ratio < 0.06: medium; otherwise full
 Inverse affine row i = (normalMatrix column i, -dot(column i,translation))
 
-Cinematic visibility removes the exterior during indoor play and restores it when the entrance breaks; the connected downstairs remains available. Surface patterns replace book-spine and fence geometry where a colour/coverage map is sufficient. Fixed physics work prevents stalls from scheduling unbounded catch-up work. Deterministic media capture uses a fixed simulation step and raw RGB frame recording; the media generator validates frame count before encoding. Benchmark timings are execution observations, not a guarantee for every environment.
+Cinematic visibility removes the exterior during indoor play and restores it when the entrance breaks. The area light follows the camera: the upstairs hall light, the corridor lamp, the nightstand lamp in Buzz's room or the porch lantern. Surface patterns replace book-spine, fence and star geometry where a colour/coverage map is sufficient. Fixed physics work prevents stalls from scheduling unbounded catch-up work. Deterministic media capture uses a fixed simulation step and raw RGB frame recording; the media generator validates frame count before encoding. Benchmark timings are execution observations, not a guarantee for every environment.
 
 Observed rendering timings
 
@@ -671,7 +692,7 @@ These observations use the final Release executable at 1600 × 900 with 60 warm-
 
 ## 4.8 Verification and achieved objectives
 
-The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding and hallway access. The fixed-step escape rehearsal uses normal movement, mounting, interaction and contacts, logs the real door hit and reaches WIN only when all five actors are outside. Captures exercise all four raster shading modes, all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
+The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding, hallway access, the connected stairs, the porch and the Buzz bedroom doorway. A fixed-step rehearsal plays the whole story with real movement, mounting, jumps, interactions and contacts; it logs the real door hit and reaches free exploration only with all five characters outside, in all four raster shading modes, the ray tracer and the Debug build. Live-control runs confirm that driving one toy leaves the others unchanged. Captures exercise all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
 
 Verification evidence
 
@@ -716,7 +737,7 @@ The project uses the graphics concepts and public library interfaces cited above
 
 # Appendix A — Complete scene-node inventory
 
-The exported scene contains 845 nodes, including 735 mesh-bearing shapes. The following tables include hidden scenery and non-rendered joints as well as visible objects. Shape counts include contact shadows, sky elements and duplicate decorative instances. Each local position, rotation and scale is relative to the parent identified by the path. Rotation uses (pitch,yaw,roll) in degrees. Bracketed indices distinguish sibling nodes with repeated names. Joint rows carry no material; their transform affects their descendants. The accompanying objects.csv also records world positions, collision/visibility flags, vertex/triangle counts, UV repeats and material coefficients.
+The exported scene contains 991 nodes, including 872 mesh-bearing shapes. The following tables include hidden scenery and non-rendered joints as well as visible objects. Shape counts include contact shadows, sky elements and duplicate decorative instances. Each local position, rotation and scale is relative to the parent identified by the path. Rotation uses (pitch,yaw,roll) in degrees. Bracketed indices distinguish sibling nodes with repeated names. Joint rows carry no material; their transform affects their descendants. The accompanying objects.csv also records world positions, collision/visibility flags, vertex/triangle counts, UV repeats and material coefficients.
 
 ## World
 
@@ -767,13 +788,13 @@ Construction records for Room[0]
 | Rug[24] | Plane / rug | 0.5,0.01,1.5 | 0,0,0 | 6,1,4.5 |
 | Poster[25] | Plane / poster | -9.98,3.8,2.2 | 90,90,0 | 2,1,3 |
 | ToyBlocks[26] | Joint | 0,0,0 | 0,0,0 | 1,1,1 |
-| ToyBlocks[26]/DoorwayObstacle[0] | Cube / mission-crate | -4,1,6 | 0,0,0 | 1.2,2,3 |
-| ToyBlocks[26]/Block0[1] | Cube / block-0 | 4.8,0.3,3.8 | 0,0,0 | 0.6,0.6,0.6 |
-| ToyBlocks[26]/Block1[2] | Cube / block-1 | 5.42,0.3,3.8 | 0,0,0 | 0.6,0.6,0.6 |
-| ToyBlocks[26]/Block2[3] | Cube / block-2 | 6.04,0.3,3.8 | 0,0,0 | 0.6,0.6,0.6 |
-| ToyBlocks[26]/Block3[4] | Cube / block-3 | 4.8,0.899,3.8 | 0,0,0 | 0.6,0.6,0.6 |
-| ToyBlocks[26]/Block4[5] | Cube / block-4 | 5.42,0.9,3.8 | 0,0,0 | 0.6,0.6,0.6 |
-| ToyBlocks[26]/Block5[6] | Cube / block-5 | 4.8,1.5,3.8 | 0,0,0 | 0.6,0.6,0.6 |
+| ToyBlocks[26]/DoorwayObstacle[0] | Cube / mission-crate | -9,1,6.9 | 0,0,0 | 1.2,2,3 |
+| ToyBlocks[26]/Block0[1] | Cube / block-0 | 4.8,0.3,6.9 | 0,0,0 | 0.6,0.6,0.6 |
+| ToyBlocks[26]/Block1[2] | Cube / block-1 | 5.42,0.3,6.9 | 0,0,0 | 0.6,0.6,0.6 |
+| ToyBlocks[26]/Block2[3] | Cube / block-2 | 6.04,0.3,6.9 | 0,0,0 | 0.6,0.6,0.6 |
+| ToyBlocks[26]/Block3[4] | Cube / block-3 | 4.8,0.899,6.9 | 0,0,0 | 0.6,0.6,0.6 |
+| ToyBlocks[26]/Block4[5] | Cube / block-4 | 5.42,0.9,6.9 | 0,0,0 | 0.6,0.6,0.6 |
+| ToyBlocks[26]/Block5[6] | Cube / block-5 | 4.8,1.5,6.9 | 0,0,0 | 0.6,0.6,0.6 |
 | Desk[27] | Joint | -5,0,-7.6 | 0,0,0 | 1,1,1 |
 | Desk[27]/Top[0] | Cube / desk-wood | 0,2.4,0 | 0,0,0 | 4,0.15,2 |
 | Desk[27]/Leg0[1] | Cube / desk-wood | -1.85,1.2,-0.85 | 0,0,0 | 0.15,2.4,0.15 |
@@ -914,7 +935,7 @@ Construction records for Woody[4]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| Woody | Joint | -3,0.012,0.5 | 0,20,0 | 1,1,1 |
+| Woody | Joint | -1.6,0.012,3.4 | 0,10,0 | 1,1,1 |
 | Pelvis[0] | Joint | 0,0.85,0 | 0,0,0 | 1,1,1 |
 | Pelvis[0]/Belt[0] | Cube / Woody-belt | 0,0.03,0 | 0,0,0 | 0.4,0.12,0.25 |
 | Pelvis[0]/Buckle[1] | Cube / brass | 0,0.03,0.13 | 0,0,0 | 0.11,0.08,0.03 |
@@ -991,7 +1012,7 @@ Construction records for Jessie[5]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| Jessie | Joint | -0.8,0.012,2 | 0,0,0 | 1,1,1 |
+| Jessie | Joint | 0.7,0.012,3.7 | 0,-5,0 | 1,1,1 |
 | Pelvis[0] | Joint | 0,0.85,0 | 0,0,0 | 1,1,1 |
 | Pelvis[0]/Belt[0] | Cube / Jessie-belt | 0,0.03,0 | 0,0,0 | 0.4,0.12,0.25 |
 | Pelvis[0]/Buckle[1] | Cube / brass | 0,0.03,0.13 | 0,0,0 | 0.11,0.08,0.03 |
@@ -1070,7 +1091,7 @@ Construction records for Bullseye[6]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| Bullseye | Joint | 2.2,0.012,0.3 | 0,-30,0 | 1,1,1 |
+| Bullseye | Joint | 3.4,0.012,3.1 | 0,60,0 | 1,1,1 |
 | Body[0] | Joint | 0,0,0 | 0,0,0 | 1,1,1 |
 | Body[0]/Barrel[0] | Sphere / horse-coat | 0,1.25,0 | 0,0,0 | 0.72,0.66,1.5 |
 | Body[0]/Belly[1] | Sphere / horse-muzzle | 0,1.08,0 | 0,0,0 | 0.5,0.3,1 |
@@ -1132,7 +1153,7 @@ Construction records for Buzz[7]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| Buzz | Joint | 0,0.012,-6.6 | 0,10,0 | 1,1,1 |
+| Buzz | Joint | -3.4,0.012,0.4 | 0,35,0 | 1,1,1 |
 | Pelvis[0] | Joint | 0,0.85,0 | 0,0,0 | 1,1,1 |
 | Pelvis[0]/Belt[0] | Cube / Buzz-belt | 0,0.03,0 | 0,0,0 | 0.4,0.12,0.25 |
 | Pelvis[0]/Buckle[1] | Cube / brass | 0,0.03,0.13 | 0,0,0 | 0.11,0.08,0.03 |
@@ -1282,33 +1303,39 @@ Construction records for HouseInterior[9]
 | LandingFloor[1] | Plane / ground-floor-wood | 15,-4.48,-8.03 | 0,0,0 | 3,1,2.05 |
 | CorridorCeiling[2] | Plane / ceiling | 12,-0.3,0 | 180,0,0 | 3,1,18.1 |
 | CorridorRunner[3] | Plane / corridor-runner | 12,-4.47,1 | 0,0,0 | 1.6,1,14 |
-| CorridorLeftWall[4] | Plane / ground-floor-wall | 10.5,-2.4,0 | 90,90,0 | 18.1,1,4.2 |
-| CorridorRightWall[5] | Plane / ground-floor-wall | 13.5,-2.4,1.02 | 90,-90,0 | 16.1,1,4.2 |
-| StairwellEnd[6] | Plane / ground-floor-wall | 13.5,0.15,-9.05 | 90,0,0 | 6,1,9.3 |
-| StairwellLeft[7] | Plane / ground-floor-wall | 13.5,0.15,-3 | 90,90,0 | 8,1,9.3 |
-| StairwellLeftUpper[8] | Plane / ground-floor-wall | 13.5,2.25,-8.03 | 90,90,0 | 2.05,1,5.1 |
-| StairwellRight[9] | Plane / ground-floor-wall | 16.5,0.15,-4.03 | 90,-90,0 | 10.1,1,9.3 |
-| StairwellCeiling[10] | Plane / ceiling | 15,4.8,-4.03 | 180,0,0 | 3,1,10.1 |
-| Step[11] | Cube / stair-wood | 15,-4.38,-6.78 | 0,0,0 | 2.96,0.25,0.444 |
-| Step[12] | Cube / stair-wood | 15,-4.25,-6.33 | 0,0,0 | 2.96,0.5,0.444 |
-| Step[13] | Cube / stair-wood | 15,-4.12,-5.89 | 0,0,0 | 2.96,0.75,0.444 |
-| Step[14] | Cube / stair-wood | 15,-4,-5.44 | 0,0,0 | 2.96,1,0.444 |
-| Step[15] | Cube / stair-wood | 15,-3.88,-5 | 0,0,0 | 2.96,1.25,0.444 |
-| Step[16] | Cube / stair-wood | 15,-3.75,-4.56 | 0,0,0 | 2.96,1.5,0.444 |
-| Step[17] | Cube / stair-wood | 15,-3.62,-4.11 | 0,0,0 | 2.96,1.75,0.444 |
-| Step[18] | Cube / stair-wood | 15,-3.5,-3.67 | 0,0,0 | 2.96,2,0.444 |
-| Step[19] | Cube / stair-wood | 15,-3.38,-3.22 | 0,0,0 | 2.96,2.25,0.444 |
-| Step[20] | Cube / stair-wood | 15,-3.25,-2.78 | 0,0,0 | 2.96,2.5,0.444 |
-| Step[21] | Cube / stair-wood | 15,-3.12,-2.33 | 0,0,0 | 2.96,2.75,0.444 |
-| Step[22] | Cube / stair-wood | 15,-3,-1.89 | 0,0,0 | 2.96,3,0.444 |
-| Step[23] | Cube / stair-wood | 15,-2.88,-1.44 | 0,0,0 | 2.96,3.25,0.444 |
-| Step[24] | Cube / stair-wood | 15,-2.75,-1 | 0,0,0 | 2.96,3.5,0.444 |
-| Step[25] | Cube / stair-wood | 15,-2.62,-0.556 | 0,0,0 | 2.96,3.75,0.444 |
-| Step[26] | Cube / stair-wood | 15,-2.5,-0.111 | 0,0,0 | 2.96,4,0.444 |
-| Step[27] | Cube / stair-wood | 15,-2.38,0.333 | 0,0,0 | 2.96,4.25,0.444 |
-| Step[28] | Cube / stair-wood | 15,-2.25,0.778 | 0,0,0 | 2.96,4.5,0.444 |
-| Handrail[29] | Cylinder / brass | 16.3,-1.25,-3 | 60.6,0,0 | 0.08,9.18,0.08 |
-| CorridorLamp[30] | Sphere / hall-ceiling-lamp | 12,-0.42,2 | 0,0,0 | 0.5,0.2,0.5 |
+| CorridorLeftWall[4] | Plane / ground-floor-wall | 10.5,-2.4,3.77 | 90,90,0 | 10.6,1,4.2 |
+| BuzzRoomDivider[5] | Cube / ground-floor-wall | 10.5,-2.4,-7.97 | 0,0,0 | 0.08,4.2,2.15 |
+| BuzzRoomDivider[6] | Cube / ground-floor-wall | 10.5,-2.4,-3.1 | 0,0,0 | 0.08,4.2,3.2 |
+| BuzzRoomLintel[7] | Cube / ground-floor-wall | 10.5,-0.6,-5.8 | 0,0,0 | 0.08,0.6,2.2 |
+| BuzzDoorCasing[8] | Cube / buzz-door-casing | 10.5,-2.7,-6.98 | 0,0,0 | 0.08,3.6,0.16 |
+| BuzzDoorCasing[9] | Cube / buzz-door-casing | 10.5,-2.7,-4.62 | 0,0,0 | 0.08,3.6,0.16 |
+| BuzzDoorCasing[10] | Cube / buzz-door-casing | 10.5,-0.82,-5.8 | 0,0,0 | 0.08,0.16,2.52 |
+| CorridorRightWall[11] | Plane / ground-floor-wall | 13.5,-2.4,1.02 | 90,-90,0 | 16.1,1,4.2 |
+| StairwellEnd[12] | Plane / ground-floor-wall | 13.5,0.15,-9.05 | 90,0,0 | 6,1,9.3 |
+| StairwellLeft[13] | Plane / ground-floor-wall | 13.5,0.15,-3 | 90,90,0 | 8,1,9.3 |
+| StairwellLeftUpper[14] | Plane / ground-floor-wall | 13.5,2.25,-8.03 | 90,90,0 | 2.05,1,5.1 |
+| StairwellRight[15] | Plane / ground-floor-wall | 16.5,0.15,-4.03 | 90,-90,0 | 10.1,1,9.3 |
+| StairwellCeiling[16] | Plane / ceiling | 15,4.8,-4.03 | 180,0,0 | 3,1,10.1 |
+| Step[17] | Cube / stair-wood | 15,-4.38,-6.78 | 0,0,0 | 2.96,0.25,0.444 |
+| Step[18] | Cube / stair-wood | 15,-4.25,-6.33 | 0,0,0 | 2.96,0.5,0.444 |
+| Step[19] | Cube / stair-wood | 15,-4.12,-5.89 | 0,0,0 | 2.96,0.75,0.444 |
+| Step[20] | Cube / stair-wood | 15,-4,-5.44 | 0,0,0 | 2.96,1,0.444 |
+| Step[21] | Cube / stair-wood | 15,-3.88,-5 | 0,0,0 | 2.96,1.25,0.444 |
+| Step[22] | Cube / stair-wood | 15,-3.75,-4.56 | 0,0,0 | 2.96,1.5,0.444 |
+| Step[23] | Cube / stair-wood | 15,-3.62,-4.11 | 0,0,0 | 2.96,1.75,0.444 |
+| Step[24] | Cube / stair-wood | 15,-3.5,-3.67 | 0,0,0 | 2.96,2,0.444 |
+| Step[25] | Cube / stair-wood | 15,-3.38,-3.22 | 0,0,0 | 2.96,2.25,0.444 |
+| Step[26] | Cube / stair-wood | 15,-3.25,-2.78 | 0,0,0 | 2.96,2.5,0.444 |
+| Step[27] | Cube / stair-wood | 15,-3.12,-2.33 | 0,0,0 | 2.96,2.75,0.444 |
+| Step[28] | Cube / stair-wood | 15,-3,-1.89 | 0,0,0 | 2.96,3,0.444 |
+| Step[29] | Cube / stair-wood | 15,-2.88,-1.44 | 0,0,0 | 2.96,3.25,0.444 |
+| Step[30] | Cube / stair-wood | 15,-2.75,-1 | 0,0,0 | 2.96,3.5,0.444 |
+| Step[31] | Cube / stair-wood | 15,-2.62,-0.556 | 0,0,0 | 2.96,3.75,0.444 |
+| Step[32] | Cube / stair-wood | 15,-2.5,-0.111 | 0,0,0 | 2.96,4,0.444 |
+| Step[33] | Cube / stair-wood | 15,-2.38,0.333 | 0,0,0 | 2.96,4.25,0.444 |
+| Step[34] | Cube / stair-wood | 15,-2.25,0.778 | 0,0,0 | 2.96,4.5,0.444 |
+| Handrail[35] | Cylinder / brass | 16.3,-1.25,-3 | 60.6,0,0 | 0.08,9.18,0.08 |
+| CorridorLamp[36] | Sphere / hall-ceiling-lamp | 12,-0.42,2 | 0,0,0 | 0.5,0.2,0.5 |
 
 ## RoomDoorLeft[10]
 
@@ -1316,7 +1343,7 @@ Construction records for RoomDoorLeft[10]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| RoomDoorLeft | Joint | 10.1,0,1 | 0,0,0 | 1,1,1 |
+| RoomDoorLeft | Joint | 10.1,0,1 | 0,8.56,0 | 1,1,1 |
 | DoorLeaf[0] | Cube / door-wood | 0,2.35,1.5 | 0,0,0 | 0.08,4.7,2.96 |
 | DoorPanel[1] | Cube / door-panel | 0,1.25,1.5 | 0,0,0 | 0.12,1.5,2.3 |
 | DoorPanel[2] | Cube / door-panel | 0,3.25,1.5 | 0,0,0 | 0.12,1.5,2.3 |
@@ -1328,7 +1355,7 @@ Construction records for RoomDoorRight[11]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| RoomDoorRight | Joint | 10.1,0,7 | 0,-0,0 | 1,1,1 |
+| RoomDoorRight | Joint | 10.1,0,7 | 0,-8.56,0 | 1,1,1 |
 | DoorLeaf[0] | Cube / door-wood | 0,2.35,-1.5 | 0,0,0 | 0.08,4.7,2.96 |
 | DoorPanel[1] | Cube / door-panel | 0,1.25,-1.5 | 0,0,0 | 0.12,1.5,2.3 |
 | DoorPanel[2] | Cube / door-panel | 0,3.25,-1.5 | 0,0,0 | 0.12,1.5,2.3 |
@@ -1353,9 +1380,9 @@ Construction records for HouseExterior[13]
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
 | HouseExterior | Joint | 0,0,0 | 0,0,0 | 1,1,1 |
-| front-left[0] | Cube / siding-front-left | 0.375,1.5,9.2 | 0,0,0 | 21.6,12,0.3 |
-| front-right[1] | Cube / siding-front-right | 15.1,1.5,9.2 | 0,0,0 | 4.65,12,0.3 |
-| front-over-door[2] | Cube / siding-front-over-door | 12,3,9.2 | 0,0,0 | 1.6,9,0.3 |
+| front-left[0] | Cube / siding-front-left | 0.225,1.5,9.2 | 0,0,0 | 21.4,12,0.3 |
+| front-right[1] | Cube / siding-front-right | 15.3,1.5,9.2 | 0,0,0 | 4.35,12,0.3 |
+| front-over-door[2] | Cube / siding-front-over-door | 12,3.3,9.2 | 0,0,0 | 2.2,8.4,0.3 |
 | back-left[3] | Cube / siding-back-left | -4.97,1.5,-9.2 | 0,0,0 | 10.9,12,0.3 |
 | back-right[4] | Cube / siding-back-right | 11,1.5,-9.2 | 0,0,0 | 12.9,12,0.3 |
 | back-under-window[5] | Cube / siding-back-under-window | 2.5,-1,-9.2 | 0,0,0 | 4,7,0.3 |
@@ -1393,9 +1420,9 @@ Construction records for HouseExterior[13]
 | WindowPane[35] | Cube / house-window-pane | 3.2,-2.3,9.47 | 0,0,0 | 3.4,1.9,0.04 |
 | FlowerBox[36] | Cube / flower-box | 3.2,-3.55,9.68 | 0,0,0 | 3.6,0.4,0.45 |
 | FlowerBed[37] | Cube / flower-bed | 3.2,-3.21,9.68 | 0,0,0 | 3.4,0.27,0.35 |
-| DoorCasing[38] | Cube / house-trim | 11.1,-3,9.39 | 0,0,0 | 0.2,3,0.12 |
-| DoorCasing[39] | Cube / house-trim | 12.9,-3,9.39 | 0,0,0 | 0.2,3,0.12 |
-| DoorCasing[40] | Cube / house-trim | 12,-1.4,9.39 | 0,0,0 | 2.04,0.2,0.12 |
+| DoorCasing[38] | Cube / house-trim | 10.8,-2.7,9.39 | 0,0,0 | 0.2,3.6,0.12 |
+| DoorCasing[39] | Cube / house-trim | 13.2,-2.7,9.39 | 0,0,0 | 0.2,3.6,0.12 |
+| DoorCasing[40] | Cube / house-trim | 12,-0.8,9.39 | 0,0,0 | 2.64,0.2,0.12 |
 | PorchDeck[41] | Cube / porch-deck | 12,-4.28,10.9 | 0,0,0 | 8,0.45,3.15 |
 | PorchStep[42] | Cube / porch-deck | 12,-4.28,12.7 | 0,0,0 | 2.4,0.45,0.4 |
 | PorchStep[43] | Cube / porch-deck | 12,-4.35,13.1 | 0,0,0 | 2.4,0.3,0.4 |
@@ -1414,7 +1441,7 @@ Construction records for HouseExterior[13]
 | PorchBeam[55] | Cube / house-trim | 12,-1.45,11 | 0,0,0 | 8.8,0.3,3.25 |
 | Planter[56] | Cylinder / planter-barrel | 14.4,-3.65,10.2 | 0,0,0 | 0.8,0.8,0.8 |
 | PorchPlant[57] | Sphere / tree-leaves-light | 14.4,-2.85,10.2 | 0,0,0 | 1.1,0.9,1.1 |
-| PorchLantern[58] | Cube / porch-lantern | 10.5,-1.9,9.5 | 0,0,0 | 0.22,0.4,0.22 |
+| PorchLantern[58] | Cube / porch-lantern | 10.3,-1.9,9.5 | 0,0,0 | 0.22,0.4,0.22 |
 | garage-front[59] | Cube / siding-garage-front | -14.7,-2.25,7.35 | 0,0,0 | 8.55,4.5,0.3 |
 | garage-side[60] | Cube / siding-garage-side | -18.9,-2.25,1.25 | 0,0,0 | 0.3,4.5,12.5 |
 | garage-back[61] | Cube / siding-garage-back | -14.7,-2.25,-4.85 | 0,0,0 | 8.55,4.5,0.3 |
@@ -1474,19 +1501,205 @@ Construction records for FrontDoor[14]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| FrontDoor | Joint | 11.2,-4.5,9.2 | 0,0,0 | 1,1,1 |
-| FrontDoorLeaf[0] | Cube / front-door | 0.8,1.5,0 | 0,0,0 | 1.56,2.96,0.1 |
-| FrontDoorWindow[1] | Cube / house-window-glass | 0.8,2.16,0.04 | 0,0,0 | 0.6,0.6,0.06 |
-| FrontDoorKnob[2] | Sphere / brass | 1.4,1.35,0.08 | 0,0,0 | 0.12,0.12,0.12 |
-| EntrancePadlock[3] | Joint | 1.2,1.2,-0.11 | 0,0,0 | 1,1,1 |
+| FrontDoor | Joint | 10.9,-4.5,9.2 | 0,0,0 | 1,1,1 |
+| FrontDoorLeaf[0] | Cube / front-door | 1.1,1.8,0 | 0,0,0 | 2.16,3.56,0.1 |
+| FrontDoorWindow[1] | Cube / house-window-glass | 1.1,2.59,0.04 | 0,0,0 | 0.6,0.6,0.06 |
+| FrontDoorKnob[2] | Sphere / brass | 2,1.62,0.08 | 0,0,0 | 0.12,0.12,0.12 |
+| EntrancePadlock[3] | Joint | 1.75,1.55,-0.11 | 0,0,0 | 1,1,1 |
 | EntrancePadlock[3]/LockBody[0] | Cube / rescue-iron | 0,0,0 | 0,0,0 | 0.24,0.28,0.12 |
 | EntrancePadlock[3]/ShackleUpright[1] | Cylinder / rescue-iron | -0.075,0.2,0 | 0,0,0 | 0.045,0.16,0.045 |
 | EntrancePadlock[3]/ShackleUpright[2] | Cylinder / rescue-iron | 0.075,0.2,0 | 0,0,0 | 0.045,0.16,0.045 |
 | EntrancePadlock[3]/ShackleCrown[3] | Cylinder / rescue-iron | 0,0.28,0 | 0,0,90 | 0.045,0.15,0.045 |
 
-## Penny[15]
+## ToyChest[15]
 
-Construction records for Penny[15]
+Construction records for ToyChest[15]
+
+| Relative node path | Shape / material | Position | Rotation° | Scale |
+| --- | --- | --- | --- | --- |
+| ToyChest | Joint | 0.5,0,0.9 | 0,0,0 | 1,1,1 |
+| ChestFloor[0] | Cube / chest-lining | 0,0.06,0 | 0,0,0 | 3.2,0.12,1.7 |
+| ChestFront[1] | Cube / chest-wood | 0,0.525,0.89 | 0,0,0 | 3.4,1.05,0.12 |
+| ChestBack[2] | Cube / chest-wood | 0,0.525,-0.89 | 0,0,0 | 3.4,1.05,0.12 |
+| ChestEnd[3] | Cube / chest-wood | -1.64,0.525,0 | 0,0,0 | 0.12,1.05,1.66 |
+| ChestEnd[4] | Cube / chest-wood | 1.64,0.525,0 | 0,0,0 | 0.12,1.05,1.66 |
+| ChestInnerLining[5] | Cube / chest-lining | 0,0.525,0 | 0,0,0 | 3.14,0.91,1.64 |
+| PaintedFront[6] | Cube / chest-painted-front | 0,0.545,0.956 | 0,0,0 | 2.98,0.83,0.02 |
+| BaseBand[7] | Cube / chest-iron | 0,0.06,0 | 0,0,0 | 3.45,0.12,1.95 |
+| RimBand[8] | Cube / chest-iron | 0,1.01,0 | 0,0,0 | 3.44,0.08,1.94 |
+| CornerBracket[9] | Cube / chest-iron | -1.65,0.525,-0.9 | 0,0,0 | 0.17,1.07,0.17 |
+| Rivet[10] | Sphere / brass | -1.65,0.25,-0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| Rivet[11] | Sphere / brass | -1.65,0.75,-0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| CornerBracket[12] | Cube / chest-iron | -1.65,0.525,0.9 | 0,0,0 | 0.17,1.07,0.17 |
+| Rivet[13] | Sphere / brass | -1.65,0.25,0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| Rivet[14] | Sphere / brass | -1.65,0.75,0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| CornerBracket[15] | Cube / chest-iron | 1.65,0.525,-0.9 | 0,0,0 | 0.17,1.07,0.17 |
+| Rivet[16] | Sphere / brass | 1.65,0.25,-0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| Rivet[17] | Sphere / brass | 1.65,0.75,-0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| CornerBracket[18] | Cube / chest-iron | 1.65,0.525,0.9 | 0,0,0 | 0.17,1.07,0.17 |
+| Rivet[19] | Sphere / brass | 1.65,0.25,0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| Rivet[20] | Sphere / brass | 1.65,0.75,0.99 | 0,0,0 | 0.06,0.06,0.06 |
+| LockPlate[21] | Cube / brass | 0,0.77,0.98 | 0,0,0 | 0.32,0.3,0.04 |
+| Keyhole[22] | Cube / keyhole | 0,0.75,1 | 0,0,0 | 0.05,0.12,0.01 |
+| SideHandle[23] | Cube / brass | -1.74,0.651,0 | 0,0,0 | 0.05,0.12,0.55 |
+| SideHandle[24] | Cube / brass | 1.74,0.651,0 | 0,0,0 | 0.05,0.12,0.55 |
+| WindUpKey[25] | Joint | 1.8,0.472,0 | 0,0,0 | 1,1,1 |
+| WindUpKey[25]/KeyStem[0] | Cylinder / brass | 0.08,0,0 | 0,0,90 | 0.07,0.2,0.07 |
+| WindUpKey[25]/KeyWings[1] | Sphere / brass | 0.2,0,0 | 0,0,0 | 0.05,0.42,0.2 |
+| ChestLid[26] | Joint | 0,1.05,-0.95 | -105,0,0 | 1,1,1 |
+| ChestLid[26]/LidFrame[0] | Cube / chest-wood | 0,0.21,0.95 | 0,0,0 | 3.4,0.42,1.9 |
+| ChestLid[26]/LidDome[1] | Cylinder / chest-wood | 0,0.42,0.95 | 0,0,90 | 0.84,3.38,1.88 |
+| ChestLid[26]/LidBand[2] | Cube / chest-iron | 0,0.035,0.95 | 0,0,0 | 3.44,0.07,1.94 |
+| ChestLid[26]/DomeStrap[3] | Cylinder / chest-iron | -1.61,0.42,0.95 | 0,0,90 | 0.89,0.16,1.95 |
+| ChestLid[26]/FrameStrap[4] | Cube / chest-iron | -1.61,0.21,0.95 | 0,0,0 | 0.16,0.42,1.95 |
+| ChestLid[26]/DomeStrap[5] | Cylinder / chest-iron | -0.748,0.42,0.95 | 0,0,90 | 0.89,0.16,1.95 |
+| ChestLid[26]/FrameStrap[6] | Cube / chest-iron | -0.748,0.21,0.95 | 0,0,0 | 0.16,0.42,1.95 |
+| ChestLid[26]/DomeStrap[7] | Cylinder / chest-iron | 0.748,0.42,0.95 | 0,0,90 | 0.89,0.16,1.95 |
+| ChestLid[26]/FrameStrap[8] | Cube / chest-iron | 0.748,0.21,0.95 | 0,0,0 | 0.16,0.42,1.95 |
+| ChestLid[26]/DomeStrap[9] | Cylinder / chest-iron | 1.61,0.42,0.95 | 0,0,90 | 0.89,0.16,1.95 |
+| ChestLid[26]/FrameStrap[10] | Cube / chest-iron | 1.61,0.21,0.95 | 0,0,0 | 0.16,0.42,1.95 |
+| ChestLid[26]/Hasp[11] | Cube / brass | 0,0.1,1.94 | 0,0,0 | 0.26,0.34,0.04 |
+| ChestLid[26]/ButtonRing[12] | Cylinder / chest-button-ring | 0,0.82,0.95 | 0,0,0 | 0.56,0.08,0.56 |
+| ChestLid[26]/ChestButton[13] | Joint | 0,0.86,0.95 | 0,0,0 | 1,1,1 |
+| ChestLid[26]/ChestButton[13]/ButtonBody[0] | Cylinder / chest-red-button | 0,0.03,0 | 0,0,0 | 0.38,0.1,0.38 |
+| ChestLid[26]/ChestButton[13]/ButtonCap[1] | Sphere / chest-red-button | 0,0.08,0 | 0,0,0 | 0.38,0.16,0.38 |
+
+## BuzzRoom[16]
+
+Construction records for BuzzRoom[16]
+
+| Relative node path | Shape / material | Position | Rotation° | Scale |
+| --- | --- | --- | --- | --- |
+| BuzzRoom | Joint | 0,0,0 | 0,0,0 | 1,1,1 |
+| BuzzRoomFloor[0] | Plane / buzz-room-floor | 6,-4.48,-5.28 | 0,0,0 | 9,1,7.55 |
+| BuzzRoomCeiling[1] | Plane / ceiling | 6,-0.3,-5.28 | 180,0,0 | 9,1,7.55 |
+| BackWall[2] | Plane / buzz-wall-BackWall | 1.5,-2.4,-5.28 | 90,90,0 | 7.55,1,4.2 |
+| WindowWall[3] | Plane / buzz-wall-WindowWall | 6,-2.4,-9.05 | 90,0,0 | 9,1,4.2 |
+| FrontWall[4] | Plane / buzz-wall-FrontWall | 6,-2.4,-1.5 | 90,180,0 | 9,1,4.2 |
+| DoorWallBack[5] | Plane / buzz-wall-DoorWallBack | 10.4,-2.4,-7.97 | 90,-90,0 | 2.15,1,4.2 |
+| DoorWallFront[6] | Plane / buzz-wall-DoorWallFront | 10.4,-2.4,-3.1 | 90,-90,0 | 3.2,1,4.2 |
+| DoorWallLintel[7] | Plane / buzz-wall-DoorWallLintel | 10.4,-0.6,-5.8 | 90,-90,0 | 2.2,1,0.6 |
+| Skirting[8] | Cube / buzz-room-trim | 1.55,-4.35,-5.28 | 0,0,0 | 0.1,0.3,7.55 |
+| Skirting[9] | Cube / buzz-room-trim | 6,-4.35,-9 | 0,0,0 | 9,0.3,0.1 |
+| Skirting[10] | Cube / buzz-room-trim | 6,-4.35,-1.55 | 0,0,0 | 9,0.3,0.1 |
+| CrownMoulding[11] | Cube / buzz-room-trim | 6,-0.38,-9 | 0,0,0 | 9,0.16,0.12 |
+| CrownMoulding[12] | Cube / buzz-room-trim | 6,-0.38,-1.56 | 0,0,0 | 9,0.16,0.12 |
+| CrownMoulding[13] | Cube / buzz-room-trim | 1.56,-0.38,-5.28 | 0,0,0 | 0.12,0.16,7.55 |
+| Wardrobe[14] | Joint | 2.17,-4.48,-5.3 | 0,0,0 | 1,1,1 |
+| Wardrobe[14]/Plinth[0] | Cube / wardrobe-wood | 0.01,0.15,0 | 0,0,0 | 1.35,0.3,3.08 |
+| Wardrobe[14]/InnerFloor[1] | Cube / wardrobe-inside | -0.025,0.33,0 | 0,0,0 | 1.2,0.06,2.84 |
+| Wardrobe[14]/BackPanel[2] | Cube / wardrobe-inside | -0.585,1.88,0 | 0,0,0 | 0.08,3.15,3 |
+| Wardrobe[14]/SidePanel[3] | Cube / wardrobe-wood | 0,1.88,-1.46 | 0,0,0 | 1.25,3.15,0.09 |
+| Wardrobe[14]/SidePanel[4] | Cube / wardrobe-wood | 0,1.88,1.46 | 0,0,0 | 1.25,3.15,0.09 |
+| Wardrobe[14]/Top[5] | Cube / wardrobe-wood | 0.015,3.42,0 | 0,0,0 | 1.38,0.18,3.12 |
+| Wardrobe[14]/Cornice[6] | Cube / wardrobe-panel | 0.645,3.24,0 | 0,0,0 | 0.08,0.18,3.04 |
+| Wardrobe[14]/HangingRail[7] | Cylinder / brass | -0.1,2.95,0 | 90,0,0 | 0.06,2.8,0.06 |
+| Wardrobe[14]/CrownArch[8] | Cylinder / wardrobe-wood | 0.525,3.45,0 | 0,0,90 | 1,0.16,1.9 |
+| Wardrobe[14]/CrownArchTrim[9] | Cylinder / wardrobe-panel | 0.565,3.45,0 | 0,0,90 | 0.82,0.12,1.55 |
+| Wardrobe[14]/FinialPost[10] | Cube / wardrobe-wood | 0.575,3.61,-1.4 | 0,0,0 | 0.18,0.22,0.18 |
+| Wardrobe[14]/FinialBall[11] | Sphere / wardrobe-wood | 0.575,3.81,-1.4 | 0,0,0 | 0.28,0.28,0.28 |
+| Wardrobe[14]/FinialPost[12] | Cube / wardrobe-wood | 0.575,3.61,1.4 | 0,0,0 | 0.18,0.22,0.18 |
+| Wardrobe[14]/FinialBall[13] | Sphere / wardrobe-wood | 0.575,3.81,1.4 | 0,0,0 | 0.28,0.28,0.28 |
+| Wardrobe[14]/WardrobeDoorLeft[14] | Joint | 0.655,0.36,1.42 | 0,-100,0 | 1,1,1 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/WardrobeDoor[0] | Cube / wardrobe-wood | 0,1.4,-0.71 | 0,0,0 | 0.07,2.79,1.4 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/DoorPanel[1] | Cube / wardrobe-panel | 0.04,1.2,-0.71 | 0,0,0 | 0.06,1.73,1.06 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/DoorPanelArch[2] | Cylinder / wardrobe-panel | 0.04,2.06,-0.71 | 0,0,90 | 0.5,0.055,1.06 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/StarDecal[3] | Cube / gold-star-decal | 0.078,1.95,-0.71 | 0,0,0 | 0.012,0.4,0.4 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/StarKnob[4] | Sphere / brass | 0.09,2.29,-1.29 | 0,0,0 | 0.12,0.17,0.17 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/KnobStar[5] | Cube / gold-star-decal | 0.155,2.29,-1.29 | 0,0,0 | 0.01,0.22,0.22 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/Hinge[6] | Cube / brass | 0,0.25,0 | 0,0,0 | 0.09,0.2,0.05 |
+| Wardrobe[14]/WardrobeDoorLeft[14]/Hinge[7] | Cube / brass | 0,2.54,0 | 0,0,0 | 0.09,0.2,0.05 |
+| Wardrobe[14]/WardrobeDoorRight[15] | Joint | 0.655,0.36,-1.42 | 0,100,0 | 1,1,1 |
+| Wardrobe[14]/WardrobeDoorRight[15]/WardrobeDoor[0] | Cube / wardrobe-wood | 0,1.4,0.71 | 0,0,0 | 0.07,2.79,1.4 |
+| Wardrobe[14]/WardrobeDoorRight[15]/DoorPanel[1] | Cube / wardrobe-panel | 0.04,1.2,0.71 | 0,0,0 | 0.06,1.73,1.06 |
+| Wardrobe[14]/WardrobeDoorRight[15]/DoorPanelArch[2] | Cylinder / wardrobe-panel | 0.04,2.06,0.71 | 0,0,90 | 0.5,0.055,1.06 |
+| Wardrobe[14]/WardrobeDoorRight[15]/StarDecal[3] | Cube / gold-star-decal | 0.078,1.95,0.71 | 0,0,0 | 0.012,0.4,0.4 |
+| Wardrobe[14]/WardrobeDoorRight[15]/StarKnob[4] | Sphere / brass | 0.09,2.29,1.29 | 0,0,0 | 0.12,0.17,0.17 |
+| Wardrobe[14]/WardrobeDoorRight[15]/KnobStar[5] | Cube / gold-star-decal | 0.155,2.29,1.29 | 0,0,0 | 0.01,0.22,0.22 |
+| Wardrobe[14]/WardrobeDoorRight[15]/Hinge[6] | Cube / brass | 0,0.25,0 | 0,0,0 | 0.09,0.2,0.05 |
+| Wardrobe[14]/WardrobeDoorRight[15]/Hinge[7] | Cube / brass | 0,2.54,0 | 0,0,0 | 0.09,0.2,0.05 |
+| Wardrobe[14]/DoorGapGlow[16] | Cube / wardrobe-buzz-glow | 0.635,1.75,0 | 0,0,0 | 0.03,2.49,0.05 |
+| WindowFrame[15] | Cube / buzz-room-trim | 7.3,-2.05,-9 | 0,0,0 | 2.3,2.1,0.08 |
+| WindowPane[16] | Cube / buzz-window-pane | 7.3,-2.05,-8.95 | 0,0,0 | 2,1.8,0.04 |
+| WindowSill[17] | Cube / buzz-room-trim | 7.3,-3.1,-8.85 | 0,0,0 | 2.5,0.08,0.32 |
+| CurtainFold[18] | Cylinder / buzz-curtain | 6.05,-2.25,-8.82 | 0,0,0 | 0.24,2.9,0.12 |
+| CurtainFold[19] | Cylinder / buzz-curtain | 5.85,-2.25,-8.82 | 0,0,0 | 0.24,2.9,0.12 |
+| CurtainFold[20] | Cylinder / buzz-curtain | 5.65,-2.25,-8.82 | 0,0,0 | 0.24,2.9,0.12 |
+| CurtainFold[21] | Cylinder / buzz-curtain | 8.55,-2.25,-8.82 | 0,0,0 | 0.24,2.9,0.12 |
+| CurtainFold[22] | Cylinder / buzz-curtain | 8.75,-2.25,-8.82 | 0,0,0 | 0.24,2.9,0.12 |
+| CurtainFold[23] | Cylinder / buzz-curtain | 8.95,-2.25,-8.82 | 0,0,0 | 0.24,2.9,0.12 |
+| CurtainRod[24] | Cylinder / brass | 7.3,-0.75,-8.8 | 0,0,90 | 0.05,3.3,0.05 |
+| BuzzRoomBed[25] | Joint | 7.6,-4.48,-3.2 | 0,0,0 | 1,1,1 |
+| BuzzRoomBed[25]/BedFrame[0] | Cube / buzz-bed-wood | 0,0.38,0 | 0,0,0 | 2.5,0.55,3.2 |
+| BuzzRoomBed[25]/Mattress[1] | Cube / buzz-linen | 0,0.78,0 | 0,0,0 | 2.4,0.28,3.1 |
+| BuzzRoomBed[25]/Quilt[2] | Cube / buzz-star-quilt | 0,0.9,-0.25 | 0,0,0 | 2.56,0.12,2.65 |
+| BuzzRoomBed[25]/QuiltDrop[3] | Cube / buzz-star-quilt | 0,0.62,-1.56 | 0,0,0 | 2.56,0.6,0.06 |
+| BuzzRoomBed[25]/Pillow[4] | Sphere / buzz-linen | 0,1.02,1.05 | 0,0,0 | 1.5,0.3,0.7 |
+| BuzzRoomBed[25]/Headboard[5] | Cube / buzz-bed-wood | 0,1,1.55 | 0,0,0 | 2.5,1.6,0.14 |
+| BuzzRoomBed[25]/BedPost[6] | Cylinder / buzz-bed-wood | -1.2,0.575,-1.55 | 0,0,0 | 0.18,1.15,0.18 |
+| BuzzRoomBed[25]/PostBall[7] | Sphere / buzz-bed-wood | -1.2,1.23,-1.55 | 0,0,0 | 0.26,0.26,0.26 |
+| BuzzRoomBed[25]/BedPost[8] | Cylinder / buzz-bed-wood | -1.2,0.95,1.55 | 0,0,0 | 0.18,1.9,0.18 |
+| BuzzRoomBed[25]/PostBall[9] | Sphere / buzz-bed-wood | -1.2,1.98,1.55 | 0,0,0 | 0.26,0.26,0.26 |
+| BuzzRoomBed[25]/BedPost[10] | Cylinder / buzz-bed-wood | 1.2,0.575,-1.55 | 0,0,0 | 0.18,1.15,0.18 |
+| BuzzRoomBed[25]/PostBall[11] | Sphere / buzz-bed-wood | 1.2,1.23,-1.55 | 0,0,0 | 0.26,0.26,0.26 |
+| BuzzRoomBed[25]/BedPost[12] | Cylinder / buzz-bed-wood | 1.2,0.95,1.55 | 0,0,0 | 0.18,1.9,0.18 |
+| BuzzRoomBed[25]/PostBall[13] | Sphere / buzz-bed-wood | 1.2,1.98,1.55 | 0,0,0 | 0.26,0.26,0.26 |
+| BuzzRoomBookcase[26] | Joint | 2,-4.48,-2.55 | 0,0,0 | 1,1,1 |
+| BuzzRoomBookcase[26]/Upright[0] | Cube / buzz-bed-wood | 0,1.5,-0.78 | 0,0,0 | 0.9,3,0.1 |
+| BuzzRoomBookcase[26]/Upright[1] | Cube / buzz-bed-wood | 0,1.5,0.78 | 0,0,0 | 0.9,3,0.1 |
+| BuzzRoomBookcase[26]/Back[2] | Cube / buzz-bed-wood | -0.42,1.5,0 | 0,0,0 | 0.06,3,1.6 |
+| BuzzRoomBookcase[26]/Shelf[3] | Cube / buzz-bed-wood | 0,0.12,0 | 0,0,0 | 0.9,0.08,1.5 |
+| BuzzRoomBookcase[26]/Books[4] | Cube / buzz-book-spines | -0.05,0.48,-0.2 | 0,90,0 | 1,0.64,0.55 |
+| BuzzRoomBookcase[26]/Shelf[5] | Cube / buzz-bed-wood | 0,1.07,0 | 0,0,0 | 0.9,0.08,1.5 |
+| BuzzRoomBookcase[26]/Books[6] | Cube / buzz-book-spines | -0.05,1.43,-0.2 | 0,90,0 | 1,0.64,0.55 |
+| BuzzRoomBookcase[26]/Shelf[7] | Cube / buzz-bed-wood | 0,2.02,0 | 0,0,0 | 0.9,0.08,1.5 |
+| BuzzRoomBookcase[26]/Shelf[8] | Cube / buzz-bed-wood | 0,2.97,0 | 0,0,0 | 0.9,0.08,1.5 |
+| BuzzRoomBookcase[26]/StarBox[9] | Cube / buzz-star-box | 0,0.41,0.45 | 0,0,0 | 0.5,0.5,0.5 |
+| BuzzRoomBookcase[26]/StarBox[10] | Cube / buzz-star-box-red | 0,1.33,0.48 | 0,0,0 | 0.44,0.44,0.44 |
+| BuzzRoomBookcase[26]/GlobeStand[11] | Cylinder / buzz-bed-wood | 0,2.08,0.1 | 0,0,0 | 0.3,0.12,0.3 |
+| BuzzRoomBookcase[26]/Globe[12] | Sphere / buzz-globe | 0,2.44,0.1 | 0,0,0 | 0.62,0.62,0.62 |
+| BuzzRoomBookcase[26]/ToyRocket[13] | Cylinder / buzz-toy-white | 0,3.33,-0.4 | 0,0,0 | 0.2,0.6,0.2 |
+| BuzzRoomBookcase[26]/ToyRocketNose[14] | Cone / buzz-toy-red | 0,3.75,-0.4 | 0,0,0 | 0.2,0.26,0.2 |
+| BuzzRoomBookcase[26]/ToyRocketFins[15] | Cube / buzz-toy-red | 0,3.09,-0.4 | 0,0,0 | 0.04,0.2,0.42 |
+| BuzzRoomBookcase[26]/TeddyBear[16] | Joint | 0.05,1.11,-0.25 | 0,90,0 | 1,1,1 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Body[0] | Sphere / teddy-fur | 0,0.3,0 | 0,0,0 | 0.48,0.55,0.4 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Head[1] | Sphere / teddy-fur | 0,0.72,0.02 | 0,0,0 | 0.38,0.38,0.38 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Ear[2] | Sphere / teddy-fur | -0.15,0.88,0 | 0,0,0 | 0.14,0.14,0.14 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Paw[3] | Sphere / teddy-fur | -0.18,0.1,0.14 | 0,0,0 | 0.18,0.18,0.18 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Ear[4] | Sphere / teddy-fur | 0.15,0.88,0 | 0,0,0 | 0.14,0.14,0.14 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Paw[5] | Sphere / teddy-fur | 0.18,0.1,0.14 | 0,0,0 | 0.18,0.18,0.18 |
+| BuzzRoomBookcase[26]/TeddyBear[16]/Bow[6] | Cube / buzz-toy-red | 0,0.53,0.17 | 0,0,0 | 0.24,0.08,0.04 |
+| Nightstand[27] | Joint | 3.55,-4.48,-8.35 | 0,0,0 | 1,1,1 |
+| Nightstand[27]/Cabinet[0] | Cube / buzz-bed-wood | 0,0.6,0 | 0,0,0 | 1.1,1.2,1 |
+| Nightstand[27]/Drawer[1] | Cube / wardrobe-panel | 0,0.35,0.51 | 0,0,0 | 0.9,0.38,0.03 |
+| Nightstand[27]/DrawerKnob[2] | Sphere / brass | 0,0.35,0.55 | 0,0,0 | 0.08,0.08,0.08 |
+| Nightstand[27]/Drawer[3] | Cube / wardrobe-panel | 0,0.85,0.51 | 0,0,0 | 0.9,0.38,0.03 |
+| Nightstand[27]/DrawerKnob[4] | Sphere / brass | 0,0.85,0.55 | 0,0,0 | 0.08,0.08,0.08 |
+| Nightstand[27]/LampBase[5] | Cylinder / brass | 0,1.25,0 | 0,0,0 | 0.3,0.1,0.3 |
+| Nightstand[27]/LampStem[6] | Cylinder / brass | 0,1.55,0 | 0,0,0 | 0.06,0.6,0.06 |
+| Nightstand[27]/LampBulb[7] | Sphere / buzz-lamp-bulb | 0,1.82,0 | 0,0,0 | 0.16,0.16,0.16 |
+| Nightstand[27]/LampShade[8] | Cone / buzz-lamp-shade | 0,2,0 | 0,0,0 | 0.62,0.45,0.62 |
+| BuzzPoster[28] | Plane / buzz-room-poster | 5.6,-2.15,-9.03 | 90,0,0 | 1.4,1,2.1 |
+| StarRug[29] | Plane / buzz-star-rug | 6.2,-4.47,-5.6 | 0,0,0 | 4.2,1,3.2 |
+| Football[30] | Sphere / football | 3.3,-4.12,-7.25 | 0,0,0 | 0.72,0.72,0.72 |
+| StorageBox[31] | Cube / buzz-star-box | 9.4,-4.13,-8.4 | 0,0,0 | 0.9,0.7,0.9 |
+| StorageBox[32] | Cube / buzz-star-box-red | 9.4,-3.5,-8.45 | 0,18,0 | 0.6,0.56,0.6 |
+
+## BuzzRoomDoor[17]
+
+Construction records for BuzzRoomDoor[17]
+
+| Relative node path | Shape / material | Position | Rotation° | Scale |
+| --- | --- | --- | --- | --- |
+| BuzzRoomDoor | Joint | 10.5,-4.48,-4.7 | 0,95,0 | 1,1,1 |
+| DoorLeaf[0] | Cube / door-wood | 0,1.78,-1.1 | 0,0,0 | 0.09,3.52,2.16 |
+| DoorPanel[1] | Cube / door-panel | 0,0.997,-1.1 | 0,0,0 | 0.12,1.14,1.65 |
+| DoorPanel[2] | Cube / door-panel | 0,2.49,-1.1 | 0,0,0 | 0.12,1.14,1.65 |
+| DoorKnob[3] | Sphere / brass | 0,1.6,-1.95 | 0,0,0 | 0.24,0.13,0.13 |
+
+## Penny[18]
+
+Construction records for Penny[18]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
@@ -1536,9 +1749,9 @@ Construction records for Penny[15]
 | Body[0]/BackLeg[10]/Leg[0] | Cylinder / penny-fur | 0,-0.24,0 | 0,0,0 | 0.15,0.48,0.15 |
 | Body[0]/BackLeg[10]/Paw[1] | Sphere / penny-fur | 0,-0.5,0.04 | 0,0,0 | 0.17,0.09,0.22 |
 
-## ClueToyTrain[16]
+## ClueToyTrain[19]
 
-Construction records for ClueToyTrain[16]
+Construction records for ClueToyTrain[19]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
@@ -1566,9 +1779,9 @@ Construction records for ClueToyTrain[16]
 | TrainWheel[20] | Cylinder / haunted-train-iron | -0.3,0.145,1.18 | 0,0,90 | 0.12,0.12,0.12 |
 | TrainWheel[21] | Cylinder / haunted-train-iron | 0.3,0.145,1.18 | 0,0,90 | 0.12,0.12,0.12 |
 
-## TrainClueDigit[17]
+## TrainClueDigit[20]
 
-Construction records for TrainClueDigit[17]
+Construction records for TrainClueDigit[20]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
@@ -1579,9 +1792,9 @@ Construction records for TrainClueDigit[17]
 | RaisedDigitSegment[3] | Cube / haunted-train-brass | -0.088,-0.064,0.03 | 0,0,0 | 0.028,0.112,0.02 |
 | RaisedDigitSegment[4] | Cube / haunted-train-brass | 0,0,0.03 | 0,0,0 | 0.136,0.028,0.02 |
 
-## ClueColoredToyBlocks[18]
+## ClueColoredToyBlocks[21]
 
-Construction records for ClueColoredToyBlocks[18]
+Construction records for ClueColoredToyBlocks[21]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
@@ -1594,32 +1807,33 @@ Construction records for ClueColoredToyBlocks[18]
 | NumberSevenBlock[5] | Cube / clue-block-color-2 | 0,0.16,0.2 | 0,0,0 | 0.3,0.32,0.3 |
 | NumberSevenBlock[6] | Cube / clue-block-color-0 | -0.32,0.16,0.48 | 0,0,0 | 0.3,0.32,0.3 |
 
-## ClueOldWallClock[19]
+## ClueOldWallClock[22]
 
-Construction records for ClueOldWallClock[19]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| ClueOldWallClock | Joint | 13.3,1.95,1.15 | 90,0,0 | 1,1,1 |
-| ClockBlueCircularCase[0] | Cylinder / old-clock-blue-rim | 0,0,0 | 0,0,0 | 1.5,0.18,1.5 |
-
-## ClueClockPrint[20]
-
-Construction records for ClueClockPrint[20]
+Construction records for ClueOldWallClock[22]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| ClueClockPrint | Joint | 13.3,1.95,1.27 | 0,0,0 | 1,1,1 |
-| ClockToyStoryPrintedFace[0] | Cylinder / toy-story-clock-face | 0,0,0 | 90,0,0 | 1.27,0.012,1.27 |
-| RaisedDigitSegment[1] | Cube / old-clock-blue-rim | 0,-0.838,0.02 | 0,0,0 | 0.119,0.0245,0.0175 |
-| RaisedDigitSegment[2] | Cube / old-clock-blue-rim | 0.077,-1.01,0.02 | 0,0,0 | 0.0245,0.098,0.0175 |
-| RaisedDigitSegment[3] | Cube / old-clock-blue-rim | 0,-1.06,0.02 | 0,0,0 | 0.119,0.0245,0.0175 |
-| RaisedDigitSegment[4] | Cube / old-clock-blue-rim | -0.077,-0.894,0.02 | 0,0,0 | 0.0245,0.098,0.0175 |
-| RaisedDigitSegment[5] | Cube / old-clock-blue-rim | 0,-0.95,0.02 | 0,0,0 | 0.119,0.0245,0.0175 |
+| ClueOldWallClock | Joint | 13.3,2.75,1.12 | 90,0,0 | 1,1,1 |
+| ClockBlueCircularCase[0] | Cylinder / old-clock-blue-rim | 0,0,0 | 0,0,0 | 0.8,0.12,0.8 |
 
-## ToyRoomCombinationKeypad[21]
+## ClueClockPrint[23]
 
-Construction records for ToyRoomCombinationKeypad[21]
+Construction records for ClueClockPrint[23]
+
+| Relative node path | Shape / material | Position | Rotation° | Scale |
+| --- | --- | --- | --- | --- |
+| ClueClockPrint | Joint | 13.3,2.75,1.19 | 0,0,0 | 1,1,1 |
+| ClockToyStoryPrintedFace[0] | Cylinder / toy-story-clock-face | 0,0,0 | 90,0,0 | 0.68,0.012,0.68 |
+| ClueDigitPlate[1] | Cube / clock-clue-plate | 0,-0.62,-0.05 | 0,0,0 | 0.3,0.34,0.02 |
+| RaisedDigitSegment[2] | Cube / old-clock-blue-rim | 0,-0.5,-0.03 | 0,0,0 | 0.128,0.0262,0.0187 |
+| RaisedDigitSegment[3] | Cube / old-clock-blue-rim | 0.0825,-0.68,-0.03 | 0,0,0 | 0.0262,0.105,0.0187 |
+| RaisedDigitSegment[4] | Cube / old-clock-blue-rim | 0,-0.74,-0.03 | 0,0,0 | 0.128,0.0262,0.0187 |
+| RaisedDigitSegment[5] | Cube / old-clock-blue-rim | -0.0825,-0.56,-0.03 | 0,0,0 | 0.0262,0.105,0.0187 |
+| RaisedDigitSegment[6] | Cube / old-clock-blue-rim | 0,-0.62,-0.03 | 0,0,0 | 0.128,0.0262,0.0187 |
+
+## ToyRoomCombinationKeypad[24]
+
+Construction records for ToyRoomCombinationKeypad[24]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
@@ -1687,185 +1901,89 @@ Construction records for ToyRoomCombinationKeypad[21]
 | RaisedDigitSegment[60] | Cube / combination-keypad-digit | 0.38,0.03,0.184 | 0,0,0 | 0.0714,0.0147,0.0105 |
 | KeypadEnterButton[61] | Cylinder / combination-keypad-metal | 0.39,-0.48,0.15 | 90,0,0 | 0.15,0.055,0.15 |
 
-## ToyRescueBarrier[22]
+## DoorDebris0[25]
 
-Construction records for ToyRescueBarrier[22]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| ToyRescueBarrier | Joint | 0,0,0 | 0,0,0 | 1,1,1 |
-| IronBar[0] | Cylinder / rescue-iron | 4.4,1.4,0.2 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[1] | Cylinder / rescue-iron | 4.4,1.4,1 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[2] | Cylinder / rescue-iron | 4.4,1.4,1.8 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[3] | Cylinder / rescue-iron | 4.4,1.4,2.6 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[4] | Cylinder / rescue-iron | 4.4,1.4,3.4 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[5] | Cylinder / rescue-iron | 4.4,1.4,4.2 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[6] | Cylinder / rescue-iron | 4.4,1.4,5 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[7] | Cylinder / rescue-iron | 4.4,1.4,5.8 | 0,0,0 | 0.1,2.8,0.1 |
-| IronBar[8] | Cylinder / rescue-iron | 4.4,1.4,6.6 | 0,0,0 | 0.1,2.8,0.1 |
-| GateRail[9] | Cube / rescue-iron | 4.4,1.4,3.4 | 0,0,0 | 0.1,0.12,6.8 |
-
-## RescueSwitch1[23]
-
-Construction records for RescueSwitch1[23]
+Construction records for DoorDebris0[25]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| RescueSwitch1 | Joint | 7.1,0.75,2 | 0,0,0 | 1,1,1 |
-| SwitchBackplate[0] | Cube / rescue-switch-case | 0,0,0 | 0,0,0 | 0.5,0.6,0.16 |
-| SwitchLever[1] | Cylinder / rescue-switch-red | 0,0.04,0.15 | 0,0,0 | 0.07,0.33,0.07 |
+| DoorDebris0 | Cube / broken-door-wood | 11.2,-3.6,9.3 | 0,0,0 | 0.5,1.2,0.07 |
 
-## RescueSwitch2[24]
+## DoorDebris1[26]
 
-Construction records for RescueSwitch2[24]
+Construction records for DoorDebris1[26]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| RescueSwitch2 | Joint | 7.1,0.75,5.8 | 0,0,0 | 1,1,1 |
-| SwitchBackplate[0] | Cube / rescue-switch-case | 0,0,0 | 0,0,0 | 0.5,0.6,0.16 |
-| SwitchLever[1] | Cylinder / rescue-switch-red | 0,0.04,0.15 | 0,0,0 | 0.07,0.33,0.07 |
+| DoorDebris1 | Cube / broken-door-wood | 12,-3.6,9.3 | 0,0,0 | 0.5,1.2,0.07 |
 
-## RescueSwitch3[25]
+## DoorDebris2[27]
 
-Construction records for RescueSwitch3[25]
+Construction records for DoorDebris2[27]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| RescueSwitch3 | Joint | 2.5,3.25,4.5 | 0,0,0 | 1,1,1 |
-| SwitchBackplate[0] | Cube / rescue-switch-case | 0,0,0 | 0,0,0 | 0.5,0.6,0.16 |
-| SwitchLever[1] | Cylinder / rescue-switch-red | 0,0.04,0.15 | 0,0,0 | 0.07,0.33,0.07 |
+| DoorDebris2 | Cube / broken-door-wood | 12.8,-3.6,9.3 | 0,0,0 | 0.5,1.2,0.07 |
 
-## HighSwitchPlatform[26]
+## DoorDebris3[28]
 
-Construction records for HighSwitchPlatform[26]
+Construction records for DoorDebris3[28]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| HighSwitchPlatform | Cube / rescue-switch-case | 2.5,0.65,4.5 | 0,0,0 | 2,1.3,1.6 |
+| DoorDebris3 | Cube / broken-door-wood | 11.2,-1.9,9.3 | 0,0,0 | 0.5,1.2,0.07 |
 
-## BuzzRoomPartitionLeft[27]
+## DoorDebris4[29]
 
-Construction records for BuzzRoomPartitionLeft[27]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| BuzzRoomPartitionLeft | Cube / buzz-room-wall | -2.7,1.6,-4.2 | 0,0,0 | 1.4,3.2,0.18 |
-
-## BuzzRoomPartitionRight[28]
-
-Construction records for BuzzRoomPartitionRight[28]
+Construction records for DoorDebris4[29]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| BuzzRoomPartitionRight | Cube / buzz-room-wall | 2.7,1.6,-4.2 | 0,0,0 | 1.4,3.2,0.18 |
+| DoorDebris4 | Cube / broken-door-wood | 12,-1.9,9.3 | 0,0,0 | 0.5,1.2,0.07 |
 
-## BuzzEnergyBarrier[29]
+## DoorDebris5[30]
 
-Construction records for BuzzEnergyBarrier[29]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| BuzzEnergyBarrier | Cube / buzz-energy-barrier | 0,1.55,-4.2 | 0,0,0 | 4,3.1,0.06 |
-
-## BuzzReleaseSwitch[30]
-
-Construction records for BuzzReleaseSwitch[30]
+Construction records for DoorDebris5[30]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| BuzzReleaseSwitch | Cube / rescue-switch-red | 2.8,0.8,-3 | 0,0,0 | 0.45,0.5,0.2 |
+| DoorDebris5 | Cube / broken-door-wood | 12.8,-1.9,9.3 | 0,0,0 | 0.5,1.2,0.07 |
 
-## DoorDebris0[31]
+## ContactShadow[31]
 
-Construction records for DoorDebris0[31]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| DoorDebris0 | Cube / broken-door-wood | 11.4,-3.7,9.3 | 0,0,0 | 0.38,1.1,0.08 |
-
-## DoorDebris1[32]
-
-Construction records for DoorDebris1[32]
+Construction records for ContactShadow[31]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| DoorDebris1 | Cube / broken-door-wood | 11.9,-3.7,9.3 | 0,0,0 | 0.38,1.1,0.08 |
+| ContactShadow | Sphere / contact-shadow | -1.6,0.012,3.4 | 0,0,0 | 1.04,0.012,1.56 |
 
-## DoorDebris2[33]
+## ContactShadow[32]
 
-Construction records for DoorDebris2[33]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| DoorDebris2 | Cube / broken-door-wood | 12.4,-3.7,9.3 | 0,0,0 | 0.38,1.1,0.08 |
-
-## DoorDebris3[34]
-
-Construction records for DoorDebris3[34]
+Construction records for ContactShadow[32]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| DoorDebris3 | Cube / broken-door-wood | 11.4,-2.4,9.3 | 0,0,0 | 0.38,1.1,0.08 |
+| ContactShadow | Sphere / contact-shadow | 0.7,0.012,3.7 | 0,0,0 | 1.04,0.012,1.56 |
 
-## DoorDebris4[35]
+## ContactShadow[33]
 
-Construction records for DoorDebris4[35]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| DoorDebris4 | Cube / broken-door-wood | 11.9,-2.4,9.3 | 0,0,0 | 0.38,1.1,0.08 |
-
-## DoorDebris5[36]
-
-Construction records for DoorDebris5[36]
+Construction records for ContactShadow[33]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| DoorDebris5 | Cube / broken-door-wood | 12.4,-2.4,9.3 | 0,0,0 | 0.38,1.1,0.08 |
+| ContactShadow | Sphere / contact-shadow | 3.4,0.012,3.1 | 0,0,0 | 2.08,0.012,2.08 |
 
-## EntranceRescueNote[37]
+## ContactShadow[34]
 
-Construction records for EntranceRescueNote[37]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| EntranceRescueNote | Cube / rescue-note-paper | 11,-3.3,9.38 | 0,0,0 | 0.65,0.45,0.025 |
-
-## ContactShadow[38]
-
-Construction records for ContactShadow[38]
+Construction records for ContactShadow[34]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
-| ContactShadow | Sphere / contact-shadow | -3,0.012,0.5 | 0,0,0 | 1.04,0.012,1.56 |
+| ContactShadow | Sphere / contact-shadow | -3.4,0.012,0.4 | 0,0,0 | 1.04,0.012,1.56 |
 
-## ContactShadow[39]
+## ContactShadow[35]
 
-Construction records for ContactShadow[39]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| ContactShadow | Sphere / contact-shadow | -0.8,0.012,2 | 0,0,0 | 1.04,0.012,1.56 |
-
-## ContactShadow[40]
-
-Construction records for ContactShadow[40]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| ContactShadow | Sphere / contact-shadow | 2.2,0.012,0.3 | 0,0,0 | 1.35,0.012,3.77 |
-
-## ContactShadow[41]
-
-Construction records for ContactShadow[41]
-
-| Relative node path | Shape / material | Position | Rotation° | Scale |
-| --- | --- | --- | --- | --- |
-| ContactShadow | Sphere / contact-shadow | 0,0.012,-6.6 | 0,0,0 | 1.04,0.012,1.56 |
-
-## ContactShadow[42]
-
-Construction records for ContactShadow[42]
+Construction records for ContactShadow[35]
 
 | Relative node path | Shape / material | Position | Rotation° | Scale |
 | --- | --- | --- | --- | --- |
@@ -1930,14 +2048,43 @@ Material coefficients
 | brass | 0.85,0.65,0.25 | 1/1/0.8 | 64 | 1/0 | -1 |
 | broken-door-wood | 0.48,0.2,0.12 | 1/1/0.25 | 24 | 1/0 | 0 |
 | bulb | 0,0,0 | 1/1/0 | 24 | 1/0 | -1 |
-| buzz-energy-barrier | 0.15,0.7,0.95 | 1/1/0.6 | 60 | 0.45/0 | -1 |
-| buzz-room-wall | 0.35,0.39,0.43 | 1/1/0.05 | 12 | 1/0 | -1 |
+| buzz-bed-wood | 0.8,0.5,0.3 | 1/1/0.3 | 32 | 1/0 | 0 |
+| buzz-book-spines | 1,1,1 | 1/1/0.08 | 16 | 1/0 | 13 |
+| buzz-curtain | 0.55,0.65,0.95 | 1/1/0 | 8 | 1/0 | 11 |
+| buzz-door-casing | 0.93,0.9,0.82 | 1/1/0.25 | 24 | 1/0 | -1 |
+| buzz-globe | 0.25,0.5,0.85 | 1/1/0.6 | 64 | 1/0 | -1 |
+| buzz-lamp-bulb | 0,0,0 | 1/1/0 | 24 | 1/0 | -1 |
+| buzz-lamp-shade | 0.95,0.82,0.55 | 1/1/0.1 | 8 | 1/0 | -1 |
+| buzz-linen | 0.92,0.9,0.84 | 1/1/0.05 | 8 | 1/0 | -1 |
+| buzz-room-floor | 0.95,0.78,0.62 | 1/1/0.3 | 40 | 1/0.12 | 0 |
+| buzz-room-poster | 1,1,1 | 1/1/0.2 | 32 | 1/0 | 5 |
+| buzz-room-trim | 0.93,0.9,0.82 | 1/1/0.25 | 24 | 1/0 | -1 |
+| buzz-star-box | 0.3,0.45,0.85 | 1/1/0.2 | 24 | 1/0 | 4 |
+| buzz-star-box-red | 0.85,0.3,0.25 | 1/1/0.2 | 24 | 1/0 | 4 |
+| buzz-star-quilt | 1,1,1 | 1/1/0.02 | 8 | 1/0 | 24 |
+| buzz-star-rug | 0.8,0.85,1.05 | 1/1/0 | 4 | 1/0 | 23 |
+| buzz-toy-red | 0.85,0.15,0.12 | 1/1/0.5 | 48 | 1/0 | -1 |
+| buzz-toy-white | 0.92,0.92,0.9 | 1/1/0.5 | 48 | 1/0 | -1 |
+| buzz-wall-BackWall | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 23 |
+| buzz-wall-DoorWallBack | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 23 |
+| buzz-wall-DoorWallFront | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 23 |
+| buzz-wall-DoorWallLintel | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 23 |
+| buzz-wall-FrontWall | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 23 |
+| buzz-wall-WindowWall | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 23 |
+| buzz-window-pane | 1,1,1 | 1/1/0.9 | 96 | 1/0.2 | 19 |
 | car-glass | 0.25,0.45,0.7 | 1/1/1 | 128 | 1/0.3 | -1 |
 | car-headlight | 1,1,0.85 | 1/1/0.5 | 32 | 1/0 | -1 |
 | car-paint | 0.85,0.1,0.1 | 1/1/0.9 | 96 | 1/0.15 | -1 |
 | car-trim | 0.12,0.12,0.14 | 1/1/0.4 | 32 | 1/0 | -1 |
 | ceiling | 0.85,0.83,0.78 | 1/1/0 | 24 | 1/0 | -1 |
+| chest-button-ring | 0.62,0.62,0.64 | 1/1/0.9 | 96 | 1/0 | -1 |
+| chest-iron | 0.27,0.22,0.16 | 1/1/0.55 | 48 | 1/0.05 | -1 |
+| chest-lining | 0.3,0.14,0.08 | 1/1/0.05 | 8 | 1/0 | 0 |
+| chest-painted-front | 1,1,1 | 1/1/0.18 | 18 | 1/0 | 22 |
+| chest-red-button | 0.9,0.1,0.06 | 1/1/0.8 | 96 | 1/0 | -1 |
+| chest-wood | 0.66,0.27,0.16 | 1/1/0.2 | 24 | 1/0 | 0 |
 | chimney-cap | 0.25,0.24,0.24 | 1/1/0.1 | 24 | 1/0 | -1 |
+| clock-clue-plate | 0.72,0.56,0.24 | 1/1/0.6 | 48 | 1/0 | -1 |
 | clock-ink | 0.05,0.06,0.09 | 1/1/0 | 24 | 1/0 | -1 |
 | clue-block-color-0 | 0.78,0.12,0.12 | 1/1/0.22 | 22 | 1/0 | 4 |
 | clue-block-color-1 | 0.92,0.67,0.14 | 1/1/0.22 | 22 | 1/0 | 4 |
@@ -1963,11 +2110,13 @@ Material coefficients
 | floor | 1,1,1 | 1/1/0.35 | 48 | 1/0.18 | 0 |
 | flower-bed | 1,1,1 | 1/1/0.05 | 8 | 1/0 | -1 |
 | flower-box | 0.92,0.92,0.9 | 1/1/0.2 | 24 | 1/0 | -1 |
+| football | 1,1,1 | 1/1/0.4 | 48 | 1/0 | 26 |
 | front-door | 0.7,0.5,0.38 | 1/1/0.25 | 24 | 1/0 | 0 |
 | garage-door | 0.55,0.58,0.66 | 1/1/0.3 | 24 | 1/0 | 15 |
 | garage-shingles | 0.8,0.4,0.28 | 1/1/0.12 | 12 | 1/0 | 16 |
 | ghost | 0.9,0.95,1 | 1/1/0.2 | 16 | 0/0 | -1 |
 | ghost-eyes | 0.02,0.02,0.05 | 1/1/0.5 | 32 | 1/0 | -1 |
+| gold-star-decal | 1,1,1 | 1/1/0.6 | 64 | 1/0 | 25 |
 | ground-floor-wall | 0.86,0.8,0.68 | 1/1/0.05 | 8 | 1/0 | -1 |
 | ground-floor-wood | 0.92,0.82,0.7 | 1/1/0.3 | 32 | 1/0 | 0 |
 | hair-bow | 1,0.85,0.2 | 1/1/0.25 | 24 | 1/0 | -1 |
@@ -1986,6 +2135,7 @@ Material coefficients
 | house-window-glass | 0.22,0.32,0.45 | 1/1/0.9 | 96 | 1/0 | -1 |
 | house-window-pane | 1,1,1 | 1/1/0.9 | 96 | 1/0.2 | -1 |
 | hub | 0.75,0.75,0.8 | 1/1/0.9 | 96 | 1/0 | -1 |
+| keyhole | 0.03,0.03,0.03 | 1/1/0 | 24 | 1/0 | -1 |
 | lamp-metal | 0.15,0.45,0.35 | 1/1/0.7 | 64 | 1/0 | -1 |
 | laser-beam | 0,0,0 | 1/1/0 | 24 | 0.85/0 | -1 |
 | lawn | 0.38,0.62,0.26 | 1/1/0.02 | 4 | 1/0 | 18 |
@@ -2013,9 +2163,6 @@ Material coefficients
 | poster | 1,1,1 | 1/1/0.2 | 32 | 1/0 | 5 |
 | quilt | 1,0.62,0.3 | 1/1/0 | 16 | 1/0 | 11 |
 | rescue-iron | 0.1,0.13,0.16 | 1/1/0.65 | 64 | 1/0.1 | -1 |
-| rescue-note-paper | 0.88,0.82,0.61 | 1/1/0.05 | 10 | 1/0 | -1 |
-| rescue-switch-case | 0.28,0.22,0.14 | 1/1/0.2 | 32 | 1/0 | -1 |
-| rescue-switch-red | 0.85,0.1,0.05 | 1/1/0.4 | 40 | 1/0 | -1 |
 | roof-shingles | 0.86,0.42,0.28 | 1/1/0.12 | 12 | 1/0 | 16 |
 | room-trim | 0.76,0.73,0.65 | 1/1/0.2 | 24 | 1/0 | -1 |
 | rug | 1,1,1 | 1/1/0 | 16 | 1/0 | 2 |
@@ -2040,6 +2187,7 @@ Material coefficients
 | stair-wood | 0.8,0.62,0.46 | 1/1/0.3 | 32 | 1/0 | 0 |
 | street | 0.3,0.3,0.32 | 1/1/0.05 | 24 | 1/0 | -1 |
 | sun | 0,0,0 | 1/1/0 | 24 | 1/0 | -1 |
+| teddy-fur | 0.55,0.36,0.2 | 1/1/0.05 | 8 | 1/0 | 8 |
 | toy-story-clock-face | 1,1,1 | 1/0.9/0.1 | 20 | 1/0 | 21 |
 | tree-bark | 0.36,0.25,0.16 | 1/1/0.05 | 24 | 1/0 | -1 |
 | tree-leaves | 0.24,0.48,0.2 | 1/1/0.05 | 24 | 1/0 | -1 |
@@ -2051,4 +2199,8 @@ Material coefficients
 | wall-back-top | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 1 |
 | wall-front | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 1 |
 | wall-side | 1,1,1 | 1/1/0.05 | 8 | 1/0 | 1 |
+| wardrobe-buzz-glow | 0,0,0 | 1/1/0 | 24 | 0/0 | -1 |
+| wardrobe-inside | 0.36,0.22,0.13 | 1/1/0.05 | 8 | 1/0 | 0 |
+| wardrobe-panel | 0.74,0.45,0.26 | 1/1/0.3 | 36 | 1/0 | 0 |
+| wardrobe-wood | 0.86,0.55,0.33 | 1/1/0.3 | 36 | 1/0 | 0 |
 | window-frame | 0.92,0.9,0.85 | 1/1/0.3 | 32 | 1/0 | -1 |

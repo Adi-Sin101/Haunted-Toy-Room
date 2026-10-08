@@ -1,25 +1,30 @@
-# Haunted Toy Room: escape progression
+# Haunted Toy Room: the story
 
-`StoryDirector` owns one six-state progression machine. The night arrival ends at the upper hallway;
-Penny then solves the combination, frees the toys, releases Buzz and leads the cast outside.
+The game has two layers.
 
-| State | Guard |
-| --- | --- |
-| PROLOGUE | Arrival completes or Y skips |
-| PUZZLE | All three clues inspected and 257 submitted |
-| TOY_RESCUE | Two Penny switches; Jessie rides, dismounts on the platform and activates the high switch |
-| BUZZ_RESCUE | Penny activates the rear release |
-| FINAL_ESCAPE | Entrance breaks from actual laser hits and all five actors are outside |
-| WIN | Idle cast, wide outdoor night camera and an inspectable scene |
+1. **Player layer.** The player controls one character at a time: Penny, Woody, Jessie, Bullseye,
+   Buzz or the RC car (click it, or keys 1-5; Ctrl+0 for Penny; 0 releases).
+2. **Story layer.** `StoryDirector` moves every character the player is not controlling. Freed toys
+   accompany Penny; Jessie and Bullseye perform the wardrobe rescue; Buzz flies into position at the
+   locked door.
 
-Advance accepts each event only from its corresponding state. The keypad owns its own digit/clue
-state; the director owns progression. Door visibility and solid flags follow the same transitions.
-The front-door hit timer cannot be substituted by a timeout or a synthetic completion event.
+`StoryDirector` owns one eight-state machine. Each state accepts only its own transition, and every
+transition needs its real condition (no timeouts stand in for player actions).
 
-Select a character for live input while the other escape routes continue. Zero releases it; N
-switches all routes to manual control. Releasing control rejoins the current floor without
-teleporting. A mounted pair can be intentionally controlled together. The final guard always
-checks actual positions, including any owned character. Shift+N restores the complete setup.
+| State | What happens | Advances when |
+| --- | --- | --- |
+| PROLOGUE | Night outside. Penny explores the garden; the front door stands open | Penny is inside the corridor: the door closes and locks |
+| PUZZLE | Upstairs hallway: train 2, clock 5, blocks 7 | All three clues inspected and 257 submitted |
+| TOY_CHEST | Penny presses the red wind-up button; Woody, Jessie and Bullseye climb out | All three have landed ("The toys are alive!") |
+| BUZZ_ROOM | Everyone goes downstairs together | Enter at the ordinary door on the corridor's left |
+| WARDROBE | The knob is too high: Jessie rides Bullseye, he jumps, she opens it | Buzz has flown out and landed |
+| FINAL_ESCAPE | Penny tries the main door; Buzz aims; the player presses L | Real laser hits break the door and Penny steps outside |
+| MORNING | Everyone leaves; night turns into morning; the camera pulls back | Sunrise (16 s) finished and the pull-back shown |
+| FREE_EXPLORE | The rescued toys stay outside; every control remains | (open ended; Shift+N replays) |
 
-See [the illustrated object, equation and implementation explanation](20-escape-gameplay.md)
-for switch distances, stair support, ray impact, debris, fog, ownership, source functions and tests.
+The toys cannot be selected while they are still inside the chest or the wardrobe. Manual mode
+(`--manual`, or N) is a sandbox: every toy stands in the Toy Room, every door is open and the story
+layer is paused.
+
+See [the illustrated object, equation and implementation explanation](20-escape-gameplay.md) for the
+chest, the bedroom and wardrobe, the follower graph, the jump, the laser, the morning and the tests.

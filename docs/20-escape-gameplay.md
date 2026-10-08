@@ -1,183 +1,177 @@
-# 20 - Connected escape: objects, control and rendering
+# 20 - The eight-stage story: objects, control and rendering
 
-The escape extends the existing scene and renderer. `StoryDirector` owns progression,
-`HallwayPuzzle` owns the combination, `PennyArrival` owns the night prologue, and
-`PhysicsWorld` supplies movement and laser contacts. Manual mode retains all graphics controls.
+The story extends the existing scene and renderers. `StoryDirector` owns progression and the story
+layer, `StoryProps` builds the chest, Buzz's bedroom and the wardrobe, `HallwayPuzzle` owns the
+combination, `PennyArrival` owns the opening crane shot, and `PhysicsWorld` supplies movement, floor
+support and laser contacts. Manual mode keeps every graphics control.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Prologue
-    Prologue --> Puzzle: Reach upper hallway / Y
-    Puzzle --> ToyRescue: Inspect 3 clues and submit 257
-    ToyRescue --> BuzzRescue: Two Penny switches and mounted Jessie reach
-    BuzzRescue --> FinalEscape: Penny activates rear release
-    FinalEscape --> Win: Real door impact and all five outside
-    Win --> Prologue: Shift+N
+    [*] --> Prologue: opening crane shot (Y skips)
+    Prologue --> Puzzle: Penny walks in, door locks
+    Puzzle --> ToyChest: 3 clues and 257
+    ToyChest --> BuzzRoom: chest opened, toys alive
+    BuzzRoom --> Wardrobe: Enter at the bedroom door
+    Wardrobe --> FinalEscape: Jessie + Bullseye jump, Buzz flies out
+    FinalEscape --> Morning: real laser hits break the door, Penny outside
+    Morning --> FreeExplore: sunrise and camera pull-back
+    FreeExplore --> Prologue: Shift+N
 ```
 
-## Construction and visual evidence
+## 1. Night outside the house
+
+`PennyArrival` is now a seven-second establishing shot: the camera cranes from high above the street
+to a chase position behind Penny, who sits on the pavement looking at the house
+(`camera = mix(street, behindPenny, smoothstep(t/6.5))`). Then the player controls her.
+
+* The physics bounds include the lawn, path, pavement and street (x -22..30, z up to 34).
+* The front walls, fence panels, gate posts, porch column bases, railings, shrubs and tree trunks are
+  solid while the exterior is drawn; the fence gate is the way through.
+* `FloorHeight` gives the porch deck (`Ground+0.45`) and its three steps (0.15 lower each).
+* The main door (now 2.2 wide and 3.6 high, so a mounted Jessie fits) stands open at 80 degrees.
+  Once Penny's feet are in the corridor (y < -0.3, z < 8) it eases shut, the padlock appears on its
+  inside face and exterior access closes.
+* Fog density is `0.011 (1 - daylight)` whenever the garden is drawn.
+
+## 2. Upstairs hallway: the 257 puzzle
 
 ![Hallway mechanisms](showcase/diagrams/puzzle-objects.png)
 
 | Object | Mesh construction | Surface and purpose |
 | --- | --- | --- |
-| Toy train | Cube chassis/cab; cylinder boiler, chimney and wheels; two separate cars | Shared wood/brass/iron materials; raised seven-segment 2 |
-| Clock clue | Circular cylinder case and thin cylinder face | Provided `clock.bmp`; cap UVs and negative v repeat correct orientation; raised 5 |
-| Block clue | Seven individually tinted cubes arranged as 7 | Existing star/border map with different material tints |
-| Combination keypad | Cube housing, plate, buttons and seven-segment strips; cylinder Enter button | Real raised geometry; HUD shows the current three digits |
-| Rescue gate | Nine cylinders and a thin cube rail under one joint | Reflective dark iron; low-switch completion raises the joint; third switch hides it |
-| Three switches | Cube case and cylinder lever | Lever roll changes from 20 to -45 degrees; low switches belong to Penny |
-| High platform | Solid cube scaled to `(2.0,1.3,1.6)` | Existing mounting transition lands Jessie on its top, y=1.3 |
-| Buzz holding area | Two cube partitions and a thin cyan cube barrier | Opacity 0.45, emission `(0.03,0.20,0.35)`; reuses existing rear floor |
-| Buzz release | Red cube at `(2.8,0.8,-3)` | Penny's nearby Enter action hides the barrier and removes its solid flag |
-| Entrance lock | Cube body, two cylinder uprights and a rotated cylinder crown | Reflective iron, attached to the actual front-door hinge |
-| Door fragments | Six preallocated cubes | Existing wood map; independent linear/angular velocities after impact |
-| Entrance note | Thin paper-coloured cube | Arrival objective and captions explain that the toys need help |
+| Toy train | Cube chassis/cab; cylinder boiler, chimney and wheels; two cars | Wood/brass/iron materials; raised seven-segment 2 |
+| Clock clue | 0.8-unit circular cylinder case at eye height and a thin cylinder face | Provided `clock.bmp` on the cap UVs; a brass plate below with a raised 5 |
+| Block clue | Seven tinted cubes arranged as 7 | Star/border map with different material tints |
+| Combination keypad | Cube housing, plate, buttons, seven-segment strips; cylinder Enter button | Raised geometry; the HUD shows the three digits |
 
-All these shapes use the original five primitive buffers and the original materials interface.
-A cube contains 24 vertices and 36 indices, giving 12 triangles; a full cylinder contains
-134 vertices and 384 indices, giving 128 triangles. Cube faces split four-corner polygons
-into `(a,b,c)` and `(c,d,a)`. Cylinder caps use separate normals and triangle fans. Seven-segment
-digits add scaled cube instances rather than a new font renderer. See [primitive derivations](03-primitives.md).
+Enter at a clue records it once. At the keypad digits 0-9 enter, Backspace deletes, Esc cancels and
+Enter submits. Even the right digits cannot bypass a missing clue; a wrong code shows
+**Incorrect Code** and clears only the digits. The correct code swings the Toy Room's double doors open.
 
-The [845-node export](showcase/inventory/objects.csv) records every joint and shape, including
-hidden debris and contact shadows. Each row supplies vertex/triangle counts, primitive,
-material, local/world coordinates, UV repeat, visibility and collision state. The comprehensive
-notes reproduce all individual construction rows and the complete material inventory.
+## 3. The toy chest
 
-![Rescue and entrance mechanisms](showcase/diagrams/escape-objects.png)
+![Chest, bedroom and wardrobe](showcase/diagrams/story-objects.png)
 
-## Input guards and the complete sequence
+| Part | Construction |
+| --- | --- |
+| Body | Hollow: floor board and four solid wall cubes (3.4 x 1.05 x 1.9), so the toys can rise out of it |
+| Painted front | A thin cube whose +Z face carries the procedural `chest-paint` texture: worn red planks, stars, clouds and a rocket |
+| Ironwork | Corner brackets, rim and base bands, brass rivets, lock plate, keyhole, side handles |
+| Lid | Hinge joint on the back top edge. A deep frame box plus a cylinder dome: the dome's lower half lies inside the frame, so the lid looks curved open or closed. Four iron straps and a brass hasp ride with it |
+| Red wind-up button | Steel ring, red cylinder and flattened sphere with pulsing emission; a red story light follows it |
+| Wind-up key | Brass stem and wings on the right end; spins while the lid opens |
 
-1. Inspect the train, clock and seven blocks with Enter. Each clue is recorded once.
-2. Approach the keypad and press Enter. Digits 0-9 enter, Backspace deletes, Esc cancels.
-   Submit `257` with Enter. Even the correct digits cannot bypass missing clues.
-   An incorrect submission displays **Incorrect Code**, clears only the digits and permits retry.
-3. Penny activates the low switches at `(7.1,0.75,2)` and `(7.1,0.75,5.8)` within 1.7 horizontal units.
-   The gate raises. Jessie mounts Bullseye within 2.2 units using R.
-4. Ride within 2 units of the high switch at `(2.5,3.25,4.5)`. R dismounts Jessie onto the
-   platform. Enter activates it only when she is unmounted, above y=1, within 1.5 horizontal
-   units and her transition has finished. The director records the actual mounted approach.
-5. Ctrl+0 selects Penny. At the rear red switch, Enter within 1.8 horizontal units releases Buzz.
-6. The ghost follows Penny. Return through the hallway, down the stairs, around the lower
-   landing and along the ground-floor corridor. Enter within 2.6 horizontal units of the
-   entrance, below the upper slab, starts Buzz's flight.
-7. Buzz rises to `Ground+2.6`, approaches `(12,Ground+2.6,7)` and aims at the real door.
-   The laser path must remain clear. The entrance breaks only after confirmed hits.
-8. Walk Penny outside. Woody, Jessie, Bullseye and Buzz follow staggered routes through the
-   same stairs and entrance. WIN requires the broken door and all five actual positions
-   with `z>13` and `y<Slab=-0.3`. A virtual route cursor cannot fake this condition.
+Enter within 3.2 units presses the button: it scales down, the key spins and the lid swings to -105
+degrees (`-105 smoothstep(t)`). Woody, Jessie and Bullseye wait hidden inside (not drawn, not physical).
+Each in turn climbs to the rim and hops down in front of the chest using the eased root transition
+(smoothstep position plus a `0.4 sin(pi t)` hop arc). Woody and Jessie cheer (both arms waving
+overhead) and Bullseye jumps. The objective reads **The toys are alive!**
 
-The terminal state keeps the application open. A wide camera shows the house and idle cast;
-camera input permits inspection. Shift+N restores doors, switches, barriers, debris and lamp state.
+## 4. Downstairs to Buzz's room
+
+Buzz's bedroom lies under the Toy Room beside the ground-floor corridor (x 1.5..10.5, z -9.05..-1.5).
+It is deliberately ordinary: star wallpaper, a wood floor, a bed with ball-topped posts and a patchwork
+star quilt, a bookcase (books, globe, toy rocket, teddy bear), a nightstand with a lamp, the
+"To infinity" poster, a window with plaid curtains, a star rug, a football and storage boxes.
+
+The corridor's left wall is a solid divider with a 2.2-wide doorway at z -6.9..-4.7. Its door is an
+ordinary hinged leaf with panels and a knob; Enter beside it opens it into the room. The ground floor's
+physics bounds are a union of boxes: corridor, stair landing, bedroom and doorway. A point outside all
+of them moves to the nearest box, and the divider and the door leaf decide where a character can pass.
+
+The area light follows the camera: the upstairs hall night light, the corridor lamp, the nightstand lamp
+in the bedroom or the porch lantern outside. This keeps every lit space within the eight light slots.
+
+## 5. The cupboard rescue
+
+The wardrobe stands against the back wall: a hollow carcass on a plinth, an arched crown (a flattened
+cylinder whose lower half is hidden in the top board) with ball finials, and two doors hinged at their
+outer edges. Each door has an arched raised panel (a box plus a slightly thinner flattened cylinder, so
+the faces never z-fight), a gold star decal (alpha cut-out `star-decal` texture) and a star knob
+**2.65 units above the floor**. While Buzz is inside, a green glow leaks from the gap, a green story
+light pulses and the doors rattle every 4.5 seconds.
+
+* Penny's Enter at the wardrobe: "too high for Penny", and the rescue starts.
+* Story layer (Jessie and Bullseye not controlled): Jessie walks to Bullseye and mounts (the normal
+  re-parenting under the saddle), Bullseye walks to the spot beside the doors and turns to face +Z,
+  jumps, Jessie raises her right arm (reach pose) and the doors swing open; Bullseye steps aside.
+* Player: select Jessie (2), R to mount, ride beside the wardrobe, L (Bullseye's jump) or Enter.
+
+Bullseye's jump moves his **body joint**, not his root: `lift = 0.75 sin(pi t / 0.9)`, front legs fold
+(-55 degrees x arc), back legs push (+40). The saddle and a mounted Jessie are descendants of that joint
+and rise with it; the root stays on the floor for physical contact. The wardrobe opens when a mounted
+Bullseye is within 1.4 units of the spot and the lift exceeds 0.45.
+
+Buzz then lifts off inside the wardrobe and flies out on four waypoints (up, out over the rug, down) with
+wings open, before landing and cheering. Flying is now measured against the floor beneath him
+(`FloorHeight`), so his flight pose also works downstairs and on the stairs.
+
+## 6. Following Penny
+
+Freed toys accompany Penny. Each toy owns a fixed formation slot behind her
+(`Penny + back (1.7 + 1.3 floor(i/2)) +/- 0.9 side`), so taking one toy over never reshuffles the others.
+When a toy is in another zone it navigates a graph of thirteen doorway nodes: Toy Room door, upper hall,
+stair opening, stair top and foot, landing, corridor end, Buzz's door (both sides), the bedroom, the
+entrance, the porch and the garden path. Floyd-Warshall precomputes the first step of the shortest route
+between every pair of nodes. While followers are active, characters do not block each other; every wall,
+door, piece of furniture and block still does, so the group never jams in a doorway.
+
+Bullseye's collision footprint is a 1.6 x 1.6 square: its rotated bounds stay narrow enough to turn in
+the 3-unit corridor and pass the bedroom doorway.
+
+## 7. The locked main door and Buzz's laser
+
+Leading everyone to the entrance and pressing Enter (or standing at the door for one second) tries it: it
+shakes but is locked. The toys wait beside the corridor walls, clear of the line of fire. Buzz (when not
+controlled) flies to `(12, Ground+1.2, 4.4)` and aims at `(12, Ground+2.0, 9.2)`, high enough to pass over
+Penny. The objective then asks the player to press **L**.
+
+The visible beam is an emissive cylinder on Buzz's wrist; `FireLaser` intersects real primitive geometry
+and reports the nearest blocking node. `StoryDirector` accumulates time only while the laser is on and
+`LastLaserHit()==doorLeaf`; any miss resets it. More than 0.65 seconds of real door contact breaks the
+door. A manually flown and aimed Buzz breaks it the same way.
+
+The door and padlock are hidden, the leaf stops being solid and exterior access opens. Six board fragments
+receive outward impulses and spin; gravity (9.81), a 1/120 s step and at most six substeps per frame move
+them. They come to rest on the porch deck (their floor uses `FloorHeight`) and characters kick them aside
+instead of being blocked.
+
+## 8. Morning and free exploration
+
+When Penny steps outside, MORNING begins. The story drives the clock from 23:36 to 07:00 over sixteen
+seconds:
+
+\[
+h(t)=\big(h_0+(31-h_0)\,\mathrm{smoothstep}(t/16)\big)\bmod 24 .
+\]
+
+The same hour moves the sun up behind the house, blends the sky, ambient and directional light colours
+and scales the fog away. Buzz flies alongside the others. Once everyone is outside the camera pulls back
+to show the house and the street. Then FREE_EXPLORE gives the camera back: the toys gather on the lawn
+and stay outside, Buzz can fly (Q/E), Jessie can ride Bullseye (R) and every selection and rendering
+control still works.
 
 ## Stair support and floor selection
 
-Ground is y=-4.5 and the upper toy-room floor is y=0. The flight covers x=13.5 to 16.5 and
-z=-7 to 1. Eighteen rendered treads each rise 0.25 over a run of 8/18 units. For a foot position
-inside this flight:
+Ground is y=-4.5 and the upper floor is y=0. The flight covers x=13.5..16.5 and z=-7..1 with eighteen
+treads each rising 0.25 over 8/18 units:
 
 \[
 n(z)=\operatorname{clamp}\left(\left\lfloor18(z+7)/8\right\rfloor+1,1,18\right),\qquad
 y_{\mathrm{support}}=-4.5+0.25n(z).
 \]
 
-`FloorHeight` returns this height; grounded actor correction includes proxy offset and skin.
-Outside the flight, the lower landing, exterior and a foot below the upper slab select the
-ground floor. Movement uses both previous and requested height when choosing the lower
-corridor bounds, preventing overlap recovery from moving a character through the upper slab.
-A conservative rotated proxy that briefly exceeds the stair width is centred on the flight,
-so turning a long actor cannot pass reversed bounds to the clamp. Buzz's grounded flag is disabled while airborne, so the stair support does not flatten his flight.
-Stair-step bounds are inset from the wall to avoid coincident faces and flickering.
-
-## Actual laser impact and wood fragments
-
-The visible beam is an emissive cylinder attached to Buzz's wrist. The emitter's world position
-and direction launch `P(t)=o+t*d`. `FireLaser` intersects real primitive geometry, compares
-positive distances and reports the nearest blocking node. Actors and furniture can intercept it.
-The beam length uses this returned distance; a point source at its tip adds the red glow.
-
-`StoryDirector` accumulates time only while the laser is on and `LastLaserHit()==doorLeaf`.
-Any miss resets this time. More than 0.65 seconds of actual door contact triggers `BreakDoor`.
-This guard also accepts a manually aimed Buzz laser. Merely pressing Enter or waiting cannot
-destroy the door. The director does not toggle off a user-owned Buzz's laser.
-
-The door hinge and padlock become hidden, the leaf ceases to be solid, and exterior access opens.
-Six existing bodies receive impulses `(-4-i%3,1,4.5)` and angular velocity `(75,15,65)`.
-Gravity uses 9.81 units/s squared, a 1/120-second step and at most six substeps per frame.
-Fragment ground bounds extend into the garden so pieces can scatter clear of the exit.
-This is preconstructed breakage with box contacts, rather than runtime mesh fracture.
-
-## Independent control while simulation continues
-
-Number selection or picking assigns one character to input. `StoryDirector::Controls` excludes
-that actor, and any deliberately mounted passenger, from scripted pose/movement writes. A
-separate route cursor progresses without modifying the controlled actor. On release, the route
-chooses a waypoint on the actor's current floor and resumes from the actual position.
-
-Escape NPC movement does not use other actors as route obstacles. Staggered starts and
-separate final positions keep the cast arranged while ownership changes cannot alter another
-actor's route through contact. The owned actor retains scenery contacts. Camera and laser
-visibility still test actors. N switches the entire simulation to manual control; selecting one
-actor alone leaves progression and the other actors active. The final-position guard remains real.
-
-`check_showcase_live.py` compares two seconds of fixed-step positions against the same baseline
-for ownership of Woody, Jessie, Bullseye, Buzz and the car. Each owned pose responds to input;
-all other toy positions remain within 0.08 units of baseline. Real Windows key-callback checks
-also exercise movement, release, flight, laser, manual mode and mounted control.
-
-## Lighting, surface colour, transparency and fog
-
-The new objects use the same ambient/diffuse/specular calculation:
-
-\[
-C_{\rm local}=C_{\rm tint}\odot C_{\rm texture}
-\left(k_aI_a+\sum_i v_i a_i I_i k_d\max(N\cdot L_i,0)\right)
-+\sum_i v_i a_i I_i k_s\max(R_i\cdot V,0)^n+E.
-\]
-
-Directional moonlight, lamp point light, lamp spotlight and Buzz's laser tip use the existing
-light slots. Lamp/headlight directions inherit their joint transforms. The iron lock has mirror
-reflectivity 0.10; wood has an image pattern rather than displacement. Gouraud evaluates
-lighting at vertices; Phong evaluates it from renormalised interpolated normals per fragment.
-The fog pass applies to both paths after their surface lighting.
-
-The ray tracer uses exact object-space primitive equations and a world-space BVH, rather than
-triangle intersections. Default two continuations allow at most three colour-bearing hits;
-9 cycles zero to four continuations. Mirror colour uses reflectivity-weighted throughput.
-The cyan barrier uses opacity-weighted local colour followed by straight transmission;
-it does not bend rays. The finite final hit contributes local lighting. See
-[ray equations and numeric colour examples](12-ray-tracing.md).
-
-There are 22 mapped surfaces plus a white fallback in the shared 512-by-512-layer texture
-array. The clock adds one mapped layer, not an extra GLSL sampler. Raster preserves native
-source dimensions; the array resamples sources bilinearly. UV repeats, material tint, filtering
-and alpha coverage use the existing material fields. See [texture construction](10-textures.md).
-
-For the depth cue:
-
-\[
-T=\exp(-\rho d),\qquad C_{\rm fogged}=T C_{\rm rendered}+(1-T)C_{\rm fog}.
-\]
-
-Fog colour is `(0.055,0.065,0.095)`. Density is 0.008 during pursuit and 0.010 outdoors at
-night, otherwise zero. Raster d is eye-to-surface distance; tracing d is the primary-hit distance
-after accumulation. At d=20 and density 0.010, T is about 0.819, retaining 81.9% of surface
-RGB and adding 18.1% fog RGB. This is exponential depth fog, not volumetric light transport.
-The ghost uses opacity 0.40 during pursuit, moves toward Penny at 1.6 units/s and stops
-1.2 units away. Lamp flicker and moving highlights reuse the original environment animation.
-
-## Reproduction and scope
+## Reproduction and checks
 
 ```powershell
-.\tools\check-physics.ps1
+.\tools\check-physics.ps1                 # 67 checks, including the bedroom doorway and porch
 python tools/check_showcase_interaction.py
-python tools/check_showcase_live.py
+python tools/check_showcase_live.py      # driving one toy leaves the others unchanged
+python tools/check_escape_rendering.py   # whole story in Flat/Gouraud/Phong/Blinn, ray tracing and Debug
 .\bin\Release\HauntedToyRoom.exe --no-intro --story --gameplay-demo --no-raytrace
 ```
 
-The rehearsal uses normal waypoint movement, mounting, dismounting, switch input, keypad
-logic and collision. It does not teleport actors or bypass transition guards. `--rehearsal-stop`
-hands the player back control after a reproducible `--seek`. It is optional; ordinary launch is
-interactive. The cast, room, controls, shared geometry, shaders, textures and BVH remain the
-existing implementation. There is no separate renderer, general combat system or inventory.
+The rehearsal (`--gameplay-demo`) drives only Penny, with normal movement, Enter interactions, the keypad
+and the L action; the story layer moves everyone else. It never teleports actors or skips a transition
+guard and reaches free exploration in about 75 seconds. `--rehearsal-stop` hands control back after a
+reproducible `--seek`.

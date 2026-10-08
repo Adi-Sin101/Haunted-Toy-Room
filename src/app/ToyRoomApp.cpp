@@ -86,7 +86,7 @@ void ToyRoomApp::BuildScene()
 	auto woodyPtr = std::make_unique<Humanoid>(*scene, assets, WoodyStyle(), glm::vec3(-1.6f, 0.0f, 3.4f), 10.0f);
 	auto jessiePtr = std::make_unique<Humanoid>(*scene, assets, JessieStyle(), glm::vec3(0.7f, 0.0f, 3.7f), -5.0f);
 	auto bullseyePtr = std::make_unique<Bullseye>(*scene, assets, glm::vec3(3.4f, 0.0f, 3.1f), 60.0f);
-	auto buzzPtr = std::make_unique<Buzz>(*scene, assets, glm::vec3(-3.2f, 0.0f, 1.6f), 35.0f);
+	auto buzzPtr = std::make_unique<Buzz>(*scene, assets, glm::vec3(-3.4f, 0.0f, 0.4f), 35.0f);
 	auto carPtr = std::make_unique<RCCar>(*scene, assets, glm::vec3(5.5f, 0.0f, -1.8f), -90.0f);
 	woody = woodyPtr.get();
 	jessie = jessiePtr.get();

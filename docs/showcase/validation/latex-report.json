@@ -1,9 +1,9 @@
 {
   "report_pages": 39,
-  "figures": 32,
-  "tables": 12,
+  "figures": 33,
+  "tables": 11,
   "equation_groups": 29,
-  "scene_nodes": 845,
+  "scene_nodes": 991,
   "engine": "pdfLaTeX",
   "page_limit": 39,
   "content_scan": "passed",

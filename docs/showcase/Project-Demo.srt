@@ -1,64 +1,64 @@
 1
-00:00:00,000 --> 00:00:10,000
-The haunted house
-Penny enters at night through hinged doors and the connected staircase.
+00:00:00,000 --> 00:00:08,000
+Night outside the house
+Penny arrives at the abandoned house. The camera cranes down from the street.
 
 2
-00:00:10,000 --> 00:00:20,000
-A furnished world
-Five indexed primitive families form furniture and articulated toys.
+00:00:08,000 --> 00:00:18,000
+In through the open door
+Penny walks in; the main door closes and locks. She climbs the eighteen-step stair.
 
 3
-00:00:20,000 --> 00:00:30,000
-Inspect the three clues
-Train 2, clock 5, blocks 7. The code opens the real toy-room doors.
+00:00:18,000 --> 00:00:26,000
+Three clues: 257
+Train 2, clock 5, blocks 7. The keypad opens the real Toy Room doors.
 
 4
-00:00:30,000 --> 00:00:42,000
-Rescue through hierarchy
-Penny activates two switches. Jessie rides Bullseye and dismounts onto the high platform.
+00:00:26,000 --> 00:00:36,000
+The toy chest
+The red wind-up button opens the lid. Woody, Jessie and Bullseye climb out alive.
 
 5
-00:00:42,000 --> 00:00:52,000
-Buzz and the pursuit
-The release removes a translucent barrier. The ghost follows Penny to the stairs.
+00:00:36,000 --> 00:00:46,000
+Downstairs together
+The toys follow Penny through a graph of doorway nodes and down the stairs.
 
 6
-00:00:52,000 --> 00:01:02,000
-Live character takeover
-Woody follows your input while the others continue. Zero releases ownership; N enters full manual mode.
+00:00:46,000 --> 00:00:58,000
+Cupboard rescue
+Jessie mounts Bullseye, he jumps, she opens the wardrobe and Buzz flies out.
 
 7
-00:01:02,000 --> 00:01:10,000
-Directional, point and spot
-Moonlight is directional; the lamp adds a point source and soft spotlight.
+00:00:58,000 --> 00:01:10,000
+The locked main door
+Penny tries the door. Buzz flies into position; L fires a nearest-hit laser and the door breaks.
 
 8
-00:01:10,000 --> 00:01:16,000
+00:01:10,000 --> 00:01:22,000
+Morning escape
+Everyone leaves the house. The fog thins, the sun rises and the camera pulls back.
+
+9
+00:01:22,000 --> 00:01:30,000
+Free exploration
+The story stays open in daylight. Adiba Tahsin / 2107031 / CSE-4102.
+
+10
+00:01:30,000 --> 00:01:38,000
+Live character takeover
+Woody follows your input while the others keep accompanying Penny. Zero releases ownership.
+
+11
+00:01:38,000 --> 00:01:44,000
 Gouraud shading
 Lighting is evaluated at vertices and interpolated across triangles.
 
-9
-00:01:16,000 --> 00:01:22,000
+12
+00:01:44,000 --> 00:01:50,000
 Phong shading
 Interpolated normals are normalised before per-fragment illumination.
 
-10
-00:01:22,000 --> 00:01:30,000
-Texture coordinates
-UVs map wood, wallpaper, fabric and lunar craters onto shared geometry.
-
-11
-00:01:30,000 --> 00:01:40,000
+13
+00:01:50,000 --> 00:02:00,000
 Analytic ray tracing
 A BVH accelerates exact primitive hits, shadows, mirror paths and straight transparency.
-
-12
-00:01:40,000 --> 00:01:52,000
-The entrance breaks
-Buzz flies and aims. Only a nearest-hit laser impact releases six physical wood fragments.
-
-13
-00:01:52,000 --> 00:02:00,000
-The toys are safe
-Every character is physically outside. The cast idles in the garden. Adiba Tahsin / 2107031 / CSE-4102.

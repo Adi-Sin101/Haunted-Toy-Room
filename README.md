@@ -1,14 +1,16 @@
 # Haunted Toy Room
 
 A computer graphics lab project in C++ and OpenGL 3.3: **Toy Story: The Midnight Mission**.
-Penny arrives at night, enters the existing house and climbs to a locked toy-room door.
-Inspect the train, clock and blocks to solve the combination. Penny activates two low switches;
-Jessie rides Bullseye and reaches the high platform. Release Buzz, return downstairs while the ghost
-follows, and trigger Buzz's flight at the entrance. His nearest-hit laser breaks the door into physical
-wood fragments. The ending requires Penny and all four rescued toys outside.
+At night Penny the cat explores the garden of an abandoned house and walks in; the main door locks
+behind her. Upstairs, the train, clock and blocks give the code **257** for the Toy Room. Its old
+painted toy chest has a glowing red wind-up button: Woody, Jessie and Bullseye climb out alive. Everyone
+goes downstairs to an ordinary bedroom, where the wardrobe knob is too high, so Jessie rides Bullseye,
+he jumps, she opens it and Buzz flies out. At the locked main door Buzz flies into position and the
+player fires his laser (**L**): the door breaks into physical wood fragments. Everyone escapes, the night
+turns into morning, and the world stays open for free exploration.
 
-During progression you can take over one character while the others continue. Press **0** to release
-that character, **N** for full manual mode, and **Ctrl+0** to select Penny.
+Two layers: you control one character (Penny, or any freed toy: 1-5, click, **Ctrl+0** for Penny) and
+the story layer drives the others. Press **0** to release, **N** for full manual mode.
 Every toy is built from hand-written primitives (plane, cube, sphere, cylinder, cone). The project also
 implements its own transformations, scene hierarchy, Phong illumination, Flat/Gouraud/Phong/Blinn shading,
 procedural textures, a BMP loader and a real-time GPU ray tracer. The only libraries are GLFW, GLAD and
@@ -34,15 +36,16 @@ feature independently. **G** hides the button, menu and the rest of the interfac
 them. All rendering implementations remain available. With lighting on and shading off, basic light
 colour and distance attenuation remain, while normal-based shading, highlights and shadows are skipped.
 
-Use **Enter** near clues, the keypad, rescue switches and the sealed entrance. The keypad requires
-all three clues and code **257**. A wrong answer clears the digits. **N** switches manual/progression;
-**Shift+N** restarts; **P** pauses. The optional `--gameplay-demo` rehearsal uses the same movement,
-interaction and collision paths to demonstrate the whole escape.
+Use **Enter** near the clues, the keypad, the chest button, Buzz's door, the wardrobe and the main
+door; **L** fires Buzz's laser once he is in position. The keypad requires all three clues and code
+**257**. A wrong answer clears the digits. **N** switches manual/progression; **Shift+N** restarts;
+**P** pauses. The optional `--gameplay-demo` rehearsal uses the same movement, interaction and collision
+paths to demonstrate the whole story.
 The interface is one compact corner panel: **H** expands its guide; **G** hides all interface text.
-Press **0** to release the selected actor back to its remaining route. Camera inputs take over the cinematic view without interrupting the mission. Mounted Jessie and Bullseye detach when selected for independent control; remounting intentionally drives the connected pair.
+Press **0** to release the selected actor back to the story layer. Camera inputs take over the cinematic view without interrupting the mission. Mounted Jessie and Bullseye detach when selected for independent control; remounting intentionally drives the connected pair.
 Press **M** for continuous mouse-look, **Escape** to release the cursor, or hold right-click to turn.
 With no toy selected in Free camera mode, **W/A/S/D** moves around the room; **PgUp/PgDn** changes height.
-See [the completed escape state machine](docs/16-midnight-mission.md).
+See [the story state machine](docs/16-midnight-mission.md).
 
 The room now has solid furniture and toys, a camera constrained to the room, a textured cratered moon,
 more detailed characters, lamp shadows and an on-screen guide. Press **H** for the guide or **G** to hide
@@ -64,7 +67,7 @@ and knock over the wooden blocks. **B** rebuilds the tower. You can also click a
 | **N / Shift+N / P / Enter** | manual/progression, replay, pause, interact |
 | **[ ] / , .** | clock speed / scrub in manual mode |
 | **H / G** | expand corner guide / hide all text |
-| **Y** | skip Penny's arrival (Shift+N replays it with the story) |
+| **Y** | skip the opening shot (Shift+N replays the story) |
 
 Full key list: [docs/13-controls.md](docs/13-controls.md).
 
@@ -73,7 +76,7 @@ Full key list: [docs/13-controls.md](docs/13-controls.md).
 [docs/00-index.md](docs/00-index.md) lists every chapter: pipeline basics, the vertex and index tables of
 each primitive, transformation matrices, the camera, the scene graph and mounting, the characters,
 illumination, shading, textures, animation, ray tracing, the code architecture, performance, the house and
-Penny, the [escape objects and logic](docs/20-escape-gameplay.md), and a formula-by-formula reference of one rendered frame
+Penny, the [story objects and logic](docs/20-escape-gameplay.md), and a formula-by-formula reference of one rendered frame
 ([docs/19-rendering-mathematics.md](docs/19-rendering-mathematics.md)).
 
 ## Project layout

@@ -8,7 +8,7 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
     diagrams=out/'diagrams'
     groups=[
         ('mesh-comparison',['wireframe','normals'],2,'Unit primitive construction, triangulated Buzz and transformed normals. Indexed triangles approximate curved surfaces in raster rendering.'),
-        ('arrival-route',['garden','stairs'],2,'The garden approach and stair connection used by Penny during the arrival sequence.'),
+        ('arrival-route',['garden','stairs'],2,'Penny in the garden at night (player-controlled prologue) and on the eighteen-step stair flight.'),
         ('rider-hierarchy',['bullseye','mounted'],2,'Bullseye and the mounted rider: ellipsoid anatomy, saddle attachment and articulated legs.'),
         ('desk-bed',['desk','bed'],2,'Desk and chair construction beside the bed frame, mattress, blanket and pillows.'),
         ('bookcase-poster',['bookcase','poster'],2,'Bookcase geometry with textured book rows, and the independently mapped wall poster.'),
@@ -17,9 +17,9 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
         ('light-comparison',['directional','point','spot','ambient','diffuse','specular'],2,'Isolated directional, point and spot sources (top rows), followed by ambient, diffuse and specular terms. All views are captured from the application.'),
         ('shading-comparison',['flat','gouraud','phong','blinn'],2,'Matched Flat, Gouraud, Phong and Blinn-Phong views. The shading model changes while geometry, material and camera remain fixed.'),
         ('ray-comparison',['room-night','ray-zero','room-ray','house-ray'],2,'Raster room, zero-continuation primary view, two-continuation reflections and ray-traced exterior texture coverage.'),
-        ('interaction-ending',['live-control','room-day','story-end'],2,'Live character takeover, daytime lighting and the completed outdoor escape.'),
+        ('interaction-ending',['live-control','room-day','morning','story-end'],2,'Live character takeover, daytime lighting in the room, the morning pull-back over the house and free exploration outside.'),
     ]
-    groups.extend([('puzzle-objects',['train-clue','clock-clue','block-clue','keypad'],2,'The four hallway puzzle objects: indexed primitive geometry, circular BMP face and raised keypad glyphs.'),('escape-objects',['high-switch','buzz-barrier','entrance-lock','door-impact','door-debris','stair-descent'],3,'Rescue platform, holding barrier, hinge-mounted lock, actual laser contact, debris and the eighteen connected stair treads.')])
+    groups.extend([('puzzle-objects',['train-clue','clock-clue','block-clue','keypad'],2,'The four hallway puzzle objects: indexed primitive geometry, circular BMP face and raised keypad glyphs.'),('story-objects',['chest-closed','chest-open','toys-alive','buzz-room','wardrobe','rescue-jump'],3,"The closed toy chest, its opening lid, the toys alive, Buzz's bedroom, the closed wardrobe and Bullseye's jump."),('escape-objects',['buzz-flight','entrance-lock','door-impact','door-debris'],2,'Buzz flying out of the wardrobe, the locked main door, the nearest-hit laser impact and the board debris on the porch.')])
     lookup={name:(key,names,cols,caption) for key,names,cols,caption in groups for name in names}
     lookup.update({key:(key,names,cols,caption) for key,names,cols,caption in groups})
     seen=set();result=[]
@@ -50,7 +50,7 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
             if 'texture-atlas' not in seen:
                 names=[r['name'] for r in sorted(textures,key=lambda r:int(r['ray_layer']))]
                 montage('texture-atlas',names,5,True)
-                result.append(('figure','texture-atlas','All 22 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.'))
+                result.append(('figure','texture-atlas','All 27 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.'))
                 result.append(('table','Surface-map construction and use',['Map / layer','Construction','Use'],[
                     [r['name']+' / '+r['ray_layer']+'; '+r['width']+'x'+r['height'],texture_rules[r['name']][1],texture_rules[r['name']][0]] for r in sorted(textures,key=lambda r:int(r['ray_layer']))]))
                 seen.add('texture-atlas')
@@ -59,8 +59,8 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
     for row in objects:
         parts=row['path'].split('/'); group=parts[1] if len(parts)>1 else 'World'
         if group.startswith(('Clue','TrainClue','ToyRoomCombination')): group='Hallway puzzle mechanisms'
-        elif group.startswith(('RescueSwitch','ToyRescue','HighSwitch')): group='Toy rescue mechanisms'
-        elif group.startswith(('BuzzRoom','BuzzEnergy','BuzzRelease')): group='Buzz holding area'
+        elif group.startswith('ToyChest'): group='Toy chest'
+        elif group.startswith('BuzzRoom'): group="Buzz's bedroom and wardrobe"
         elif group.startswith('DoorDebris'): group='Entrance debris'
         elif group.startswith('ContactShadow'): group='Character contact shadows'
         grouped[group].append(row)

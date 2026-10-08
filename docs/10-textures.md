@@ -106,6 +106,16 @@ All generators evaluate a function `f(u, v) → colour` at the centre of every t
 | Pickets 256², RGBA | 8 pickets across u: picket where `|frac(8u) − ½| < 0.22` and below a triangular tip `v < 0.80 + 0.14(1 − off/0.22)`; rails at v ∈ [0.24, 0.33] and [0.60, 0.69]; **alpha = 1 on pickets and rails, 0 elsewhere** | fence and porch railing cut-outs (slot 14) |
 | Window pane 128² | white frame where u or v is within 0.06 of the edge, cross mullions where `|u − ½| < 0.03` or `|v − ½| < 0.03`; glass blue graded with v plus a diagonal sheen | house windows (raster only) |
 | Flower bed 256² | leafy green noise; a 10 × 10 grid of cells each holding one blossom (radius 0.28 of a cell, random position and one of 4 colours) | the flower box (raster only) |
+| Chest paint 512×256 | isotropic paint space `x = 2u, y = v`; three red planks with grain `fbm(3u, 40v)`, per-plank tint and dark seams; clouds = unions of four circles; five-point stars by `InStar` (below); rocket = ellipse `(rx/0.30)² + (ry/0.10)² < 1` in a frame rotated 55°, red nose, ringed porthole, fins, flame; paint chipped to bare wood where `fbm(18u, 9v) + edge term > 0.66` | the toy chest's front panel (slot 22) |
+| Star wallpaper 256² | 8 alternating blue stripes, two gold stars per tile | Buzz's bedroom walls; the star rug (tinted) (slot 23) |
+| Star quilt 256² | 4 × 4 patches: navy with a gold star, or blue/white plaid `frac(32u) < 0.35`, `frac(32v) < 0.35`; dark seams | the patchwork quilt (slot 24) |
+| Star decal 128², RGBA | gold star, **alpha = 0 outside it** (cut-out) | wardrobe door and knob stars (slot 25) |
+| Football 256×128 | sphere direction from (u, v); black where `max_k n·c_k > 0.955` for the 12 icosahedron vertices c_k (pentagons), grey rim to 0.945 | the football in Buzz's room (slot 26) |
+
+**Five-point star test.** Fold the plane into one tenth of the star: `a = (atan2(y, x) − π/2) mod 72°`,
+`b = 36° − |a − 36°|` (0 at a point, 36° at an inner corner). With `q = r(cos b, sin b)`, the outer vertex
+`o = (R, 0)` and the inner vertex `i = 0.42R(cos 36°, sin 36°)`, the point is inside when
+`(i − o) × (q − o) > 0`, i.e. on the centre's side of the single edge from o to i.
 
 **The moon.** For texel (u, v) the shader-like generator first converts the texel to a direction on the
 unit sphere — `longitude = 2πu`, `latitude = (v − ½)π`,
@@ -204,4 +214,4 @@ poster.
 
 ## 5. Textures in the ray tracer
 
-The ray tracer computes UV analytically from the object-space hit point using formulas matching the primitive mesh. All 22 mapped surfaces, including the six exterior maps, occupy layers of one 512-by-512 texture array. Source maps are bilinearly resampled, mipmaps are generated, and a runtime layer index is legal with sampler2DArray in GLSL 3.30. This uses one surface-map binding instead of 15 individually selected samplers. Cutout alpha is sampled at level zero so neighbouring rays on unrelated surfaces do not blur coverage holes. The source `.rgba` exports retain alpha; BMP exports are colour previews.
+The ray tracer computes UV analytically from the object-space hit point using formulas matching the primitive mesh. All 27 mapped surfaces, including the six exterior maps and the five story maps, occupy layers of one 512-by-512 texture array. Source maps are bilinearly resampled, mipmaps are generated, and a runtime layer index is legal with sampler2DArray in GLSL 3.30. This uses one surface-map binding instead of 15 individually selected samplers. Cutout alpha is sampled at level zero so neighbouring rays on unrelated surfaces do not blur coverage holes. The source `.rgba` exports retain alpha; BMP exports are colour previews.
