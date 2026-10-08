@@ -32,11 +32,11 @@ SHOTS = {
     "garden": ["--intro", "--story", "--seek", "10", "--no-raytrace"],
     "stairs": ["--intro", "--story", "--seek", "26", "--no-raytrace"],
     "woody": ["--no-raytrace", "--select", "0", "--cam", "-3,1.5,3.4,-3,1.15,0.5"],
-    "jessie": ["--no-raytrace", "--select", "1", "--cam", "-0.8,1.5,4.8,-0.8,1.15,2"],
+    "jessie": ["--no-raytrace", "--select", "1", "--cam", "0.8,2.2,4.1,-0.8,1.3,2"],
     "bullseye": ["--no-raytrace", "--select", "2", "--cam", "2.5,2.8,4.6,2.2,1.35,0.3"],
     "buzz": ["--no-raytrace", "--select", "3", "--cam", "0,1.5,-4.5,0,1.15,-6.6"],
     "car": ["--no-raytrace", "--select", "4", "--cam", "7.4,1.7,0.8,5.5,0.45,-1.8"],
-    "mounted": ["--no-raytrace", "--select", "2", "--mount", "--seek", "1.5", "--cam", "2.5,3.7,5.5,2.2,2,0.3"],
+    "mounted": ["--no-raytrace", "--select", "2", "--mount", "--seek", "1.5", "--cam", "3.8,3.4,2.5,2.2,1.8,0.3"],
     "ball": ["--no-raytrace", "--select", "5", "--orbit", "20,20,1.6"],
     "lamp": ["--no-raytrace", "--select", "6", "--orbit", "30,10,3.5"],
     "ghost": ["--haunt", "--select", "7", "--seek", "2", "--orbit", "20,10,3", "--ray-scale", "1"],
@@ -47,8 +47,8 @@ SHOTS = {
     "window": ["--no-raytrace", "--cam", "2.5,4,-3,2.5,4,-9"],
     "clock": ["--no-raytrace", "--cam", "-1.2,5,-6,-1.2,5.1,-9"],
     "fan": ["--no-raytrace", "--cam", "-1.5,4.7,2,-1.5,6.8,0"],
-    "poster": ["--no-raytrace", "--cam", "-7,3.7,-1,-10,3.8,-1"],
-    "blocks": ["--no-raytrace", "--cam", "3,2.2,6,5.3,0.8,3.8"],
+    "poster": ["--no-raytrace", "--cam", "-6.5,4.3,3.8,-10,3.8,2.2"],
+    "blocks": ["--no-raytrace", "--cam", "7.2,2.8,5.8,5.3,0.8,3.8"],
     "laser": ["--no-raytrace", "--laser-demo", "--story-step", "0.05", "--frames", "45", "--cam", "2,3.8,6,5.1,1,2"],
     "no-textures": ["--no-raytrace", "--no-textures", *ROOM],
     "ambient": ["--no-raytrace", "--no-diffuse", "--no-specular", *ROOM],
@@ -63,7 +63,7 @@ SHOTS = {
 }
 SHOTS.update({
     "hallway-puzzle":["--story","--gameplay-demo","--seek","0.1","--no-raytrace","--cam","13,3,4,13.5,1.5,1.8"],
-    "train-clue":["--no-raytrace","--cam","14.4,2.2,7.2,15.3,0.35,5.5"],
+    "train-clue":["--no-raytrace","--cam","15,1.8,4.6,15.7,0.35,5.85"],
     "clock-clue":["--no-raytrace","--cam","13.3,2.5,4.8,13.3,2.4,1.2"],
     "block-clue":["--no-raytrace","--cam","11.8,2,4.9,11.8,0.1,2.5"],
     "keypad":["--no-raytrace","--cam","12.3,1.5,4.8,12.3,1.45,6.82"],
@@ -74,7 +74,7 @@ SHOTS.update({
     "stair-descent":["--story","--gameplay-demo","--seek","23.5","--no-raytrace","--cam","16,-1,-5,15,-2,-3"],
     "entrance-lock":["--story","--gameplay-demo","--seek","35","--no-raytrace","--cam","12,-2.8,6.6,12,-3.1,9.2"],
     "door-impact":["--story","--gameplay-demo","--seek","51.9","--no-raytrace","--cam","10,-1.8,6,12,-2.9,9.2"],
-    "door-debris":["--story","--gameplay-demo","--seek","53.5","--no-raytrace","--cam","9,-1,13,12,-3.4,9.2"],
+    "door-debris":["--story","--gameplay-demo","--seek","53.05","--no-raytrace","--cam","8,-2.2,14,11.5,-3.6,10"],
 })
 for name,args in SHOTS.items():
     if "--story" not in args and "--intro" not in args: args.append("--manual")

@@ -33,7 +33,7 @@ path,name,primitive,material,texture_layer,px,py,pz,rx,ry,rz,sx,sy,sz,world_x,wo
 "World/Room[0]/Sun[22]","Sun",Sphere,sun,-1,6.28873,0.612839,-20,0,0,0,2.4,2.4,2.4,0,0,0,0,0,925,1656,1,1,0,24,1,0,1,1,1
 "World/Room[0]/Moon[23]","Moon",Sphere,moon,7,1.21127,4.38716,-20,0,-35,0,2.7,2.7,2.7,1.21127,4.38716,-20,0,1,925,1656,1,1,0,16,1,0,1,1,1
 "World/Room[0]/Rug[24]","Rug",Plane,rug,2,0.5,0.01,1.5,0,0,0,6,1,4.5,0.5,0.01,1.5,0,1,4,2,1,1,0,16,1,0,0,1,1
-"World/Room[0]/Poster[25]","Poster",Plane,poster,5,-9.98,3.8,-1,90,90,0,2,1,3,-9.98,3.8,-1,0,1,4,2,1,1,0.2,32,1,0,0,1,1
+"World/Room[0]/Poster[25]","Poster",Plane,poster,5,-9.98,3.8,2.2,90,90,0,2,1,3,-9.98,3.8,2.2,0,1,4,2,1,1,0.2,32,1,0,0,1,1
 "World/Room[0]/ToyBlocks[26]","ToyBlocks",Joint,,-1,0,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
 "World/Room[0]/ToyBlocks[26]/DoorwayObstacle[0]","DoorwayObstacle",Cube,mission-crate,4,-4,1,6,0,0,0,1.2,2,3,-4,1,6,1,1,24,12,1,1,0.1,16,1,0,0,1,1
 "World/Room[0]/ToyBlocks[26]/Block0[1]","Block0",Cube,block-0,4,4.8,0.3,3.8,0,0,0,0.6,0.6,0.6,4.8,0.3,3.8,1,1,24,12,1,1,0.25,32,1,0,0,1,1

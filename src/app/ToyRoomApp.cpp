@@ -353,8 +353,12 @@ void ToyRoomApp::StepScene(float dt)
 	physics.Update(dt);
 	for (size_t i = 0; i < contactShadows.size(); ++i) {
 		const glm::vec3 p = characters[i]->Root()->local.position;
-		contactShadows[i]->local.position = {p.x, 0.012f, p.z};
-		contactShadows[i]->visible = settings.lighting && settings.shadingEnabled && !settings.rayTracing && !(characters[i].get() == jessie && jessieMounted) && p.y < 2.0f;
+		const float support = physics.FloorHeight(p);
+		// Contact cues belong on the current tread or floor, not the upstairs y=0 plane.
+		// An airborne or elevated actor has no contact with this support surface.
+		contactShadows[i]->local.position = {p.x, support + 0.012f, p.z};
+		contactShadows[i]->visible = settings.lighting && settings.shadingEnabled && !settings.rayTracing &&
+			!(characters[i].get() == jessie && jessieMounted) && std::abs(p.y - support) < 0.06f;
 	}
 
 	// One depth-first pass computes every world matrix: world = parent.world * local.

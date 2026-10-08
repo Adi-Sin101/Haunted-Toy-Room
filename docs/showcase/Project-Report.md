@@ -208,7 +208,7 @@ Loaded (B,G,R) is stored as (R,G,B,A=255)
 
 ## 2.8 Visibility, shadows and ray tracing
 
-The raster path creates a 2048 × 2048 depth map from the lamp spotlight. Each visible surface is projected into the lamp's clip space and compared with that depth. A nine-sample 3 × 3 percentage-closer filter softens the edge. A small normal-dependent bias limits self-shadow acne. This is a depth comparison technique, distinct from the ray tracer's visibility rays. Other raster lights have no general shadow maps; flattened translucent contact shapes supplement the toys' contact with the floor.
+The raster path creates a 2048 × 2048 depth map from the lamp spotlight. Each visible surface is projected into the lamp's clip space and compared with that depth. A nine-sample 3 × 3 percentage-closer filter softens the edge. A small normal-dependent bias limits self-shadow acne. This is a depth comparison technique, distinct from the ray tracer's visibility rays. Other raster lights have no general shadow maps; flattened translucent contact shapes supplement the toys' contact with the floor. Their height follows the current support surface, including stairs and the lower floor, with a 0.012-unit depth offset. They are hidden when the feet are more than 0.06 units from that support, preventing floating cues during flight or mounting. The five shapes are reused without per-frame allocation.
 
 ```text
 shadowCoordinate = (LightVP × vec4(P,1)).xyz / w × 0.5 + 0.5

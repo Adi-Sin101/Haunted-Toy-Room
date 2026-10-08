@@ -178,7 +178,7 @@ Loaded (B,G,R) is stored as (R,G,B,A=255)
 
 ## 2.8 Visibility, shadows and ray tracing
 
-The raster path creates a 2048 × 2048 depth map from the lamp spotlight. Each visible surface is projected into the lamp's clip space and compared with that depth. A nine-sample 3 × 3 percentage-closer filter softens the edge. A small normal-dependent bias limits self-shadow acne. This is a depth comparison technique, distinct from the ray tracer's visibility rays. Other raster lights have no general shadow maps; flattened translucent contact shapes supplement the toys' contact with the floor.
+The raster path creates a 2048 × 2048 depth map from the lamp spotlight. Each visible surface is projected into the lamp's clip space and compared with that depth. A nine-sample 3 × 3 percentage-closer filter softens the edge. A small normal-dependent bias limits self-shadow acne. This is a depth comparison technique, distinct from the ray tracer's visibility rays. Other raster lights have no general shadow maps; flattened translucent contact shapes supplement the toys' contact with the floor. Their height follows the current support surface, including stairs and the lower floor, with a 0.012-unit depth offset. They are hidden when the feet are more than 0.06 units from that support, preventing floating cues during flight or mounting. The five shapes are reused without per-frame allocation.
 
 shadowCoordinate = (LightVP × vec4(P,1)).xyz / w × 0.5 + 0.5
 bias = max(0.0009(1-max(N·L,0)),0.00012)
@@ -765,7 +765,7 @@ Construction records for Room[0]
 | Sun[22] | Sphere / sun | 6.29,0.613,-20 | 0,0,0 | 2.4,2.4,2.4 |
 | Moon[23] | Sphere / moon | 1.21,4.39,-20 | 0,-35,0 | 2.7,2.7,2.7 |
 | Rug[24] | Plane / rug | 0.5,0.01,1.5 | 0,0,0 | 6,1,4.5 |
-| Poster[25] | Plane / poster | -9.98,3.8,-1 | 90,90,0 | 2,1,3 |
+| Poster[25] | Plane / poster | -9.98,3.8,2.2 | 90,90,0 | 2,1,3 |
 | ToyBlocks[26] | Joint | 0,0,0 | 0,0,0 | 1,1,1 |
 | ToyBlocks[26]/DoorwayObstacle[0] | Cube / mission-crate | -4,1,6 | 0,0,0 | 1.2,2,3 |
 | ToyBlocks[26]/Block0[1] | Cube / block-0 | 4.8,0.3,3.8 | 0,0,0 | 0.6,0.6,0.6 |

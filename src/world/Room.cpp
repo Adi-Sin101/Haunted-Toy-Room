@@ -134,7 +134,8 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	room->AddShape("Rug", &plane, &rugMat, { 0.5f, 0.01f, 1.5f }, { 6.0f, 1.0f, 4.5f });
 
 	Material& posterMat = Textured(a, "poster", glm::vec3(1.0f), Assets::PosterSlot, { 1.0f, 1.0f }, 0.2f, 32.0f);
-	room->AddShape("Poster", &plane, &posterMat, { -HalfWidth + 0.02f, 3.8f, -1.0f }, { 2.0f, 1.0f, 3.0f }, { 90, 90, 0 });
+	// Keep the full printed face beside the bookcase rather than hidden behind its books.
+	room->AddShape("Poster", &plane, &posterMat, { -HalfWidth + 0.02f, 3.8f, 2.2f }, { 2.0f, 1.0f, 3.0f }, { 90, 90, 0 });
 
 	const glm::vec3 blockColors[3] = { { 0.9f, 0.2f, 0.2f }, { 0.2f, 0.4f, 0.95f }, { 1.0f, 0.8f, 0.15f } };
 	const glm::vec3 blockPos[6] = { { 4.8f, 0.3f, 3.8f }, { 5.42f, 0.3f, 3.8f }, { 6.04f, 0.3f, 3.8f },

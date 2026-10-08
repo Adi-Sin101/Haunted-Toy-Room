@@ -259,7 +259,7 @@ position      p  += forward · v · dt
 | Sun / Moon | unlit spheres on an arc behind the window; the moon has the cratered texture | positions drive the directional light |
 | Distant houses | 9 dark unlit cubes behind the sky | skyline silhouette |
 | Rug | plane 6 × 4.5, procedural rug texture | |
-| Poster | plane on the left wall, texture loaded from `assets/textures/poster.bmp` by our BMP loader | |
+| Poster | plane on the clear left-wall section at (-9.98, 3.8, 2.2), texture loaded from `assets/textures/poster.bmp` by our BMP loader | Positioned beside the bookcase so the full printed face remains readable |
 | Toy blocks | a 6-cube tower plus the mission's doorway crate (1.2 × 2 × 3) | gravity, collisions; Buzz's laser pushes them |
 | Desk | top + 4 legs + drawer cubes, knob sphere, sketchbook, 3 pencils | solid furniture |
 | Bed | frame, mattress, quilted blanket (fabric texture), headboard, 2 pillows | solid furniture |

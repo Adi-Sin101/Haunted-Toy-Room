@@ -203,6 +203,12 @@ so `spot = 0`, `att·spot·intensity = 0 < 10⁻⁴` and the light is skipped in
 floor in raster mode. It is a cheap "ambient occlusion" cue that grounds the toys when the directional
 light casts no raster shadow.
 
+The cue follows the current support height from `PhysicsWorld::FloorHeight`, including stair treads
+and the ground floor. Its centre sits 0.012 units above that surface to avoid depth fighting. It is
+visible only when the toy's feet are within 0.06 units of the support; flight, elevated poses and a
+mounted rider therefore do not leave a floating shadow on the upstairs floor. These five existing
+shapes are reused every frame; no new shadow geometry or allocation is needed during movement.
+
 ## 7. Modes of the Settings panel
 
 The renderer evaluates three different expressions depending on the toggles (backtick opens Settings):
