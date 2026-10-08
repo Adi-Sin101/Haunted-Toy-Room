@@ -26,6 +26,7 @@ in vec2 vNdc;
 out vec4 FragColor;
 
 uniform samplerBuffer uInstances;
+uniform sampler2DArray uSurfaceMaps;
 uniform int uNodeOffset;
 uniform int uLightShadow[MAX_LIGHTS];
 
@@ -39,22 +40,6 @@ uniform vec3 uBackground;
 uniform int uMaxBounces;
 uniform int uUseTexture;
 
-uniform sampler2D uTex0;
-uniform sampler2D uTex1;
-uniform sampler2D uTex2;
-uniform sampler2D uTex3;
-uniform sampler2D uTex4;
-uniform sampler2D uTex5;
-uniform sampler2D uTex6;
-uniform sampler2D uTex7;
-uniform sampler2D uTex8;
-uniform sampler2D uTex9;
-uniform sampler2D uTex10;
-uniform sampler2D uTex11;
-uniform sampler2D uTex12;
-uniform sampler2D uTex13;
-uniform sampler2D uTex14;
-uniform sampler2D uTex15;
 
 const float INF = 1e20;
 const float EPS = 1e-4;
@@ -82,7 +67,13 @@ float hitCube(vec3 o, vec3 d, out vec3 n)
 	float tNear = max(max(tmin.x, tmin.y), tmin.z);
 	float tFar = min(min(tmax.x, tmax.y), tmax.z);
 	n = vec3(0.0);
-	if (tNear > tFar || tNear < EPS) return INF;
+	if (tNear > tFar || tFar < EPS) return INF;
+    if (tNear < EPS) {
+        if (tFar == tmax.x) n=vec3(sign(d.x),0,0);
+        else if (tFar == tmax.y) n=vec3(0,sign(d.y),0);
+        else n=vec3(0,0,sign(d.z));
+        return tFar;
+    }
 	// the axis whose slab was entered last is the face that was hit
 	if (tNear == tmin.x) n = vec3(-sign(d.x), 0, 0);
 	else if (tNear == tmin.y) n = vec3(0, -sign(d.y), 0);
@@ -146,6 +137,11 @@ float hitCone(vec3 o, vec3 d, out vec3 n)
 	float b = 2.0 * (dot(o.xz, d.xz) + k2 * oy * d.y);
 	float c = dot(o.xz, o.xz) - k2 * oy * oy;
 	float disc = b * b - 4.0 * a * c;
+    if (abs(a) <= 1e-8 && abs(b) > 1e-8) {
+        float t=-c/b;
+        vec3 p=o+t*d;
+        if (t>EPS && p.y>=-0.5 && p.y<=0.5) { best=t; n=normalize(vec3(2.0*p.x,2.0*k2*(0.5-p.y),2.0*p.z)); }
+    }
 	if (abs(a) > 1e-8 && disc >= 0.0) {
 		float s = sqrt(disc);
 		float r0 = (-b - s) / (2.0 * a), r1 = (-b + s) / (2.0 * a);
@@ -290,23 +286,7 @@ vec2 primitiveUV(int type, vec3 p, vec3 n)
 
 vec3 sampleSlot(int slot, vec2 uv)
 {
-	if (slot == 0) return texture(uTex0, uv).rgb;
-	if (slot == 1) return texture(uTex1, uv).rgb;
-	if (slot == 2) return texture(uTex2, uv).rgb;
-	if (slot == 3) return texture(uTex3, uv).rgb;
-	if (slot == 4) return texture(uTex4, uv).rgb;
-	if (slot == 5) return texture(uTex5, uv).rgb;
-	if (slot == 6) return texture(uTex6, uv).rgb;
-	if (slot == 7) return texture(uTex7, uv).rgb;
-	if (slot == 8) return texture(uTex8, uv).rgb;
-	if (slot == 9) return texture(uTex9, uv).rgb;
-	if (slot == 10) return texture(uTex10, uv).rgb;
-	if (slot == 11) return texture(uTex11, uv).rgb;
-	if (slot == 12) return texture(uTex12, uv).rgb;
-	if (slot == 13) return texture(uTex13, uv).rgb;
-	if (slot == 14) return texture(uTex14, uv).rgb;
-	if (slot == 15) return texture(uTex15, uv).rgb;
-	return vec3(1.0);
+    return texture(uSurfaceMaps, vec3(uv, float(slot))).rgb;
 }
 
 // Only the cut-out textures (fence pickets / railings, slot 14) carry a meaningful alpha.
@@ -314,7 +294,7 @@ float sampleSlotAlpha(int slot, vec2 uv)
 {
 	// level 0: neighbouring pixels of a ray tracer can hit unrelated surfaces, so screen-space
 	// derivatives (and the mip level chosen from them) are meaningless at a cut-out's edges
-	if (slot == 14) return textureLod(uTex14, uv, 0.0).a;
+	if (slot == 14) return textureLod(uSurfaceMaps, vec3(uv, 14.0), 0.0).a;
 	return 1.0;
 }
 
@@ -369,6 +349,9 @@ void main()
 			}
 			shaded = albedo * (ambientTerm(t4.x) + diffuse) + specular + t5.rgb;
 		}
+
+		// 4. Local illumination closes the finite path at the last permitted hit.
+		if (bounce == uMaxBounces) { color += throughput * shaded; break; }
 
 		// 4. Transparency, reflection or stop
 		float opacity = t5.a;

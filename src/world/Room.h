@@ -11,6 +11,9 @@ struct Material;
 struct RoomRig {
 	std::vector<SceneNode*> blocks;
 	SceneNode* missionObstacle = nullptr;
+	SceneNode* fanRotor = nullptr;
+	SceneNode* clockHour = nullptr;
+	SceneNode* clockMinute = nullptr;
 	// Desk lamp: swivel (Y) -> arm tilt (X) -> head tilt (X) -> shade, bulb, light anchor
 	SceneNode* lamp = nullptr;
 	SceneNode* lampArm = nullptr;

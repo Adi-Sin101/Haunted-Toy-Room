@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -60,10 +61,21 @@ struct LaunchOptions {
 	int windowWidth = 1600, windowHeight = 900;
 	bool pauseClock = false;
 	bool story = false;     // keep the story running during a capture
+	bool manual = false;    // full manual control without coordinated actor routes
 	bool hasCamera = false;
 	glm::vec3 cameraPos{ 0.0f }, cameraTarget{ 0.0f };
 	float orbitYaw = 1e9f, orbitPitch = 1e9f, orbitDistance = -1.0f;
 	std::string capture;   // save a screenshot here after 'frames' frames, then quit
+	std::string record;    // bottom-up RGB24 frame stream, encoded by tools/make_showcase.py
+	std::string exportDirectory;
+	int recordFps = 24;
+	float seek = 0.0f;
+	bool haunt = false;
+	bool noTextures = false, noLighting = false;
+	bool ambient = true, diffuse = true, specular = true;
+	int lightOnly = -1, bounces = -1;
+	float rayScale = -1.0f;
+	float scriptedDrive = 0.0f, scriptedTurn = 0.0f, scriptedFly = 0.0f;
 	int frames = 90;
 	float storyStep = 0.0f;
 	int storySteps = 1;
@@ -111,6 +123,8 @@ private:
 	void PrintHelp() const;
 	void DumpSelectedGeometry(bool full) const;
 	void SaveScreenshot(const std::string& path = {});
+	void ExportScene(const std::string& directory);
+	void RecordFrame();
 	void ApplyLaunchOptions();
 	void DrawHud();
 	Ray ViewRay(const glm::vec2& mouse) const;
@@ -162,6 +176,10 @@ private:
 	bool wasMoving = false;
 	LaunchOptions launch;
 	int frameCounter = 0;
+	FILE* recording = nullptr;
+	std::vector<unsigned char> recordingPixels;
+	double simulationTime = 0.0;
+	std::vector<glm::vec3> previousPositions;
 	double benchmarkStart = 0.0, benchmarkCpu = 0.0;
 	long long benchmarkTriangles = 0, benchmarkDraws = 0;
 };

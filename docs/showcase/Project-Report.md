@@ -1,0 +1,651 @@
+# Haunted Toy Room: The Midnight Mission
+
+Adiba Tahsin | Roll 2107031
+
+CSE-4102 — Computer Graphics and Image Processing Laboratory
+
+# Abstract
+
+Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project in which a furnished toy room becomes the setting for a coordinated rescue story. Penny, a white cat with ginger patches, walks from the garden into a two-storey house and upstairs. At midnight Woody discovers a stranded car; Jessie rides Bullseye, Buzz clears a doorway obstacle with his laser, and the group escorts the car home. Morning lighting restores the toys to their resting poses.
+
+The implementation uses C++ and an OpenGL 3.3 core pipeline. Five indexed primitive families form the complete environment and articulated models. Hand-authored homogeneous transformations support a scene hierarchy, multiple camera modes and an object inspector. A shared illumination model supplies ambient, diffuse and specular terms for directional, point and spot lights. Flat, Gouraud, Phong and Blinn-Phong shading can be compared in the raster path. Procedural surface maps and a custom BMP loader provide texture detail. The optional GPU ray tracer intersects transformed analytic primitives through a median-split bounding volume hierarchy, then evaluates shadow rays, mirror reflection and straight-through transparency. The project combines cinematic playback, live character takeover and full manual control so each graphics concept can be demonstrated independently.
+
+# CHAPTER I — Introduction
+
+## 1.1 Project background and motivation
+
+A room of articulated toys provides a practical setting for explaining geometry, local coordinate systems, surface appearance and motion together. The visual narrative gives a purpose to each operation: a wheel rotates because a car moves, a rider follows because her root belongs to the saddle, and a spotlight follows a moving lamp head because its anchor belongs to that head. The haunted atmosphere is expressed through night colours, lamp flicker, a translucent ghost and self-moving props.
+
+![Figure 1: The furnished toy room under moonlight, with the coordinated cast, furniture and animated props.](diagrams/scene-overview.png)
+
+## 1.2 Objectives and scope
+
+The objectives are to construct a complete scene from reusable indexed geometry; implement and demonstrate three-dimensional transformations; compare Gouraud and Phong shading; explain three light types through one illumination equation; animate articulated and rolling objects with elapsed time; provide keyboard and mouse interaction; and extend the renderer with analytic ray tracing. Modelling, shader logic, procedural textures, BMP parsing, story choreography and the interface are implemented within the project. GLFW provides window/input services, GLAD loads OpenGL entry points, and GLM supplies vector and matrix storage and algebra.
+
+## 1.3 Proposed features and final implementation
+
+The recorded concept specifies a child's toy room that comes alive at night, primitive-built controllable characters, Jessie riding Bullseye through a parent-child hierarchy, and a morning return. The final implementation realises these features and adds a connected house, Penny's arrival, collision-aware movement, detailed textures and two rendering paths. Table 1 maps the proposed functionality to the corresponding final modules.
+
+Table 1: Proposal-to-implementation coverage
+
+| Proposed functionality | Final implementation | Principal code |
+| --- | --- | --- |
+| A toy room becomes alive at night and quiet in the morning | Seven mission scenes, arrival prologue, night-to-dawn clock and restored rest poses | StoryDirector / PennyArrival / Environment |
+| Recognisable primitive-built toys | Woody, Jessie, Bullseye, Buzz and RC car; Penny and a ghost | Humanoid / Bullseye / RCCar / Cat |
+| At least four independently controlled objects | Five driveable toys, controllable ball and lamp; click-based inspection | Select / HandleObjectControl |
+| Jessie mounts and follows Bullseye | Saddle reparenting, a smooth seat transition and world-space dismount | Mount / Dismount / SceneNode |
+| Translation, rotation, scale and hierarchy | TRS, shear, reflection, normal correction and parent-child motion | Transform3D / Transform / SceneNode |
+| Lighting and shading | Directional, point and spot lights; Flat, Gouraud, Phong and Blinn-Phong | lighting.glsl / Renderer |
+| Moving environment | Lamp swivel/flicker, rolling ball, ghost motion, ceiling fan and clock hands | Environment / StepScene |
+| Texturing and bonus ray tracing | 21 mapped surfaces, own BMP loader, analytic GPU tracing with BVH, shadows and reflection | Assets / ProceduralTextures / RayTracer |
+
+## 1.4 Project workflow and organisation
+
+Geometry and material resources are created once. Scene builders assemble the room, house and characters from those resources. Each frame reads input, advances the story and motion, resolves physical contacts, propagates world transforms, refreshes lights and renders the selected graphics path. This report first establishes the theory, then explains the methodology and individual models, and finally presents visual comparisons, verification and the complete object inventory.
+
+![Figure 2: One frame from input to the displayed image. Both rendering paths consume the same scene transforms, materials and lights.](diagrams/pipeline-diagram.png)
+
+# CHAPTER II — Graphics Foundations
+
+## 2.1 Indexed geometry and curved surfaces
+
+A vertex stores three position coordinates, three normal coordinates and two texture coordinates. An index buffer groups vertices into triangles. A plane has four vertices and two triangles. A cube has 24 vertices rather than eight because a corner needs independent face normals and UV coordinates on each adjacent face. Shared primitive buffers reduce duplicated geometry while model matrices give each instance its dimensions and placement. The graphics pipeline and programmable stages are defined by the OpenGL specification [1].
+
+```text
+Vertex = (px, py, pz, nx, ny, nz, u, v); stride = 8 × 4 = 32 bytes
+Triangle k = indices[3k], indices[3k+1], indices[3k+2]
+```
+
+Table 2: Full-detail primitive meshes
+
+| Primitive | Definition | Vertices | Triangles |
+| --- | --- | --- | --- |
+| Plane | 1 × 1 in XZ, normal +Y | 4 | 2 |
+| Cube | [-0.5,0.5] on all axes | 24 | 12 |
+| Sphere | radius 0.5; 24 stacks × 36 sectors | 925 | 1656 |
+| Cylinder | radius 0.5, height 1, 32 sectors; two caps | 134 | 128 |
+| Cone | base radius 0.5, height 1, 32 sectors; one cap | 99 | 64 |
+
+For the sphere, latitude phi ranges from -pi/2 to pi/2 and longitude theta from 0 to 2pi. A rectangular grid of (stacks+1)(sectors+1) vertices includes duplicated seam positions at u=0 and u=1. Adjacent cells create two triangles, except at the poles where a degenerate half is omitted. Analytic curved surfaces remain exact in the ray tracer; in raster mode their appearance also depends on tessellation and level of detail.
+
+```text
+Sphere: p = 0.5(cos(phi) sin(theta), sin(phi), cos(phi) cos(theta))
+n = 2p; u = theta/(2pi); v = phi/pi + 0.5
+Sphere triangles = 2 × sectors × (stacks - 1)
+```
+
+Cylinder sides use circular rings with outward radial normals; cap rings have independent +Y or -Y normals. Cone sides use a radial slope normal and a duplicated apex normal for each sector. Splitting these vertices keeps the cap edge sharp while allowing smooth curved side shading. Counter-clockwise triangles define the outside; mirrored instances reverse the front-face convention during raster drawing.
+
+```text
+Cylinder side: p = (0.5 sin(theta), y, 0.5 cos(theta)); n = (sin(theta),0,cos(theta))
+Cone side: n = normalize(sin(theta), 0.5, cos(theta))
+Cylinder vertices = 4n + 6; triangles = 4n
+Cone vertices = 3n + 3; triangles = 2n
+```
+
+![Figure 3: Five unit primitives and their main uses. Curved geometry is constructed by sampling angular parameters, then transformed into ellipsoids, wheels, limbs and lamp parts.](diagrams/primitive-diagram.png)
+
+![Figure 4: Unit primitive construction, triangulated Buzz and transformed normals. Indexed triangles approximate curved surfaces in raster rendering.](diagrams/mesh-comparison.png)
+
+A polygon is a closed face; the renderer submits triangles rather than general polygons. addQuad triangulates a counter-clockwise four-corner face into (a,b,c) and (c,d,a). For the plane, v0=(-0.5,0,0.5), v1=(0.5,0,0.5), v2=(0.5,0,-0.5), v3=(-0.5,0,-0.5); all normals are +Y and the UVs are (0,0),(1,0),(1,1),(0,1). Its six indices are 0,1,2,2,3,0. The cube repeats this construction with a different normal for each face: 24 vertices, 36 indices and 12 triangles. Cross(edge1,edge2) defines a face normal; counter-clockwise winding selects the front face.
+
+For a sphere ring i and sector j, k1=i(sectors+1)+j and k2=k1+sectors+1. The cell emits (k1,k2,k1+1), except at the top pole, and (k1+1,k2,k2+1), except at the bottom pole. With 24 stacks and 36 sectors this gives 925 vertices and 1656 triangles (4968 indices). A cylinder uses two side rings, duplicated cap rings and two centres; side quads become two triangles and each cap is a triangle fan. A cone uses a base side ring, sector-specific apex normals, a separate cap ring and a centre; each sector supplies one side triangle and one cap triangle. Seam duplication preserves both u=0 and u=1. The full vertex/index listings are in docs/03-primitives.md and can be printed with Shift+V.
+
+## 2.2 Homogeneous transformations
+
+Points are column vectors (x,y,z,1); directions use w=0, so translation changes points without changing directions. Products act from right to left. A node's local matrix first scales its primitive, applies an optional basis matrix for accumulated rolling, shear or reflection, applies roll, pitch and yaw, and then translates it. Transform::Matrix evaluates the rotation entries directly to avoid repeated general matrix products.
+
+```text
+Mlocal = T(position) Ry(yaw) Rx(pitch) Rz(roll) B S(scale)
+T = [1 0 0 tx; 0 1 0 ty; 0 0 1 tz; 0 0 0 1]
+S = diag(sx,sy,sz,1)
+Ry = [cos(a) 0 sin(a) 0; 0 1 0 0; -sin(a) 0 cos(a) 0; 0 0 0 1]
+```
+
+Rotation about an arbitrary unit axis follows Rodrigues' construction. A pivot rotation moves the pivot to the origin, rotates, then restores it. A shear changes one coordinate in proportion to another; a reflection reverses the component along a plane normal. These are linear operations stored in B. They are visible in the inspector, while translation and Euler rotation remain individually editable.
+
+```text
+R(axis,a) = cos(a)I + (1-cos(a)) axis axis^T + sin(a)[axis]cross
+Mpivot = T(pivot) R T(-pivot)
+Shear example: x' = x + k y
+Reflection about a plane through the origin: F = I - 2 n n^T
+```
+
+## 2.3 Hierarchy and transformed normals
+
+An empty scene node is a joint; a mesh-bearing node is a visible part. Descendants inherit their parent's world transform, so moving a shoulder rotates its complete arm. Non-uniform shape scale is normally placed on leaf nodes to preserve the proportions of sibling parts. Normals require the inverse transpose of the world linear matrix: transforming them as ordinary directions would break perpendicularity under non-uniform scale or shear.
+
+```text
+Mworld(child) = Mworld(parent) Mlocal(child)
+Nworld = normalize((A^-1)^T Nobject), where A = mat3(Mworld)
+(A^-T n) · (A t) = n · t = 0 for a tangent t
+```
+
+![Figure 5: Jessie as an independent root and as a child of Bullseye's saddle. The world-to-local conversion preserves placement before the seat transition.](diagrams/hierarchy-diagram.png)
+
+## 2.4 Camera, projection and picking
+
+The camera constructs a forward vector from yaw and pitch, a right vector from forward cross global up, and an orthogonal up vector. The view matrix expresses world points in that frame. Perspective projection divides by depth to make distant objects smaller. Free, Orbit and Follow modes use the same view/projection equations; orbit changes eye position around a target, while field-of-view zoom changes the lens angle.
+
+```text
+f = normalize(target - eye); r = normalize(f × worldUp); u = r × f
+View rows = (r,-r·eye), (u,-u·eye), (-f,f·eye), (0,0,0,1)
+clip = P V M p; NDC = clip.xyz/clip.w
+P00 = 1/(aspect tan(fov/2)); P11 = 1/tan(fov/2)
+P22 = -(far+near)/(far-near); P23 = -2 far near/(far-near); P32 = -1
+```
+
+For picking, a screen point is converted to normalised device coordinates and a camera ray. Each candidate's inverse model matrix maps that ray to object space. The nearest positive primitive intersection chooses the object's owner. Collision-aware camera movement and orbit sightline tests prevent the view from passing through furniture; the open doorway permits inspection in the connected hallway. GLFW supplies the event callbacks and input states [2].
+
+```text
+d = normalize(f + xNDC tan(fov/2) aspect r + yNDC tan(fov/2) u)
+oObject = M^-1(oWorld,1); dObject = M^-1(dWorld,0)
+```
+
+## 2.5 Illumination: ambient, diffuse and specular
+
+The project uses the Phong reflection model [3] as a local surface model. At a visible surface point, N is the unit normal, L points toward the light and V toward the eye. The RGB albedo C is material colour multiplied by a texture sample. Ambient light supplies a constant scene term; diffuse light depends on the surface orientation; specular light depends on the viewing direction and shininess. Emissive E is added independently for a glowing bulb, laser or sky. Emission alone does not illuminate nearby surfaces, so a separate light is attached where that effect is required.
+
+```text
+I = C [ka Ia + Σ visibility_i attenuation_i cone_i Il_i kd max(N·L_i,0)]
+    + Σ visibility_i attenuation_i cone_i Il_i ks max(R_i·V,0)^n + E
+R = 2(N·L)N - L;  C = materialRGB × textureRGB
+```
+
+Directional lights use parallel rays and unit attenuation. Point lights radiate from a position and diminish with distance. Spotlights add a cone factor between inner and outer half-angles. smoothstep gives a gradual cone edge; its arguments are cosine values, so the outer-angle cosine is the smaller bound. F5, F6 and F7 independently disable the ambient, diffuse and specular terms.
+
+```text
+Directional: L = normalize(-lightDirection), attenuation = 1
+Point: L = (lightPosition-P)/d; attenuation = 1/(kc + kl d + kq d²)
+Spot: theta = (-L)·axis; cone = smoothstep(cos(outer),cos(inner),theta)
+smoothstep = q²(3-2q), q = clamp((theta-cos(outer))/(cos(inner)-cos(outer)),0,1)
+```
+
+![Figure 6: Directional, point and spot light geometry, followed by the normal, light, view and reflection vectors at a surface point.](diagrams/lighting-diagram.png)
+
+After sampling an RGB texel, albedo C is the componentwise product of that texel and the material tint. The shader adds C times ambient-plus-diffuse, then the untinted specular light colour and emission. For C=(0.4,0.6,0.8), ambient factor 0.06, diffuse factor 0.1791 and white specular factor 0.0277, RGB is (0.12334,0.17116,0.21898) before framebuffer storage. Texture alpha is used for cutout coverage; material opacity controls blending/transmission. These are componentwise shader values, not a physically calibrated spectral or tone-mapped pipeline.
+
+As a numerical example, with ka=0.2, Ia=0.3, kd=0.8, N·L=0.6, ks=0.4, R·V=0.9, n=16, d=4 and (kc,kl,kq)=(1,0.14,0.07), attenuation is 1/2.68 = 0.3731. For unit light intensity and full cone visibility, the scalar ambient, diffuse and specular factors are 0.06, 0.1791 and 0.0277. The coloured terms multiply C; the specular term remains in the light's colour. The implementation suppresses specular response when N dot L is nonpositive, so a light behind a surface cannot create a front-facing highlight. Increasing n narrows the highlight, while increasing kq reduces distant illumination.
+
+## 2.6 Shading techniques and interpolation
+
+Illumination is the rule for light at one point; shading determines where that rule is evaluated across the surface. Gouraud evaluates lighting at vertices and interpolates it [4]. Phong interpolates normals and evaluates lighting per fragment [3]. The project's Flat mode uses a triangle face normal computed from derivatives of world position; its lighting can still vary within that face because point-light distance and the view vector vary. Blinn-Phong replaces the reflection-vector dot product with a half-vector term [5].
+
+Table 3: Shading evaluation in the raster pipeline
+
+| Mode | Normal / evaluation | Characteristic |
+| --- | --- | --- |
+| Flat | Nface = normalize(dFdx(P) × dFdy(P)); lighting per fragment | Planar facets remain visible |
+| Gouraud | Lighting per vertex; ambient/diffuse and specular interpolated separately | Narrow highlights between vertices can disappear |
+| Phong | Interpolated N normalised per fragment; max(R·V,0)^n | Smoother moving highlights on curved geometry |
+| Blinn-Phong | H=normalize(L+V); max(N·H,0)^(4n) | Half-vector highlights; 4n approximates similar width |
+
+```text
+Perspective-correct attribute = [Σ lambda_i attribute_i / w_i] / [Σ lambda_i / w_i]
+Gouraud colour = C × interpolated(ambient+diffuse) + interpolated(specular) + E
+Phong normal = normalize(interpolated(vertexNormal))
+```
+
+F2 cycles the raster modes and automatically selects raster rendering. The ray tracer shades analytic surface hits per pixel; it can use the Phong or Blinn specular equation, but it does not perform Gouraud triangle interpolation or display polygon facets. This distinction is necessary when explaining the comparison.
+
+## 2.7 Texture mapping and procedural detail
+
+Each primitive stores UV coordinates. A material's uvScale repeats its pattern over the model. Cube faces have separate rectangular charts, sphere UVs follow longitude and latitude, and cylinder/cone sides wrap their angular coordinate while caps use planar coordinates. Multiplying texture RGB by material RGB allows the same wood or greyscale siding pattern to take several colours. The raster textures preserve their native dimensions; all 21 ray-traced maps are bilinearly resampled into 512 × 512 layers of one texture array.
+
+```text
+uvSample = uv × uvScale; repeated coordinate = fract(uvSample)
+Bilinear sample = (1-a)(1-b) C00 + a(1-b) C10 + (1-a)b C01 + ab C11
+Trilinear filtering blends bilinear samples from two adjacent mip levels
+```
+
+![Figure 7: UV parameterisation and repeated surface detail. A duplicated seam separates u=0 from u=1 while keeping the same geometric position.](diagrams/uv-diagram.png)
+
+Most maps are generated in CPU memory with deterministic arithmetic. Hash values select per-cell variations. Smooth value noise bilinearly interpolates four hashed grid samples after applying q²(3-2q) to each fractional coordinate. Layered noise supplies grain, woven variation and grass. These are colour patterns; they do not displace vertices or implement normal mapping. The poster is loaded from a 24-bit BMP file generated by tools/make_poster.py. The custom loader handles headers, padded rows, orientation and BGR-to-RGB conversion.
+
+```text
+BMP row stride = 4 ceil((width × bitsPerPixel)/32)
+Positive BMP height: bottom-up rows; negative height: top-down rows
+Loaded (B,G,R) is stored as (R,G,B,A=255)
+```
+
+## 2.8 Visibility, shadows and ray tracing
+
+The raster path creates a 2048 × 2048 depth map from the lamp spotlight. Each visible surface is projected into the lamp's clip space and compared with that depth. A nine-sample 3 × 3 percentage-closer filter softens the edge. A small normal-dependent bias limits self-shadow acne. This is a depth comparison technique, distinct from the ray tracer's visibility rays. Other raster lights have no general shadow maps; flattened translucent contact shapes supplement the toys' contact with the floor.
+
+```text
+shadowCoordinate = (LightVP × vec4(P,1)).xyz / w × 0.5 + 0.5
+bias = max(0.0009(1-max(N·L,0)),0.00012)
+visibility = (1/9) Σ [receiverDepth-bias ≤ storedDepth]
+```
+
+The optional tracer follows the primary/visibility/reflection structure associated with Whitted-style ray tracing [6]. A full-screen triangle launches one primary ray for each traced pixel. The shader finds the nearest analytic surface, shades it, tests selected shadow rays and continues along a reflected ray or a straight transmission ray. Bounces are bounded and throughput below 0.02 terminates the path. At the last permitted hit the tracer uses local illumination to close the finite path.
+
+```text
+Ray: P(t) = o + t d, t > epsilon
+Sphere: (d·d)t² + 2(o·d)t + (o·o - 0.25) = 0
+Cylinder side: (dx²+dz²)t² + 2(ox dx+oz dz)t + ox²+oz²-0.25 = 0
+Cone: x²+z² = 0.25(0.5-y)², with -0.5 ≤ y ≤ 0.5
+Plane: t = -oy/dy, bounded by |x|,|z| ≤ 0.5
+Cube slabs: tEnter = max(min(t0,t1)); tExit = min(max(t0,t1))
+```
+
+Object-space ray directions are deliberately not normalised after applying the inverse model matrix. Therefore the parameter t is identical in world and object space, allowing comparisons among differently scaled instances. Sphere, cylinder and cone sides reduce to quadratic equations; cylinder/cone caps use disk tests. When a cone coefficient a is approximately zero, its equation becomes linear. A ray beginning inside a cube uses the exit slab intersection. One-sided planes respect the authored wall direction.
+
+```text
+Reflection: dNext = d - 2(d·N)N; originNext = P + 0.002 N
+Caccum += throughput × (1-rho) × Clocal; throughput *= rho
+Transmission: Caccum += throughput × opacity × Clocal
+throughput *= (1-opacity); originNext = P + 0.002 d
+```
+
+Transparency follows the existing ray direction; it does not bend according to an index of refraction. In this single continuation implementation, transparent surfaces use transmission before the opaque reflection branch; the ghost and helmet therefore demonstrate transparency, while the polished floor and ball demonstrate mirror reflection. The image is not a path-traced global-illumination solution: there are no diffuse secondary bounces, caustics or physically simulated area lights.
+
+The default ray budget is two continuations: the primary hit plus at most two further hits (three surface evaluations). Key 9 cycles 0 through 4, allowing at most five hit evaluations. The loop includes bounce zero and ends after uMaxBounces. A miss adds throughput times the background. At an opaque reflecting surface it adds throughput times (1-rho) times the local lit colour, then multiplies throughput by rho. A transparent hit instead adds throughput times alpha times local colour and continues straight with throughput times (1-alpha). The last permitted hit contributes its full local colour; the path also stops if its largest throughput component falls below 0.02. Visibility rays are extra occlusion queries, not additional colour bounces.
+
+```text
+Example: rho0=0.2, rho1=0.5; local colours C0=(0.6,0.3,0.1), C1=(0.2,0.4,0.8), C2=(0.1,0.1,0.2)
+Two-continuation result = 0.8 C0 + 0.2(0.5 C1) + 0.1 C2 = (0.51,0.29,0.18)
+```
+
+![Figure 8: Primary, shadow, reflected and transmitted rays. A finite bounce budget limits tracing cost; the local surface model supplies each hit's colour.](diagrams/ray-diagram.png)
+
+## 2.9 Bounding volume hierarchy and conservative bounds
+
+A bounding volume hierarchy encloses groups of primitives with boxes, rejecting whole groups when a ray misses the box [7]. This project rebuilds a median-split tree over the visible scene each frame because its toys and doors move. The longest spread of box centres chooses the split axis; leaves contain at most two instances unless their centres coincide. Closest-hit traversal visits the nearer child first and prunes nodes farther than the current hit. Shadow traversal stops at the first qualifying opaque occluder.
+
+```text
+World AABB centre c = M[3].xyz
+Half-size h = 0.5(|M[0].xyz| + |M[1].xyz| + |M[2].xyz|)
+Node bounds = union(child bounds)
+Conservative sphere radius = 0.5 max over sy,sz in {-1,+1} |a0 + sy a1 + sz a2|
+```
+
+The sphere-bound expression measures the four distinct lengths among the eight transformed cube corners and remains valid under shear. The earlier orthogonal-column expression is insufficient when axes cease to be perpendicular. Scene nodes that are not visible are omitted from drawing and tracing, but the ray scene is not camera-frustum culled: off-screen geometry can still be visible in a reflection or block a shadow ray.
+
+![Figure 9: A spatial hierarchy rejects groups of distant objects before exact primitive intersection. The bounds must enclose the geometry after rotation, scale and shear.](diagrams/bvh-diagram.png)
+
+# CHAPTER III — Methodology and Object Construction
+
+## 3.1 Resource ownership and rendering architecture
+
+Assets owns five full-detail primitive meshes, lower-detail curved meshes, textures and materials. SceneNode stores pointers to these resources and owns its children. GPU wrappers manage buffers, arrays, shaders and textures for their lifetimes. Renderer collects visible shapes into DrawItems with model and normal matrices. The raster path uses indexed draws; RayTracer packs inverse transforms, material coefficients and BVH nodes into an RGBA32F texture buffer. The same light equations are included by both shader paths through lighting.glsl.
+
+Table 4: Module responsibilities
+
+| Module | Responsibility | Entry point |
+| --- | --- | --- |
+| core | Window, frame loop, elapsed time, input edges, asset paths | Application::Run / Input |
+| geometry / math | Primitive vertices and indices; matrices; CPU intersections | Primitives / Transform3D / RayIntersect |
+| scene | Local transforms, hierarchy, materials, camera and lights | SceneNode::UpdateWorld |
+| characters | Model assembly, drive state, gait, wheels, flight and cat poses | Character::Drive / Animate |
+| world | Room/house builders, story choreography, arrival, physical contacts | BuildRoom / BuildHouse / StoryDirector |
+| render | Raster shaders, shadow map, ray tracer, textures, debug geometry, HUD | Renderer::Render / RayTracer::Render |
+| app | Scene wiring, selection, input dispatch, mount/dismount and evidence export | ToyRoomApp::StepScene / OnRender |
+
+## 3.2 Woody and Jessie: one humanoid construction
+
+HumanoidStyle configures a reusable builder. A pelvis joint owns the torso, head, shoulders and hips; each shoulder owns the upper arm, elbow/forearm and hand, while each hip owns the thigh, knee/shin and boot. Ellipsoids model the head, hands and rounded details; cylinders model limbs; cubes provide the torso, garment panels and boots. Woody is identified by his brown hat, yellow plaid shirt, cow-print vest and denim trousers. Jessie changes the same structure to a red hat, white/red shirt, red hair braid and tan boots. Sharing materials and geometry keeps the construction consistent.
+
+![Figure 10: Woody: hat, plaid shirt, cow-print vest, denim trousers and articulated limbs.](figures/woody.png)
+
+Woody's silhouette comes from separately scaled hat brim, crown, torso and boots, rather than a single imported mesh. The plaid, cow-print and denim maps are selected per shape, so one shared primitive mesh can represent different garment surfaces. Shoulder and hip pivots rotate their descendants without changing the body root. His root position and heading are the quantities transferred to user control during live takeover.
+
+![Figure 11: Jessie: the same humanoid hierarchy with different garments, red hair, braid and hat.](figures/jessie.png)
+
+Jessie retains the same joint layout but changes the visible hat, hair, garment colours and boot proportions. The braid is assembled from rounded primitive sections under the head, so it follows head orientation. The saddle attachment changes the root parent while preserving the world transform; a seated pose then bends the existing legs. Dismounting restores an independent character root instead of duplicating the model.
+
+Drive computes the forward vector from heading, accelerates toward the requested speed and changes yaw with turn input. Animate advances the walk phase with travelled distance, not only wall-clock time. Opposite hips swing out of phase and shoulders swing against the legs. Motion blend approaches zero when the toy stops. Mounted Jessie blends to a seated pose and stops independent driving; selecting a mounted actor detaches Jessie for independent control. Voluntary remounting drives the connected pair.
+
+```text
+forward = (sin(heading),0,cos(heading))
+v += clamp(vTarget-v,-acceleration dt,+acceleration dt)
+heading += turnInput × turnRate × dt; position += forward × v × dt
+phase += v dt × 4; legSwing = sin(phase) × 35 degrees × moveBlend
+```
+
+## 3.3 Bullseye and dynamic mounting
+
+Bullseye uses an elongated sphere for the barrel, a separate neck/head hierarchy, muzzle, ears and eyes, four leg joints, hooves, mane, tail and a saddle. Differently scaled spheres preserve the horse's rounded toy silhouette. The saddle owns pad, flaps, straps, stirrups and an attachment joint. Gait animates the four leg joints and adds a small body bob; the saddle inherits that movement.
+
+![Figure 12: Bullseye and the mounted rider: ellipsoid anatomy, saddle attachment and articulated legs.](diagrams/rider-hierarchy.png)
+
+Mounting is accepted when Jessie's horizontal distance to Bullseye is no greater than 2.2 units and no transition is already running. The app remembers her world transform, reparents her root to the saddle and converts the placement into the saddle's coordinates. A 0.7-second interpolation takes her to the seat. Dismount converts back to a world-space position beside the horse and restores her independent collision body and controls. The placement conversion uses position and yaw; it is designed for the ordinary character rig rather than arbitrary affine reparenting of an externally sheared character.
+
+```text
+MlocalNew = inverse(MworldSaddle) MworldJessie
+MworldJessie = MworldBullseye MlocalSaddle MlocalJessie
+smooth transition weight = q²(3-2q), q=clamp(elapsed/duration,0,1)
+```
+
+## 3.4 Buzz: flight, helmet and laser
+
+Buzz extends the humanoid with a purple hood, clear spherical helmet, green/white armour, chest indicators, back pack, thrusters, wings and a wrist laser. The flight pose suppresses the walking gait, trails the legs, pitches the body according to cruise motion and banks while turning. A wings joint changes width between folded and extended poses. The helmet uses opacity 0.22; raster rendering blends it after opaque parts and ray tracing continues through its surface.
+
+![Figure 13: Buzz's armour, spherical helmet, wings and wrist-mounted laser emitter.](figures/buzz.png)
+
+L toggles the laser; Z/X changes its aim and Alt+click aims at a visible surface. The beam is a thin emissive cylinder whose transform follows the right-arm rig. A red point light at its tip supplies local glow. PhysicsWorld::FireLaser finds the nearest blocking hit and applies an impulse only if it is a dynamic wooden block. Furniture can intercept the beam before a hidden block. The beam length is shortened to the hit distance, linking the visible effect to the intersection result.
+
+![Figure 14: Buzz's red beam strikes the block scene; the impulse moves and tumbles affected blocks.](figures/laser.png)
+
+## 3.5 RC car: wheels, headlights and route
+
+The car combines box chassis/body pieces, cabin, bumpers and grille with four cylinder wheels, hubs, axle details and an antenna. Wheel joints align cylinders with the axle and accumulate an angle equal to travelled distance divided by tyre radius. Two headlight anchors follow the car's world transform and emit forward/downward spotlights. L toggles manual headlights. During activation in the mission, headlights switch on and the car follows its route through the hallway into its home position.
+
+```text
+wheelAngle += travelledDistance / wheelRadius
+headlightPosition = MworldAnchor[3].xyz
+headlightDirection = normalize(anchor +Z axis + downward tilt)
+```
+
+![Figure 15: The RC car in the connected hallway, with four wheels, body panels and headlight lenses.](figures/car.png)
+
+## 3.6 Penny: curved anatomy and the arrival
+
+Penny is built from ellipsoids for the body, head, muzzle, cheeks and paws; pointed ears combine curved/triangular primitive forms, and the tail uses a separate curved arrangement of primitive sections. White material and ginger patch shapes identify the coat. Eye, nose, mouth and whisker details belong to the head hierarchy. Walking alternates the legs; sitting and sleeping reconfigure the existing rig. Head orientation follows the active toy during the mission.
+
+![Figure 16: Penny's white coat, ginger patches, rounded head and seated pose on the bed.](figures/penny.png)
+
+PennyArrival follows fifteen waypoints from the pavement through the gate, porch, ground-floor corridor, stairs and room. Each door is a child of a hinge joint and opens when Penny reaches the relevant part of the route. The stair flight has a 4.5-unit rise over an 8-unit run; the body pitch follows that slope. A 0.7-second eased interpolation with a sine lift produces the hop onto the bed. Route progress also drives sunset. The house exterior is hidden after the stairs are reached, and the downstairs interior is hidden after the arrival finishes.
+
+```text
+stairAngle = atan2(4.5,8) = 29.36 degrees
+jumpPosition = mix(start,bed,q²(3-2q)) + (0,sin(pi q),0)
+arrivalHour = 16.3 + 7.6 smoothstep(travelledDistance/routeLength)
+```
+
+![Figure 17: The garden approach and stair connection used by Penny during the arrival sequence.](diagrams/arrival-route.png)
+
+## 3.7 Room shell, window and sky
+
+The play room is 20 units wide, 18 deep and 7.5 high. Inward-facing wall planes are split around an actual back-wall window opening and right-wall doorway. Four window-frame strips, two mullions and a sill reveal an external sky plane, sun/moon spheres and distant house silhouettes. Side skirting and crown trim supply architectural edges. The window is an architectural opening; the implemented user-controlled opening is the door/lamp/character interaction system rather than a manually hinged window sash.
+
+![Figure 18: Window frame, curtain folds and the textured cratered moon visible through the wall opening.](figures/window.png)
+
+Environment::UpdateSky maps the 24-hour clock onto opposite sun and moon arcs. A smooth daylight factor blends ambient light, sky emission and directional-light colour. The emissive sun and moon are visible representations; a separate directional light represents illumination. The large sky plane is unlit and its star brightness fades during daytime.
+
+```text
+a = (hour-6) pi/12; sunHeight = sin(a)
+sunPosition = skyCentre + (-3.2 cos(a),3.1 sin(a),0)
+moonPosition = orbit(a+pi); daylight = smoothstep(-0.1,0.25,sunHeight)
+```
+
+## 3.8 Furnishings and texture-efficient detail
+
+The desk uses a box top, four legs, drawer and a spherical brass knob. A sketchbook and three pencil cylinders sit on the top. The articulated lamp belongs to a separate root above the desk. The chair adds a seat, back and four legs. The bed uses frame, mattress, plaid blanket, headboard and two flattened-sphere pillows. The bookcase has uprights, back and four shelves; a single textured box on each shelf represents a row of book spines. Solid furniture contributes to collision bounds, while thin visual trim stays decorative.
+
+![Figure 19: Desk and chair construction beside the bed frame, mattress, blanket and pillows.](diagrams/desk-bed.png)
+
+Desk and chair: box faces provide flat normals at the tabletop, drawer and leg edges; the brass knob uses a sphere with a stronger specular response. The three pencil cylinders and thin sketchbook remain decorative parts. Chair seat, back and four legs share the same wood material. Repeated wood UVs add grain without additional triangles, while solid furniture bounds keep driven characters outside the structure.
+
+Bed: the frame and headboard establish the solid silhouette, while separate mattress and blanket boxes permit different surface materials. Two flattened spheres form soft pillows. The fabric pattern uses the existing face UVs and repeat scale, so the checked blanket is coloured surface detail. The bed also supplies the final arrival target for Penny; the jump and sleeping pose use her original rig.
+
+![Figure 20: Bookcase geometry with textured book rows, and the independently mapped wall poster.](diagrams/bookcase-poster.png)
+
+Bookcase: uprights, backing and shelves are independent scaled boxes. Each shelf contains one textured book-row box; coloured spine bands suggest many books with fewer draw calls than individual book meshes. This is a deliberate surface-detail approximation. The frame retains geometric depth and cast-shadow structure, while the texture provides fine repetition that would otherwise require many small objects.
+
+A repeated fabric pattern covers eight curtain-fold cylinders. A wall poster is an independently UV-mapped plane. The rug uses concentric square colour bands on a plane just above the floor. Toy blocks are six cubes arranged as a tower; a larger doorway crate is a mission obstacle. Their star/bevel texture adds surface identity without adding bevel geometry. All leaf transforms and material assignments are recorded in objects.csv and the comprehensive construction notes; Appendix A indexes the complete scene groups.
+
+Poster, curtains and rug: the poster is a plane with a single BMP image, giving a clear demonstration of file loading rather than procedural generation. Curtain folds use eight cylinders to produce an actual curved silhouette and changing normals. The rug is a slightly elevated plane with concentric colour bands. Small offsets prevent coincident surfaces from competing in the depth buffer.
+
+![Figure 21: The six-block tower and doorway crate. Boxes participate in gravity, separation and laser impulses.](figures/blocks.png)
+
+Blocks and doorway crate: each rigid box has its own translation and orientation, allowing gravity, separation and laser impulses to act independently. The star-and-border map identifies the faces, but its apparent bevel is a colour pattern rather than extra edge polygons. The crate is the story obstacle; the small tower provides a visible test of falling and tumbling objects after an impulse.
+
+## 3.9 Fan, clock and haunted props
+
+The ceiling fan has a fixed mount and shaft, a spherical motor and four thin box blades. Each blade is placed below a rotor joint. The rotor turns at 110 degrees per second while world playback is active. The wall clock has a cylindrical rim and face, twelve box hour marks, two hand pivots and a central pin. Rotating each pivot moves the complete hand, and the two angles are derived from the scene hour rather than independent animation clocks.
+
+```text
+fanYaw = (fanYaw + 110 dt) mod 360
+hourHandAngle = -30 (hour mod 12) degrees
+minuteHandAngle = -360 fract(hour) degrees
+```
+
+![Figure 22: Ceiling fan rotor and clock hands: distinct parent joints driven by scene time.](diagrams/fan-clock.png)
+
+The beach ball is one sphere below a position root, with six coloured UV gores and white polar regions. Rolling accumulates a Rodrigues rotation in its shape basis. The ghost combines a spherical head, conical sheet and dark face parts under a body joint. Its opacity fades toward night visibility; sinusoidal position, bobbing and body roll create floating motion. O toggles the haunted ambience outside edit mode, enabling autonomous ball motion, ghost appearance and lamp swivel/flicker without changing the coordinated story's default choreography.
+
+```text
+rollingAxis = normalize(up × displacement); rollingAngle = |displacement|/radius
+ballBasisNext = R(rollingAxis,rollingAngle) ballBasis
+ghostPosition = (4.5 sin(0.25t),4.2+0.35 sin(1.3t),3 cos(0.25t)-0.5)
+```
+
+![Figure 23: Rolling beach ball and translucent ghost: spherical UVs, accumulated rotation and time-dependent opacity.](diagrams/ball-ghost.png)
+
+## 3.10 Lamp hierarchy and moving illumination
+
+The lamp has a cylinder base, arm pivot, cylinder arm, elbow sphere, head pivot, cone shade, emissive bulb sphere and a light anchor beyond the shade. A/D changes base yaw, W/S changes head tilt, R toggles power and comma/period adjust brightness. Both the point light and spotlight position follow the light anchor, while the spotlight direction is the head's transformed local -Y axis. Thus editing the lamp changes the light itself, not just the decorative mesh. In ambience mode, layered value noise modulates brightness and occasionally produces a short dropout.
+
+![Figure 24: The shade, bulb and hierarchy follow the lamp's controls, carrying the point and spot sources.](figures/lamp.png)
+
+## 3.11 House, doors and garden
+
+BuildHouse constructs a two-storey facade, pitched roof, gables, trim, porch, garage and ground-floor corridor around the upper play room. A rotated, stretched cube supplies each gable silhouette; box sections form roof slopes. Siding, shingles and brick detail are tinted procedural maps. The porch has supports, railings and steps; transparent cutout picket maps replace repeated fence and railing geometry. The garden includes lawn, path, street, pavement, driveway, shrubs, five trees, flower details, mailbox and gate posts. The visible external sun contains an emissive core and translucent halo.
+
+![Figure 25: The full house exterior, porch, garage, fence, trees, lawn, pavement and street at the start of the arrival.](figures/house.png)
+
+Exterior groups: scaled boxes form the house walls, porch, garage and pavement, with roof and trim elements preserving the architectural outline. Fence pickets use alpha coverage to cut holes in a textured surface; their silhouette is not a separate mesh for every opening. Grass, siding, shingles and brick have distinct UV repeats. Trees and garden elements give depth to the arrival view and remain selectable or inspectable through their scene-node records.
+
+The front door, double toy-room door and stair door use hinge roots: yaw rotates the door and handle together. Arrival stage and Penny's proximity drive exponentially eased opening. Cinematic visibility hides downstairs geometry after arrival while retaining its inventory records. The shared texture array supplies exterior maps to both raster and ray-traced rendering.
+
+# CHAPTER IV — Implementation, Results and Discussion
+
+## 4.1 Light sources and material response
+
+Table 5: Scene light configuration
+
+| Source | Type / control | Attenuation (kc,kl,kq) | Cone / visibility |
+| --- | --- | --- | --- |
+| Sun / moon | Directional; clock and F8 | (1,0,0) effective | No cone; ray shadows |
+| Lamp bulb | Point; lamp anchor, R power | (1,0.14,0.07) | All directions; ray shadows |
+| Lamp shade | Spot; head -Y axis | (1,0.05,0.01) | 22° / 34°; raster map + ray shadows |
+| Hall night light | Point; fixed position | (1,0.10,0.03) | No general shadow test |
+| Left / right headlight | Two spots; moving car, L | (1,0.10,0.05) | 12° / 22°; no general shadow test |
+| Laser glow | Point; Buzz laser tip, L | (1,0.35,0.40) | No general shadow test |
+| Ghost glow | Point; ghost world position | (1,0.30,0.15) | Fades with ghost; no general shadow test |
+
+Eight light slots share one shader interface. Light intensity is refreshed each frame, so switching a lamp, activating the car or moving a glow source changes the actual illumination. Textures are multiplied into ambient/diffuse reflectance while highlights stay in light colour. Cloth uses low specular strength; brass and lamp metal use stronger, sharper highlights. The floor uses ks=0.35, shininess=48 and reflectivity=0.18; the ball uses ks=0.6, shininess=64 and reflectivity=0.12. Appendix B gives representative coefficients; materials.csv and the comprehensive notes give every material's actual coefficients.
+
+![Figure 26: Isolated directional, point and spot sources (top rows), followed by ambient, diffuse and specular terms. All views are captured from the application.](diagrams/light-comparison.png)
+
+## 4.2 Matched shading comparison
+
+The following images use the same camera, materials, time and light state. Only the raster shading mode changes. Wireframe and normal views identify the geometry behind the comparison. Gouraud's interpolated vertex light is usually less accurate around a small highlight; Phong computes the normal-based response per fragment. Flat makes individual planar facets easier to identify, while Blinn uses a half-vector term with four times the stored exponent.
+
+![Figure 27: Matched Flat, Gouraud, Phong and Blinn-Phong views. The shading model changes while geometry, material and camera remain fixed.](diagrams/shading-comparison.png)
+
+## 4.3 Complete surface-map catalogue
+
+The texture catalogue includes every sampled scene map and the white utility fallback. Native size, array layer, scene use and generation rule are listed alongside faithful exported images. The alpha fence map is also shown over a checker background to reveal holes; alpha is shape coverage and remains effective even when colour texturing is disabled. Texture rows in the exported inventory preserve the source dimensions.
+
+![Figure 28: All 21 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.](diagrams/texture-atlas.png)
+
+Table 6: Surface-map construction and use
+
+| Map / layer | Construction | Use |
+| --- | --- | --- |
+| white / -1; 1x1 | One white texel leaves the material's colour unchanged; no traced layer is required. | Untextured material fallback |
+| wood-floor / 0; 512x512 | Eight plank columns and staggered joints; per-plank hash tint, sinusoidal/noise grain and dark gaps. | Floor, desk, chair, bed and fan blades |
+| wallpaper / 1; 256x256 | Two-tone vertical stripes and regularly placed diamond motifs in normalised UV space. | Room wall sections |
+| rug / 2; 256x256 | Square radius d=max(/u-0.5/,/v-0.5/); band=floor(16d) mod 4 with fine value-noise variation. | Floor rug |
+| beach-ball / 3; 256x128 | Longitude selects six colour gores; latitude creates white polar caps. | Rolling ball |
+| toy-block / 4; 128x128 | Face-border shading and a star motif imitate bevel/detail without extra triangles. | Tower blocks and doorway crate |
+| poster / 5; 256x384 | 24-bit BMP from the local poster generator; decoded by the project's BMP parser. | Wall poster |
+| night-sky / 6; 1024x512 | Deterministic star locations on black; sky emission supplies the background and daylight fades stars. | External sky backdrop |
+| lunar-surface / 7; 1024x512 | Procedural spherical crater/maria colour pattern with deterministic noise; no displacement mapping. | Moon |
+| woven-cotton / 8; 256x256 | Crossing fine periodic threads combined with low-amplitude noise. | Shirts, curtains, horse mane/body |
+| denim / 9; 256x256 | Diagonal woven/twill modulation over the material's tint. | Trousers and tyre detail |
+| worn-leather / 10; 256x256 | Fine grain and uneven mottling from layered value noise. | Hats, boots and saddle |
+| shirt-plaid / 11; 256x256 | Two sets of periodic crossing stripe masks form checks; fabric noise adds small variation. | Shirts and orange blanket |
+| cow-print / 12; 256x256 | Thresholded smooth noise defines irregular dark patches on a light base. | Woody's vest |
+| book-spines / 13; 256x256 | Twelve UV cells, six-colour palette, hashed height, gap and gold title band. | Four bookcase rows |
+| pickets / 14; 256x256 | Eight narrow pickets per repeat, triangular tips and two rails; alpha=0 in every hole. | Fence and porch/stair rails |
+| siding / 15; 256x256 | Eight board rows: fractional row height controls edge shading, with stretched wood noise. | House facade |
+| shingles / 16; 256x256 | Eight staggered rows and six tabs per row; hashed tab brightness and dark gap masks. | Roof slopes |
+| brick / 17; 256x256 | Eight running-bond courses, four bricks per row, half-brick row offsets and pale mortar masks. | House/porch masonry |
+| grass / 18; 256x256 | Two noise scales: coarse clumps and fine elongated blade variation, tinted green. | Garden lawn |
+| window-pane / 19; 128x128 | Border/cross masks and a vertical glass gradient with a diagonal sheen; opaque colour map. | Exterior windows |
+| flower-bed / 20; 256x256 | Ten-by-ten hashed cells place blossom centres and choose among four colours over leaf noise. | Garden flower details |
+
+![Figure 29: With colour textures disabled, flat material preview colours reveal the geometric construction. Cutout coverage still preserves fence holes.](figures/no-textures.png)
+
+## 4.4 Raster and ray-traced results
+
+The scene and camera remain the same in the following comparisons. Raster mode approximates curved geometry with triangles and uses the lamp shadow map; the ray tracer intersects exact primitive equations and can reveal off-screen geometry in the polished floor. Primary rays, shadow rays, mirror paths and opacity continuation are all implemented in the shader. Ray resolution defaults to half the display dimensions, giving one quarter of its pixels; minus/equal adjusts resolution from 0.2 to 1.0 and 9 cycles the bounce limit from zero to four.
+
+![Figure 30: Zero-continuation room view, two-continuation reflections and ray-traced exterior texture coverage.](diagrams/ray-comparison.png)
+
+The shader uses quality thresholds to bound shadow work. Very weak light contributions are skipped; lights tagged for tracing cast an occlusion ray only when attenuation × intensity × max(N·L,0) exceeds 0.02. Transparent and unlit instances are excluded from general shadow occlusion. These choices improve interactive cost but mean visibility is deliberately approximate for weak lights and translucent objects. The tracer does not provide physical refraction or indirect diffuse illumination.
+
+## 4.5 Coordinated animation and interaction
+
+Table 7: Story states and visible graphics operations
+
+| Stage | Action | Graphics concept |
+| --- | --- | --- |
+| Arrival | Penny enters through doors, climbs and jumps to the bed | Waypoints, hinges, camera following, slope/jump, sunset |
+| 1 Discovery | Woody looks toward the lost car | Yaw steering and establishing camera |
+| 2 Departure | Jessie mounts; Buzz flies; Woody leads | Hierarchy, pose blend, translation and flight |
+| 3 Clear path | Buzz's laser pushes the doorway obstacle | Ray picking, impulse, emissive geometry |
+| 4 Reach car | The friends cross into the hallway | Coordinated waypoint routes and contacts |
+| 5 Activate car | Enter or automatic activation starts its return | User interaction, headlights, wheel rotation |
+| 6 Return home | Rider dismounts; toys return to their places | World/local conversion and independent control |
+| 7 Morning / End | Lamp off, rest poses restored, Penny asleep | Clock-driven lighting and complete pose restoration |
+
+The mission's transition guards test route completion, mounting state or laser impact. Enter explicitly activates the car in its activation scene; unattended playback performs that action after three seconds. Selecting a character during playback grants live ownership while the director continues other actors. The director never writes the owned actor's route, heading, special state or morning reset. A separate virtual route cursor advances at the scheduled speed, so a scene-completion guard cannot wait indefinitely for keyboard input. When Buzz is owned, the doorway opens after a three-second cinematic gate without changing his laser or aim. Scripted actors ignore the owned actor as a movement obstacle, while the owned actor retains furniture and wall contacts. Selecting a mounted rider or horse first detaches the rider for independent control; voluntarily remounting transfers the connected pair as one physical unit. Pressing 0 releases ownership and the actor steers from its current location toward the remaining route. N switches the complete scene to full manual mode or resumes story mode, Shift+N restarts the arrival and story, Y skips the arrival, and P pauses the story clock. The interface exposes the active rendering path and selected object. Penny can also be picked and driven after the arrival. A complete keyboard reference and a narration guide accompany the report.
+
+![Figure 31: Live character takeover, daytime lighting and the completed morning return.](diagrams/interaction-ending.png)
+
+```text
+Owned route progress: delta = nextWaypoint - virtualPosition; d = length(delta)
+virtualPositionNext = virtualPosition + delta min(d, routeSpeed dt)/d
+Scene gate = virtual completion for owned actor AND real completion for other actors
+```
+
+## 4.6 Collision and frame-time control
+
+Moving actors and the camera use swept bounding boxes. Expanding an obstacle by the mover's half-size converts box movement into a segment/slab test. At contact the remaining motion loses its component into the contact normal, allowing sliding along furniture. Dynamic blocks use a fixed 1/120-second step with at most six steps per displayed frame. Gravity updates vertical speed, contact separation resolves overlaps and an impact transfers linear/angular velocity. This is a compact box approximation, not a full rigid-body constraint solver.
+
+```text
+vYNext = vY - 9.81 step; pNext = p + v step
+Expanded obstacle = [boxMin - moverHalf, boxMax + moverHalf]
+slideDelta = delta - n min(0,delta·n)
+Maximum physics work = 6 substeps × 1/120 s per frame
+```
+
+## 4.7 Optimisation decisions
+
+Geometry buffers and materials are shared. Sphere detail levels contain 1656, 396 or 100 triangles; cylinder and cone levels use 32, 16 or 8 sectors. Projected-size estimates choose detail levels. Raster frustum planes cull only shapes whose conservative bounds are outside the view. Opaque draws are grouped within depth slices by material and mesh; transparent shapes are sorted far-to-near and disable depth writes. Uniform locations are cached. The shadow pass skips inactive lamps and tiny/out-of-cone shapes. The ray tracer reuses CPU vectors and avoids per-item general 4 × 4 inversion by deriving inverse rows from the normal matrix. A single texture array prevents per-map sampler growth.
+
+```text
+LOD ratio = boundingRadius / distanceToEye
+ratio < 0.012: low; ratio < 0.06: medium; otherwise full
+Inverse affine row i = (normalMatrix column i, -dot(column i,translation))
+```
+
+Cinematic visibility removes the exterior and downstairs geometry when the arrival no longer exposes them. Surface patterns replace book-spine and fence geometry where a colour/coverage map is sufficient. Fixed physics work prevents stalls from scheduling unbounded catch-up work. Deterministic media capture uses a fixed simulation step and raw RGB frame recording; the media generator validates frame count before encoding. Benchmark timings are execution observations, not a guarantee for every environment.
+
+Table 8: Observed rendering timings
+
+| Mode | Frames | ms/frame | FPS | Draws/frame | Geometry |
+| --- | --- | --- | --- | --- | --- |
+| Raster Blinn-Phong | 200 | 0.84 | 1183.59 | 674 | 81603 |
+| Ray tracing (0.5 scale, 2 bounces) | 200 | 3.18 | 314.72 | 2 fullscreen passes | Analytic primitives |
+
+These observations use the final Release executable at 1600 × 900 with 60 warm-up frames followed by 200 timed frames, v-sync disabled, and the mission running without its arrival. The two rendering paths use their normal settings. Ray statistics refer to full-screen passes, not the raster triangle counters. Timing is influenced by scene progression and concurrent system work; it is not an isolated before/after experiment.
+
+## 4.8 Verification and achieved objectives
+
+The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding and hallway access. The full arrival/mission replay reaches The End, logs mounting and dismounting, and restores the driveable toys to their expected home positions. Captures exercise all four raster shading modes, all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
+
+Table 9: Verification evidence
+
+| Area | Method | Result |
+| --- | --- | --- |
+| Geometry / transforms / contacts | tests/PhysicsChecks.cpp | 36 checks passed |
+| Manual + mounted + live input | Actual Windows key messages into GLFW callbacks | All three scenarios passed |
+| Story completion | Arrival plus 300-second fixed-step replay | The End; mounts/dismounts; dawn/home positions |
+| Rendering | 42 deterministic PNG captures; capture checks GL errors | All paths completed |
+| Live takeover | Five independently owned toy replays plus real key ownership/release checks | All five reach The End; other toys return home |
+| Video | 2880 frames, 1280 × 720, 24 fps; complete decode | 120 seconds; passed |
+
+# Conclusions
+
+The project implements the recorded toy-room concept as a complete interactive scene and coordinated animation. Its geometry, transforms, hierarchy, lighting, shading, texture generation and analytic ray tracing are exposed through controls and supported by actual rendered examples. A shared scene/material model connects the raster and ray-traced views, while resource reuse, level of detail, visibility culling, bounded simulation work and BVH traversal keep the implementation practical for demonstration. The complete node and material inventories make individual object construction traceable.
+
+The remaining design limits are specific: raster general shadows come from the lamp spotlight; ray shadows use selected sources and intensity thresholds; transparent rays continue straight; finite bounces close with local lighting; object interaction uses approximate boxes; and arbitrary affine edits are not a general-purpose rigging or reparenting system. Extensions could add refractive paths, broader shadow coverage or static/dynamic BVH separation, but these are separate enhancements to the implemented graphics scope.
+
+# References
+
+[1] M. Segal and K. Akeley, The OpenGL Graphics System: A Specification, Version 3.3 Core Profile, Khronos Group, 2010. https://registry.khronos.org/OpenGL/specs/gl/glspec33.core.pdf
+
+[2] GLFW Project, GLFW 3.3 Documentation. https://www.glfw.org/docs/3.3/ (accessed Oct. 7, 2026).
+
+[3] B. T. Phong, “Illumination for computer generated pictures,” Communications of the ACM, vol. 18, no. 6, pp. 311–317, 1975, doi: 10.1145/360825.360839.
+
+[4] H. Gouraud, “Continuous shading of curved surfaces,” IEEE Transactions on Computers, vol. C-20, no. 6, pp. 623–629, 1971, doi: 10.1109/T-C.1971.223313.
+
+[5] J. F. Blinn, “Models of light reflection for computer synthesized pictures,” Proceedings of SIGGRAPH, pp. 192–198, 1977, doi: 10.1145/563858.563893.
+
+[6] T. Whitted, “An improved illumination model for shaded display,” Communications of the ACM, vol. 23, no. 6, pp. 343–349, 1980, doi: 10.1145/358876.358882.
+
+[7] M. Pharr, W. Jakob and G. Humphreys, Physically Based Rendering: From Theory to Implementation, 4th ed., “Bounding Volume Hierarchies,” 2023. https://www.pbr-book.org/4ed/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies
+
+[8] G-Truc Creation, OpenGL Mathematics (GLM), source and documentation. https://github.com/g-truc/glm (accessed Oct. 7, 2026).
+
+[9] D. Herberth, GLAD OpenGL loader generator, source. https://github.com/Dav1dde/glad (accessed Oct. 7, 2026).
+
+[10] Pixar Animation Studios, Toy Story, 1995, and Toy Story 2, 1999. Visual character inspiration for the primitive-built toy cast. https://www.pixar.com/toy-story
+
+The project uses the graphics concepts and public library interfaces cited above. Character names and recognisable colour/silhouette cues are inspired by Toy Story; the meshes are constructed locally from primitive builders rather than imported film assets. Scene screenshots are captured from the application, and explanatory diagrams are authored for this report. The poster is a locally generated image. The renderers, scene construction, procedural surface generators, BMP reader, object inspector and animation logic are project source implementations.
+
+# Appendix A - Object construction index
+
+The scene export contains 699 nodes, including 600 mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.
+
+Table 10: Complete scene coverage by construction group
+
+| Group | Nodes / shapes | Primitive families |
+| --- | --- | --- |
+| World | 1 / 0 |  |
+| Room[0] | 136 / 120 | Cube, Cylinder, Plane, Sphere |
+| Lamp[1] | 9 / 5 | Cone, Cylinder, Sphere |
+| Ball[2] | 2 / 1 | Sphere |
+| Ghost[3] | 7 / 5 | Cone, Sphere |
+| Woody[4] | 70 / 62 | Cone, Cube, Cylinder, Sphere |
+| Jessie[5] | 72 / 63 | Cone, Cube, Cylinder, Sphere |
+| Bullseye[6] | 55 / 44 | Cone, Cube, Cylinder, Sphere |
+| Buzz[7] | 87 / 77 | Cube, Cylinder, Sphere |
+| RCCar[8] | 44 / 32 | Cube, Cylinder, Sphere |
+| HouseInterior[9] | 32 / 31 | Cube, Cylinder, Plane, Sphere |
+| RoomDoorLeft[10] | 5 / 4 | Cube, Sphere |
+| RoomDoorRight[11] | 5 / 4 | Cube, Sphere |
+| StairDoor[12] | 5 / 4 | Cube, Sphere |
+| HouseExterior[13] | 115 / 104 | Cube, Cylinder, Plane, Sphere |
+| FrontDoor[14] | 4 / 3 | Cube, Sphere |
+| Penny[15] | 45 / 36 | Cone, Cube, Cylinder, Sphere |
+| ContactShadow[16] | 1 / 1 | Sphere |
+| ContactShadow[17] | 1 / 1 | Sphere |
+| ContactShadow[18] | 1 / 1 | Sphere |
+| ContactShadow[19] | 1 / 1 | Sphere |
+| ContactShadow[20] | 1 / 1 | Sphere |
+
+# Appendix B - Material and study references
+
+Every material is recorded in materials.csv: colour, ambient/diffuse/specular coefficients, shininess, emission, opacity, mirror reflectivity, texture layer and UV scale. Representative coefficients below make the visual comparisons reproducible. Ghost opacity is a time-dependent value: 0.55 times visibility, or 0.55 while selected; the export records its initial hidden value of zero. The comprehensive notes retain the full material inventory. The Demonstration and Viva Guide supplies a timed two-minute narration, live-control rehearsal, theory questions and parameter-change practice. The numbered source documentation explains vertex/index construction, every object hierarchy, illumination, shading, textures and analytic ray tracing in greater depth.
+
+Table 11: Representative actual material coefficients
+
+| Material | ka/kd/ks | n | alpha / rho | UV |
+| --- | --- | --- | --- | --- |
+| floor | 1/1/0.35 | 48 | 1 / 0.18 | 8 / 4 |
+| wall-side | 1/1/0.05 | 8 | 1 / 0 | 1 / 3.75 |
+| desk-wood | 1/1/0.3 | 32 | 1 / 0 | 1 / 0.5 |
+| brass | 1/1/0.8 | 64 | 1 / 0 | 1 / 1 |
+| lamp-metal | 1/1/0.7 | 64 | 1 / 0 | 1 / 1 |
+| beach-ball | 1/1/0.6 | 64 | 1 / 0.12 | 1 / 1 |
+| ghost | 1/1/0.2 | 16 | 0 / 0 | 1 / 1 |
+| Buzz-helmet | 1/1/1 | 128 | 0.22 / 0.25 | 1 / 1 |
+| car-paint | 1/1/0.9 | 96 | 1 / 0.15 | 1 / 1 |
+| car-glass | 1/1/1 | 128 | 1 / 0.3 | 1 / 1 |

@@ -1,0 +1,64 @@
+1
+00:00:00,000 --> 00:00:10,000
+Welcome home
+Penny's route links the garden, doorway, stairs and toy room.
+
+2
+00:00:10,000 --> 00:00:20,000
+A furnished world
+Five reusable primitives build the house, furniture and articulated toys.
+
+3
+00:00:20,000 --> 00:00:32,000
+Hierarchy in motion
+Jessie attaches to Bullseye's saddle; one parent transform moves both.
+
+4
+00:00:32,000 --> 00:00:44,000
+Flight, laser and collision
+Buzz aims at the obstacle. The nearest ray hit receives an impulse.
+
+5
+00:00:44,000 --> 00:00:56,000
+Rescue and return
+The car follows waypoints. Wheel rotation uses distance divided by radius.
+
+6
+00:00:56,000 --> 00:01:06,000
+Live character takeover
+Woody follows your controls while Jessie and Buzz continue the mission; 0 releases him, N enters full manual.
+
+7
+00:01:06,000 --> 00:01:14,000
+Directional, point and spot
+Moonlight is directional. The lamp adds a point source and a soft cone.
+
+8
+00:01:14,000 --> 00:01:20,000
+Gouraud shading
+Light is evaluated at vertices; the rasterizer interpolates the result.
+
+9
+00:01:20,000 --> 00:01:26,000
+Phong shading
+Interpolated normals are normalized; the reflection-vector highlight is per pixel.
+
+10
+00:01:26,000 --> 00:01:34,000
+Procedural textures
+UVs map grain, wallpaper, fabric and lunar craters onto shared geometry.
+
+11
+00:01:34,000 --> 00:01:46,000
+Ray tracing
+A BVH finds analytic hits; shadow rays and mirror bounces reveal the polished floor.
+
+12
+00:01:46,000 --> 00:01:52,000
+A quiet morning
+The lamp turns off, the toys return home and Penny falls asleep.
+
+13
+00:01:52,000 --> 00:02:00,000
+Thank you
+Adiba Tahsin | Roll 2107031 | CSE-4102

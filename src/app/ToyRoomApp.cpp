@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <iomanip>
+#include <fstream>
+#include <stdexcept>
 #include <iostream>
 #include <map>
 #include <set>
@@ -67,7 +69,7 @@ ToyRoomApp::ToyRoomApp(const LaunchOptions& options) : Application(options.windo
 	ApplyLaunchOptions();
 }
 
-ToyRoomApp::~ToyRoomApp() = default;
+ToyRoomApp::~ToyRoomApp() { if (recording) std::fclose(recording); }
 
 // =============================================================================================
 // Scene construction
@@ -108,6 +110,9 @@ void ToyRoomApp::BuildScene()
 	penny = std::make_unique<Cat>(*scene, assets, glm::vec3(2.0f, RoomSize::Ground, 23.4f), 90.0f);
 	pennyId = static_cast<int>(selectables.size());
 	AddSelectable("Penny", penny->Root(), penny.get(), 0, 0.5f, 3.0f);
+	for (const char* name : {"Desk", "DeskChair", "Bed", "Bookcase", "CeilingFan", "WallClock", "Window", "Poster", "Rug", "Moon"}) {
+		if (SceneNode* node=scene->Find(name)) AddSelectable(name,node,nullptr,0,0.5f,4.0f);
+	}
 	arrival.Init(penny.get(), house);
 	hallwayPuzzle.Build(*scene, assets, house);
 	// Penny uses the existing hallway-aware PhysicsWorld clamp rather than Character's room-only clamp.
@@ -191,15 +196,18 @@ void ToyRoomApp::AddSelectable(const std::string& name, SceneNode* node, Charact
 void ToyRoomApp::OnUpdate(float dt)
 {
  const int steps=launch.story && !launch.capture.empty() ? launch.storySteps : 1;
+ if (!launch.record.empty()) dt = 1.0f / launch.recordFps;
+ else if (!launch.capture.empty()) dt = 1.0f / 60.0f;
  for (int i=0;i<steps;++i) { StepScene(dt); if (i+1<steps) input.EndFrame(); }
 }
 void ToyRoomApp::StepScene(float dt)
 {
 	if (launch.storyStep > 0 && !launch.capture.empty()) dt=launch.storyStep;
+ if (!launch.capture.empty() || !launch.record.empty()) { simulationTime += dt; time = simulationTime; }
 	glm::vec3 previousCamera = camera.position;
-	glm::vec3 previousPenny = penny->Root()->WorldPosition();
-	std::vector<glm::vec3> previous;
-	for (const auto& c : characters) previous.push_back(c->Root()->WorldPosition());
+	glm::vec3 previousPenny=penny->Root()->WorldPosition();
+	previousPositions.resize(characters.size());
+	for (size_t i=0;i<characters.size();++i) previousPositions[i]=characters[i]->Root()->WorldPosition();
 	glm::vec3 previousBall = environment.Rig().ball->local.position;
 	glm::vec3 previousGhost = environment.Rig().ghost->local.position;
 	glm::vec3 previousLamp = environment.Rig().lamp->local.position;
@@ -211,7 +219,7 @@ void ToyRoomApp::StepScene(float dt)
   previousBall=environment.Rig().ball->local.position;
   previousGhost=environment.Rig().ghost->local.position;
   previousLamp=environment.Rig().lamp->local.position;
-  for (size_t i=0;i<characters.size();++i) previous[i]=characters[i]->Root()->WorldPosition();
+  for (size_t i=0;i<characters.size();++i) previousPositions[i]=characters[i]->Root()->WorldPosition();
   missionRestarted=false;
  }
 	// Penny's arrival owns the camera and the clock; the toys stay frozen until it ends (Y skips it).
@@ -223,11 +231,18 @@ void ToyRoomApp::StepScene(float dt)
 		else
 			HandleSelection();
 		HandleCamera(dt);
-		if (!story.enabled && !hallwayPuzzle.KeypadActive()) {
+		Character* driver=story.enabled ? DrivenCharacter() : nullptr;
+		story.SetControlled(driver,driver==bullseye && jessieMounted ? jessie : nullptr);
+		if ((!story.enabled || Selected()) && !hallwayPuzzle.KeypadActive()) {
 			if (editMode) HandleEditMode(dt); else HandleObjectControl(dt);
 		}
 	}
 
+ if (!arriving) {
+  Character* driver=story.enabled ? DrivenCharacter() : nullptr;
+  story.SetControlled(driver,driver==bullseye && jessieMounted ? jessie : nullptr);
+  physics.SetIndependentActor(driver ? driver->Root() : nullptr);
+ }
  if (arriving) { arrival.Update(dt); environment.hour = arrival.Hour(); }
  else {
   if (story.CurrentState() == StoryDirector::GameplayState::PROLOGUE) {
@@ -266,6 +281,10 @@ void ToyRoomApp::StepScene(float dt)
  if (story.enabled) environment.paused=true;
  environment.Update(dt,static_cast<float>(time),selectedId==lampId,selectedId==ballId,selectedId==ghostId);
  environment.paused=userPaused;
+ if (!userPaused && environment.Rig().fanRotor) {
+  auto& angle=environment.Rig().fanRotor->local.rotation.y;
+  angle=std::fmod(angle+dt*110.0f,360.0f);
+ }
 
 	if (!arriving) // during the arrival the toys keep the rest pose the story's restart gave them
 		for (auto& c : characters)
@@ -297,7 +316,7 @@ void ToyRoomApp::StepScene(float dt)
 		if (!c->clampToRoom) continue;
 		if (c == jessie && c->InTransition()) continue; // mounting changes parent space; preserve the hop off the saddle
 		const glm::vec3 wanted = c->Root()->local.position;
-		physics.ConstrainActor(c->Root(), previous[i]);
+		physics.ConstrainActor(c->Root(), previousPositions[i]);
 		if (c == DrivenCharacter() && glm::distance(wanted, c->Root()->local.position) > 0.04f) {
 			statusText = "Solid contact / turn or choose another path"; statusTimer = 1.0f;
 		}
@@ -416,8 +435,10 @@ void ToyRoomApp::HandleGlobalKeys()
 		} else { physics.ResetBlocks(); statusText = "The block tower has been rebuilt"; statusTimer = 3.0f; }
 	}
 
-	if (input.Pressed(GLFW_KEY_F1)) flip(settings.wireframe, "Wireframe");
+	if (input.Pressed(GLFW_KEY_F1)) { settings.rayTracing=false; flip(settings.wireframe, "Wireframe"); }
+ if (!editMode && input.Pressed(GLFW_KEY_O)) flip(environment.hauntingEnabled, "Haunted ambience");
 	if (input.Pressed(GLFW_KEY_F2)) {
+  settings.rayTracing=false; // Gouraud is a raster interpolation technique.
 		if (input.ShiftDown()) settings.shadingEnabled=!settings.shadingEnabled;
 		else if (!settings.shadingEnabled) settings.shadingEnabled=true;
 		else settings.shading = static_cast<ShadingMode>((static_cast<int>(settings.shading) + 1) % 4);
@@ -436,9 +457,9 @@ void ToyRoomApp::HandleGlobalKeys()
 		lights[SkyLight].enabled = !lights[SkyLight].enabled;
 		std::cout << "Sun/Moon light: " << (lights[SkyLight].enabled ? "ON" : "OFF") << "\n";
 	}
-	if (input.Pressed(GLFW_KEY_F9)) flip(settings.showNormals, "Normals of selected object");
-	if (input.Pressed(GLFW_KEY_F10)) flip(settings.showVertices, "Vertices of selected object");
-	if (input.Pressed(GLFW_KEY_F11)) flip(settings.showGizmo, "Local axes gizmo");
+	if (input.Pressed(GLFW_KEY_F9)) { settings.rayTracing=false; flip(settings.showNormals, "Normals of selected object"); }
+	if (input.Pressed(GLFW_KEY_F10)) { settings.rayTracing=false; flip(settings.showVertices, "Vertices of selected object"); }
+	if (input.Pressed(GLFW_KEY_F11)) { settings.rayTracing=false; flip(settings.showGizmo, "Local axes gizmo"); }
 	if (input.Pressed(GLFW_KEY_F12)) SaveScreenshot();
 	if (input.Pressed(GLFW_KEY_V)) DumpSelectedGeometry(input.ShiftDown());
 
@@ -486,7 +507,7 @@ void ToyRoomApp::HandleGlobalKeys()
 
 	if (input.Pressed(GLFW_KEY_TAB)) {
 		editMode = !editMode;
-		if (editMode && story.enabled) { story.enabled=false; story.Pause(); }
+		// Editing a selected object also preserves independent story playback.
 		std::cout << "Edit mode " << (editMode ? "ON" : "OFF");
 		if (editMode) std::cout << " (" << EditOpName(editOp) << ") - T operation, J/L X, U/O Y, I/K Z, M mirror, Backspace reset";
 		std::cout << "\n";
@@ -561,7 +582,13 @@ void ToyRoomApp::Select(int id)
 	if (Character* c = DrivenCharacter())
 		c->Stop();
 	selectedId = id;
-	if (id>=0 && story.enabled) { story.enabled=false; story.Pause(); }
+	if (id>=0 && story.enabled) {
+		// A rider and horse must detach before either receives independent ownership.
+		const Character* actor=selectables[static_cast<size_t>(id)].character;
+		if (jessieMounted && (actor==jessie || actor==bullseye)) Dismount();
+		storyCamera=false;
+		statusText="Live control / other toys continue / 0 releases / N full manual"; statusTimer=4;
+	}
 	cameraPan = glm::vec3(0);
 	wasMoving = false;
 	if (const Selectable* s = Selected()) {
@@ -760,7 +787,7 @@ void ToyRoomApp::HandleCamera(float dt)
 		if (panning) cameraPan += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance * zoomSpeed;
 		camera.target = glm::mix(camera.target, focus + cameraPan, std::min(1.0f, dt * 6.0f));
 		camera.target = glm::clamp(camera.target, glm::vec3(-RoomSize::HalfWidth + 0.3f, 0.3f, -RoomSize::HalfDepth + 0.3f),
-			glm::vec3(RoomSize::HalfWidth - 0.3f, RoomSize::Height - 0.3f, RoomSize::HalfDepth - 0.3f));
+			glm::vec3(RoomSize::HallEnd - 0.3f, RoomSize::Height - 0.3f, RoomSize::HalfDepth - 0.3f));
 		if (rotating) {
 			camera.orbitYaw -= md.x * 0.3f * zoomSpeed;
 			camera.orbitPitch += md.y * 0.3f * zoomSpeed;
@@ -864,6 +891,9 @@ void ToyRoomApp::HandleObjectControl(float dt)
 		return;
 
 	ControlInput in;
+	in.forward=launch.scriptedDrive;
+	in.turn=launch.scriptedTurn;
+	in.vertical=launch.scriptedFly;
 	if (input.Down(GLFW_KEY_W)) in.forward += 1.0f;
 	if (input.Down(GLFW_KEY_S)) in.forward -= 1.0f;
 	if (input.Down(GLFW_KEY_A)) in.turn += 1.0f;
@@ -1061,6 +1091,8 @@ void ToyRoomApp::UpdateLights()
 	lights[GhostGlow].position = rig.ghost->WorldPosition();
 	lights[GhostGlow].intensity = 0.8f * environment.ghostVisibility;
 	lights[GhostGlow].enabled = environment.ghostVisibility > 0.02f;
+	if (launch.lightOnly >= 0)
+		for (size_t i=0;i<lights.size();++i) lights[i].enabled = static_cast<int>(i)==launch.lightOnly;
 }
 
 // =============================================================================================
@@ -1106,7 +1138,7 @@ void ToyRoomApp::DrawHud()
 			info.controls = "A/D swivel / W/S tilt / R power / , and . brightness";
 		} else if (selectedId == ghostId) {
 			info.description = "A translucent visitor appears at night. Inspect or reposition it in edit mode.";
-			info.controls = "Tab edit / F inspect / N haunting on or off";
+			info.controls = "Tab edit / F inspect / O haunting on or off";
 		} else if (physics.IsBlock(selected->node)) {
 			info.description = "A solid wooden block. Gravity, other blocks and Buzz's laser affect its motion.";
 			info.controls = "W/A/S/D push / Space brake / B rebuild / Ctrl+B next block";
@@ -1175,14 +1207,16 @@ void ToyRoomApp::OnRender()
 	}
 
 	if (hudVisible) DrawHud();
+ if (!launch.exportDirectory.empty() && frameCounter==0) ExportScene(launch.exportDirectory);
+ if (recording) { RecordFrame(); if (++frameCounter >= launch.frames) Close(); return; }
 	if (launch.benchmark > 0) {
 		// Skip a warm-up period (shader compilation, driver caches), then time the next N frames.
 		constexpr int warmup = 60;
 		++frameCounter;
 		if (frameCounter == warmup) { glFinish(); benchmarkStart = glfwGetTime(); }
 		else if (frameCounter > warmup) {
-			benchmarkTriangles += renderer.Stats().triangles + renderer.Stats().shadowTriangles;
-			benchmarkDraws += renderer.Stats().drawCalls + renderer.Stats().shadowDrawCalls;
+			benchmarkTriangles += settings.rayTracing ? 2 : renderer.Stats().triangles + renderer.Stats().shadowTriangles;
+			benchmarkDraws += settings.rayTracing ? 2 : renderer.Stats().drawCalls + renderer.Stats().shadowDrawCalls;
 			if (frameCounter == warmup + launch.benchmark) {
 				glFinish();
 				const double seconds = glfwGetTime() - benchmarkStart;
@@ -1257,8 +1291,25 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		}
 		else if (a == "--pause") o.pauseClock = true;
 		else if (a == "--story") o.story = true;
+		else if (a == "--manual") o.manual = true;
 		else if (a == "--capture" && hasValue) o.capture = argv[++i];
-		else if (a == "--frames" && hasValue) o.frames = std::stoi(argv[++i]);
+        else if (a == "--record" && hasValue) o.record = argv[++i];
+        else if (a == "--record-fps" && hasValue) o.recordFps = std::clamp(std::stoi(argv[++i]), 20, 60);
+        else if (a == "--export" && hasValue) o.exportDirectory = argv[++i];
+        else if (a == "--seek" && hasValue) o.seek = std::clamp(std::stof(argv[++i]), 0.0f, 600.0f);
+        else if (a == "--haunt") o.haunt = true;
+        else if (a == "--no-textures") o.noTextures = true;
+        else if (a == "--no-lighting") o.noLighting = true;
+        else if (a == "--no-ambient") o.ambient = false;
+        else if (a == "--no-diffuse") o.diffuse = false;
+        else if (a == "--no-specular") o.specular = false;
+        else if (a == "--light-only" && hasValue) o.lightOnly = std::clamp(std::stoi(argv[++i]), 0, MaxLights-1);
+        else if (a == "--bounces" && hasValue) o.bounces = std::clamp(std::stoi(argv[++i]), 0, 4);
+        else if (a == "--ray-scale" && hasValue) o.rayScale = std::clamp(std::stof(argv[++i]), 0.2f, 1.0f);
+        else if (a == "--drive" && hasValue) o.scriptedDrive = std::clamp(std::stof(argv[++i]), -1.0f, 1.0f);
+        else if (a == "--turn" && hasValue) o.scriptedTurn = std::clamp(std::stof(argv[++i]), -1.0f, 1.0f);
+        else if (a == "--fly" && hasValue) o.scriptedFly = std::clamp(std::stof(argv[++i]), -1.0f, 1.0f);
+		else if (a == "--frames" && hasValue) o.frames = std::max(1, std::stoi(argv[++i]));
 		else if (a == "--story-steps" && hasValue) o.storySteps=std::clamp(std::stoi(argv[++i]),1,20);
 		else if (a == "--intro") o.intro = true;
 		else if (a == "--no-intro") o.noIntro = true;
@@ -1283,15 +1334,21 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 void ToyRoomApp::ApplyLaunchOptions()
 {
 	if (launch.benchmark > 0) glfwSwapInterval(0); // measure the real frame cost, not the monitor rate
-	if (launch.noIntro || (!launch.capture.empty() && !launch.intro)) arrival.Skip();
+	const bool scripted = !launch.capture.empty() || !launch.record.empty();
+ if (scripted) { glfwSwapInterval(0); glfwSetWindowAttrib(window,GLFW_RESIZABLE,GLFW_FALSE); }
+ if (launch.noIntro || (scripted && !launch.intro)) arrival.Skip();
 	if (launch.hour >= 0.0f) environment.hour = launch.hour;
-	if (launch.pauseClock || (!launch.capture.empty() && !launch.story)) environment.paused = true;
-	if (!launch.capture.empty() && !launch.story) { story.enabled=false; story.Pause(); }
-	environment.hauntingEnabled = false;
+	if (launch.pauseClock || (scripted && !launch.story)) environment.paused = true;
+	if (scripted && !launch.story) { story.enabled=false; story.Pause(); }
+	if (launch.manual) { story.enabled=false; story.Pause(); }
+	environment.hauntingEnabled = launch.haunt;
 	if (launch.rayTrace) settings.rayTracing = true;
 	if (launch.noRayTrace) settings.rayTracing = false;
 	if (launch.shading >= 0 && launch.shading <= 3) { settings.shadingEnabled=true; settings.shading = static_cast<ShadingMode>(launch.shading); }
-	settings.lighting=launch.lighting; settings.textures=launch.textures; renderSettingsOpen=launch.renderSettings;
+	settings.lighting=launch.lighting && !launch.noLighting; settings.textures=launch.textures && !launch.noTextures;
+ settings.ambient=launch.ambient; settings.diffuse=launch.diffuse; settings.specular=launch.specular;
+ if (launch.bounces>=0) settings.rayBounces=launch.bounces;
+ if (launch.rayScale>0) settings.rayScale=launch.rayScale; renderSettingsOpen=launch.renderSettings;
 	settings.wireframe = launch.wireframe;
 	settings.showNormals = launch.normals;
 	hudVisible = !launch.noHud;
@@ -1312,6 +1369,7 @@ void ToyRoomApp::ApplyLaunchOptions()
 	}
 	if (launch.select >= 0 && launch.select < static_cast<int>(selectables.size()))
 		Select(launch.select);
+	scene->UpdateWorld(glm::mat4(1.0f)); // arrival.Skip and mounting changed the inspection targets
 	if (launch.hasCamera) {
 		storyCamera=false;
 		camera.position = launch.cameraPos;
@@ -1328,6 +1386,18 @@ void ToyRoomApp::ApplyLaunchOptions()
 		camera.ApplyOrbit();
 	}
 	scene->UpdateWorld(glm::mat4(1.0f));
+    if (launch.seek > 0) {
+        const float savedStep=launch.storyStep; launch.storyStep=0;
+        for (float t=0; t<launch.seek; t+=0.05f) StepScene(std::min(0.05f, launch.seek-t));
+        launch.storyStep=savedStep;
+    }
+    if (!launch.record.empty()) {
+        const std::filesystem::path path(launch.record);
+        if (path.has_parent_path()) std::filesystem::create_directories(path.parent_path());
+        fopen_s(&recording, launch.record.c_str(), "wb");
+        if (!recording) throw std::runtime_error("Cannot open recording stream");
+        recordingPixels.resize(static_cast<size_t>(width)*height*3);
+    }
 }
 
 // =============================================================================================
@@ -1366,6 +1436,7 @@ void ToyRoomApp::PrintHelp() const
 		"\n====================== HAUNTED TOY ROOM ======================\n"
 		"SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost\n"
 		"            0 nothing   |  left-click any object to select it\n"
+		"LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual\n"
 		"CHARACTER   W/S move  A/D turn  Shift run  SPACE stop\n"
 		"            R  Jessie mount / dismount Bullseye (must be close)\n"
 		"            Q/E Buzz fly up/down   L Buzz laser / Car headlights\n"
@@ -1433,6 +1504,7 @@ void ToyRoomApp::DumpSelectedGeometry(bool full) const
 
 void ToyRoomApp::SaveScreenshot(const std::string& path)
 {
+ if (glGetError()!=GL_NO_ERROR) throw std::runtime_error("OpenGL error before capture");
 	Image img(width, height);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadBuffer(GL_BACK);
@@ -1450,4 +1522,50 @@ void ToyRoomApp::SaveScreenshot(const std::string& path)
 		std::cout << "Saved " << std::filesystem::absolute(name).string() << "\n";
 	else
 		std::cout << "Could not save screenshot\n";
+}
+
+// CSV inventory is generated from every node, including scenery hidden by cinematic visibility.
+void ToyRoomApp::ExportScene(const std::string& directory)
+{
+    std::filesystem::create_directories(directory);
+    std::ofstream out(std::filesystem::path(directory)/"objects.csv");
+    out << "path,name,primitive,material,texture_layer,px,py,pz,rx,ry,rz,sx,sy,sz,world_x,world_y,world_z,solid,visible,vertices,triangles,ka,kd,ks,shininess,opacity,reflectivity,unlit,uv_x,uv_y\n";
+    std::function<void(const SceneNode&,std::string)> visit = [&](const SceneNode& n,std::string path) {
+        const Transform& t=n.local; const auto p=n.WorldPosition();
+        const Material* m=n.material;
+        out << std::quoted(path) << ',' << std::quoted(n.name) << ',' << (n.mesh?n.mesh->Name():"Joint") << ',' << (m?m->name:"") << ',' << (m?m->rtTextureSlot:-1) << ','
+            << t.position.x << ',' << t.position.y << ',' << t.position.z << ',' << t.rotation.x << ',' << t.rotation.y << ',' << t.rotation.z << ','
+            << t.scale.x << ',' << t.scale.y << ',' << t.scale.z << ',' << p.x << ',' << p.y << ',' << p.z << ',' << n.solid << ',' << n.visible << ','
+            << (n.mesh?n.mesh->Data().vertices.size():0) << ',' << (n.mesh?n.mesh->TriangleCount():0) << ','
+            << (m?m->ka:0) << ',' << (m?m->kd:0) << ',' << (m?m->ks:0) << ',' << (m?m->shininess:0) << ',' << (m?m->opacity:0) << ',' << (m?m->reflectivity:0) << ',' << (m?m->unlit:0) << ',' << (m?m->uvScale.x:0) << ',' << (m?m->uvScale.y:0) << '\n';
+        int index=0;
+        for (const auto& child:n.Children()) visit(*child,path+"/"+child->name+"["+std::to_string(index++)+"]");
+    };
+    visit(*scene,"World");
+    if (!out) throw std::runtime_error("Scene export failed");
+    std::ofstream mats(std::filesystem::path(directory)/"materials.csv");
+    mats << "name,r,g,b,ka,kd,ks,shininess,emissive_r,emissive_g,emissive_b,opacity,reflectivity,unlit,cutout,texture_layer,uv_x,uv_y\n";
+    std::set<const Material*> seen;
+    scene->ForEach([&](SceneNode& n) {
+        if (!n.material || !seen.insert(n.material).second) return;
+        const auto& m=*n.material;
+        mats << m.name << ',' << m.color.r << ',' << m.color.g << ',' << m.color.b << ',' << m.ka << ',' << m.kd << ',' << m.ks << ',' << m.shininess << ',' << m.emissive.r << ',' << m.emissive.g << ',' << m.emissive.b << ',' << m.opacity << ',' << m.reflectivity << ',' << m.unlit << ',' << m.cutout << ',' << m.rtTextureSlot << ',' << m.uvScale.x << ',' << m.uvScale.y << '\n';
+    });
+    std::ofstream lamp(std::filesystem::path(directory)/"lights.csv");
+    lamp << "slot,name,type,enabled,shadows,intensity,r,g,b,kc,kl,kq,inner_degrees,outer_degrees\n";
+    for (size_t i=0;i<lights.size();++i) {
+        const auto& l=lights[i];
+        lamp << i << ',' << l.name << ',' << static_cast<int>(l.type) << ',' << l.enabled << ',' << l.castsShadows << ',' << l.intensity << ',' << l.color.r << ',' << l.color.g << ',' << l.color.b << ',' << l.constant << ',' << l.linear << ',' << l.quadratic << ',' << glm::degrees(std::acos(l.innerCutoff)) << ',' << glm::degrees(std::acos(l.outerCutoff)) << '\n';
+    }
+    assets.ExportTextures((std::filesystem::path(directory)/"textures").string());
+    std::cout << "Exported scene inventory to " << directory << '\n';
+}
+
+void ToyRoomApp::RecordFrame()
+{
+    const size_t bytes=static_cast<size_t>(width)*height*3;
+    recordingPixels.resize(bytes);
+    glPixelStorei(GL_PACK_ALIGNMENT,1); glReadBuffer(GL_BACK);
+    glReadPixels(0,0,width,height,GL_RGB,GL_UNSIGNED_BYTE,recordingPixels.data());
+    if (std::fwrite(recordingPixels.data(),1,bytes,recording)!=bytes) throw std::runtime_error("Recording write failed");
 }

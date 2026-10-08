@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-08",
+  "builds": {
+    "Debug": "passed",
+    "Release": "passed"
+  },
+  "checks": 36,
+  "input_scenarios": 3,
+  "live_actor_replays": 5,
+  "unaffected_route_comparison": "passed",
+  "captures": 42,
+  "story": "The End",
+  "report_pages": 38,
+  "figures": 31,
+  "tables": 11,
+  "scene_nodes": 699,
+  "slides": 10,
+  "embedded_video_matches_mp4": true,
+  "video_seconds": 120,
+  "pdf_layout_bounds": "passed",
+  "report_content_scan": "passed",
+  "status": "passed",
+  "archived_runtime_smoke": "passed",
+  "equation_groups": 28,
+  "engine": "pdfLaTeX",
+  "page_limit": 39,
+  "content_scan": "passed",
+  "overfull_boxes": 0,
+  "embedded_video": true,
+  "identity": true,
+  "report_engine": "pdfLaTeX",
+  "missing_glyphs": 0,
+  "unresolved_references": 0,
+  "chapter_start_pages": [
+    5,
+    8,
+    18,
+    28
+  ],
+  "contents_start_page": 3,
+  "contents_includes_sections": true,
+  "contents_section_entries": 32
+}

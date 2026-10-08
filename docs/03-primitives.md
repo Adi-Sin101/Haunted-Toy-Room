@@ -373,8 +373,8 @@ cylinder and cone has three meshes (`Assets::Load`, `Mesh::SetDetailLevels`). Ev
 `Renderer::CollectNode` computes, for each shape:
 
 ```
-radius      = ½ · sqrt( |a₀|² + |a₁|² + |a₂|² )       a₀,a₁,a₂ = the three axis columns of the model matrix
-                                                       (half the diagonal of the scaled unit cube: it encloses every primitive)
+radius      = 0.5 * max length(a0 +/- a1 +/- a2), using four opposite-corner pairs
+                (encloses the transformed unit cube, including shear)
 distance    = | shape centre − camera position |
 screenSize  = radius / distance                        ≈ tangent of the angular radius, proportional to size in pixels
 

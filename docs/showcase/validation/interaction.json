@@ -1,0 +1,54 @@
+[
+  {
+    "scenario": "interaction-independent",
+    "key_message_callbacks": "passed",
+    "signals": [
+      "Shading: Gouraud",
+      "Shading: Phong",
+      "Ambient: OFF",
+      "Diffuse: OFF",
+      "Specular: OFF",
+      "Textures: OFF",
+      "mirrored",
+      "transform reset",
+      "Selected: Desk Lamp",
+      "Selected: Buzz",
+      "Selected: RC Car",
+      "Jessie is too far",
+      "Woody moving",
+      "Woody stopped"
+    ]
+  },
+  {
+    "scenario": "interaction-mounted",
+    "key_message_callbacks": "passed",
+    "signals": [
+      "Shading: Gouraud",
+      "Shading: Phong",
+      "Ambient: OFF",
+      "Diffuse: OFF",
+      "Specular: OFF",
+      "Textures: OFF",
+      "mirrored",
+      "transform reset",
+      "Selected: Desk Lamp",
+      "Selected: Buzz",
+      "Selected: RC Car",
+      "Jessie dismounted.",
+      "Bullseye moving",
+      "Jessie moving"
+    ]
+  },
+  {
+    "scenario": "interaction-live",
+    "key_message_callbacks": "passed",
+    "signals": [
+      "Live control: Woody",
+      "Live control: Buzz",
+      "Live control: released to simulation",
+      "MISSION 2 / Moving Outside",
+      "Manual control / N resumes the story",
+      "RC Car moving"
+    ]
+  }
+]

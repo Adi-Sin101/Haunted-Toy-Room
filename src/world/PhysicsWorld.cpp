@@ -115,7 +115,8 @@ std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore) con
 		const glm::vec3 half = Extent(b.node->local.Matrix(), glm::vec3(0.5f));
 		list.push_back({b.node->local.position - half, b.node->local.position + half, b.node});
 	}
-	for (const Actor& a : actors) if (a.enabled && a.node != ignore) list.push_back(ActorBounds(a));
+	for (const Actor& a : actors) if (a.enabled && a.node != ignore &&
+		!(ignore && ignore!=independentActor && a.node==independentActor)) list.push_back(ActorBounds(a));
 	return list;
 }
 
@@ -126,7 +127,10 @@ glm::vec3 PhysicsWorld::Move(const glm::vec3& from, const glm::vec3& to, const g
   // Once an actor/camera is in the connected hallway, keep it in that corridor even
   // when a requested step crosses a side boundary. Falling back to RoomClamp here
   // teleports it through the connected doorway into the room at the corridor corner.
-  if (hallway && p.x > RoomSize::HalfWidth - extent.x - Skin) {
+  if (hallway && p.x > RoomSize::HalfWidth - extent.x - Skin
+   && ((p.z >= RoomSize::DoorLow + extent.z + 0.1f && p.z <= RoomSize::DoorHigh - extent.z - 0.1f)
+    || (from.x > RoomSize::HalfWidth && from.z >= RoomSize::DoorLow && from.z <= RoomSize::DoorHigh))
+   && p.y + extent.y < RoomSize::DoorHeight - 0.1f) {
    return glm::clamp(p, glm::vec3(-RoomSize::HalfWidth+extent.x+Skin,extent.y+Skin,RoomSize::DoorLow+extent.z+0.1f),
     glm::vec3(RoomSize::HallEnd-extent.x-0.1f,RoomSize::DoorHeight-extent.y-0.1f,RoomSize::DoorHigh-extent.z-0.1f));
   }

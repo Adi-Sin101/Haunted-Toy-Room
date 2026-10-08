@@ -240,6 +240,42 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 		room->AddShape("DistantHouse", &cube, &silhouette, {-22.0f + i * 6.0f, Ground + h * 0.5f, -29.0f}, {5.0f, h, 2.0f});
 	}
 
+	// Ceiling fan: the shaft is stationary, and one rotor joint owns all four blades.
+	SceneNode* fan = room->AddChild("CeilingFan");
+	fan->local.position = {-1.5f, Height - 0.08f, 0.0f};
+	fan->AddShape("Mount", &cylinder, &lampMetal, {0,-0.06f,0}, {0.36f,0.12f,0.36f});
+	fan->AddShape("Shaft", &cylinder, &knobMat, {0,-0.35f,0}, {0.08f,0.55f,0.08f});
+	rig.fanRotor = fan->AddChild("Rotor");
+	rig.fanRotor->local.position = {0,-0.63f,0};
+	rig.fanRotor->AddShape("Motor", &sphere, &lampMetal, {0,0,0}, {0.5f,0.25f,0.5f});
+	for (int i=0;i<4;++i) {
+		SceneNode* blade = rig.fanRotor->AddChild("BladePivot" + std::to_string(i));
+		blade->local.rotation.y = i * 90.0f;
+		blade->AddShape("Blade", &cube, &deskMat, {0.83f,0,0}, {1.35f,0.045f,0.30f}, {0,0,-4});
+	}
+	// Desk chair: seat/back use wood, with four legs and a back joint.
+	SceneNode* chair = room->AddChild("DeskChair");
+	chair->local.position = {-5.6f,0,-4.8f};
+	solid(chair->AddShape("Seat", &cube, &deskMat, {0,1.15f,0}, {1.15f,0.12f,1.05f}));
+	solid(chair->AddShape("Back", &cube, &deskMat, {0,1.9f,0.47f}, {1.15f,1.35f,0.12f}));
+	for (float x : {-0.43f,0.43f}) for (float zc : {-0.38f,0.38f})
+		solid(chair->AddShape("Leg", &cube, &deskMat, {x,0.55f,zc}, {0.10f,1.1f,0.10f}));
+	// Clock lies on the back wall; hands rotate around local Z in the face plane.
+	SceneNode* clock = room->AddChild("WallClock");
+	clock->local.position = {-1.2f,5.1f,-HalfDepth+0.16f};
+	clock->AddShape("Rim", &cylinder, &knobMat, {0,0,0}, {1.05f,0.12f,1.05f}, {90,0,0});
+	clock->AddShape("Face", &cylinder, &paper, {0,0,0.07f}, {0.94f,0.03f,0.94f}, {90,0,0});
+	Material& ink = a.Mat("clock-ink", {0.05f,0.06f,0.09f},0.0f);
+	for (int i=0;i<12;++i) {
+		const float angle=glm::radians(i*30.0f);
+		clock->AddShape("HourMark", &cube, &ink, {0.39f*std::sin(angle),0.39f*std::cos(angle),0.095f}, {0.035f,0.065f,0.015f}, {0,0,-i*30.0f});
+	}
+	rig.clockHour=clock->AddChild("HourHandPivot");
+	rig.clockMinute=clock->AddChild("MinuteHandPivot");
+	rig.clockHour->AddShape("HourHand", &cube, &ink, {0,0.12f,0.115f},{0.045f,0.27f,0.02f});
+	rig.clockMinute->AddShape("MinuteHand", &cube, &ink, {0,0.18f,0.14f},{0.026f,0.38f,0.02f});
+	clock->AddShape("Pin", &sphere, &knobMat, {0,0,0.17f},glm::vec3(0.075f));
+
 	// ---- Beach ball ------------------------------------------------------------------------
 	Material& ballMat = Textured(a, "beach-ball", glm::vec3(1.0f), Assets::BallSlot, { 1, 1 }, 0.6f, 64.0f);
 	ballMat.reflectivity = 0.12f;

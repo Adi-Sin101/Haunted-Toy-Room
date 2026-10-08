@@ -149,7 +149,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
   const char* lines[]={
    "1 Woody / 2 Jessie / 3 Bullseye / 4 Buzz / 5 Car",
    "6 Ball / 7 Lamp / 8 Ghost / Ctrl+B blocks",
-   "Selection pauses the story. N resumes; Shift+N replays.",
+   "Selection: live control / 0 release / N full manual",
    "W/S move / A/D turn / Shift run / Space stop",
    "Jessie + Bullseye: R mount or dismount nearby",
    "Buzz: Q/E altitude / L laser / Z/X aim / Alt+click target",

@@ -41,4 +41,7 @@ glm::mat4 perspective(float fovyRadians, float aspect, float zNear, float zFar);
 // Normal matrix: transforms normals correctly even under non-uniform scale or shear.
 glm::mat3 normalMatrix(const glm::mat4& model);
 
+// Radius enclosing every transformed corner of the unit cube, including shear.
+float unitBoundsRadius(const glm::mat4& model);
+
 }

@@ -14,13 +14,13 @@ namespace {
 using namespace RoomSize;
 
 // A material whose greyscale detail texture (siding, shingles, brick, grass, wood) is tinted by `color`.
-// `repeat` = how many times the texture repeats across a face. The house textures have no ray-tracer
-// slot (rtTextureSlot = -1): in ray-traced mode the house shows its plain colours.
+// `repeat` = how many times the texture repeats across a face. Both renderers use the same image.
 Material& Tinted(Assets& a, const std::string& name, const glm::vec3& color, const char* texture,
 	const glm::vec2& repeat, float ks = 0.1f, float shininess = 16.0f)
 {
 	Material& m = a.Mat(name, color, ks, shininess);
 	m.texture = a.Named(texture);
+	m.rtTextureSlot = a.NamedSlot(texture);
 	m.uvScale = repeat;
 	return m;
 }

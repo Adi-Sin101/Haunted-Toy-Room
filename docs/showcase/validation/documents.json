@@ -1,0 +1,22 @@
+{
+  "report_pages": 38,
+  "figures": 31,
+  "tables": 11,
+  "equation_groups": 28,
+  "scene_nodes": 699,
+  "engine": "pdfLaTeX",
+  "page_limit": 39,
+  "content_scan": "passed",
+  "overfull_boxes": 0,
+  "chapter_start_pages": [
+    5,
+    8,
+    18,
+    28
+  ],
+  "contents_start_page": 3,
+  "contents_includes_sections": true,
+  "slides": 10,
+  "embedded_video": true,
+  "identity": true
+}

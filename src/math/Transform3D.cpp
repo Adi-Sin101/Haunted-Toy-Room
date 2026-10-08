@@ -1,6 +1,7 @@
 #include "Transform3D.h"
 
 #include <cmath>
+#include <algorithm>
 
 namespace t3d {
 
@@ -138,6 +139,18 @@ glm::mat4 perspective(float fovy, float aspect, float n, float f)
 glm::mat3 normalMatrix(const glm::mat4& model)
 {
 	return glm::transpose(glm::inverse(glm::mat3(model)));
+}
+
+float unitBoundsRadius(const glm::mat4& model)
+{
+	const glm::vec3 a(model[0]), b(model[1]), c(model[2]);
+	// Opposite corners have equal length, so only four sign combinations are needed.
+	float squared = 0.0f;
+	for (float y : {-1.0f, 1.0f}) for (float z : {-1.0f, 1.0f}) {
+		const glm::vec3 corner = a + y * b + z * c;
+		squared = std::max(squared, glm::dot(corner, corner));
+	}
+	return 0.5f * std::sqrt(squared);
 }
 
 }

@@ -21,6 +21,8 @@ public:
 	void BeginGameplay();
 	bool Advance(Transition transition);
 	void Pause();
+	void SetControlled(Character* actor, Character* passenger=nullptr) { controlled=actor; attached=passenger; }
+	bool Controls(const Character* actor) const { return actor && (actor==controlled || actor==attached); }
 
 	std::string Title() const;
 	std::string Caption() const;
@@ -46,5 +48,7 @@ private:
 	RCCar* car = nullptr;
 	PhysicsWorld* physics = nullptr;
 	std::function<void()> dismount;
+	Character* controlled=nullptr;
+	Character* attached=nullptr;
 	GameplayState state = GameplayState::PROLOGUE;
 };

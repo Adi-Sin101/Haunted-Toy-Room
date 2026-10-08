@@ -1,0 +1,11 @@
+{
+  "duration_seconds": 120,
+  "fps": 24,
+  "frames": 2880,
+  "size": [
+    1280,
+    720
+  ],
+  "decode": "passed",
+  "audio": "live presenter narration; cues supplied"
+}

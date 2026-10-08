@@ -140,10 +140,7 @@ void Renderer::CollectNode(const SceneNode& node, const glm::vec3& cameraPos)
 		item.normalMatrix = t3d::normalMatrix(item.model);
 		item.ownerId = node.ownerId;
 		item.center = node.WorldPosition();
-		// Every primitive fits in the unit cube [-0.5, 0.5]^3, whose corners lie within
-		// 0.5 * sqrt(|a0|^2 + |a1|^2 + |a2|^2) of the centre for the model's axis columns a0..a2.
-		const glm::vec3 a0(item.model[0]), a1(item.model[1]), a2(item.model[2]);
-		item.radius = 0.5f * std::sqrt(glm::dot(a0, a0) + glm::dot(a1, a1) + glm::dot(a2, a2));
+		item.radius = t3d::unitBoundsRadius(item.model);
 		item.viewDepth = glm::length(item.center - cameraPos);
 		item.mesh = &node.mesh->ForScreenSize(item.radius / std::max(item.viewDepth, 0.01f));
 		items.push_back(item);
@@ -240,7 +237,10 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	const Material* currentMaterial = nullptr;
 	const Mesh* currentMesh = nullptr;
 	float currentHighlight = -1.0f;
+	GLenum currentWinding = GL_CCW;
 	auto draw = [&](const DrawItem& item) {
+		const GLenum winding = glm::determinant(glm::mat3(item.model)) < 0.0f ? GL_CW : GL_CCW;
+		if (winding != currentWinding) { glFrontFace(winding); currentWinding = winding; }
 		if (item.material != currentMaterial) { // skip redundant material uploads
 			ApplyMaterial(u, *item.material, settings);
 			currentMaterial = item.material;
@@ -291,6 +291,7 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	}
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glFrontFace(GL_CCW);
 	glBindVertexArray(0);
 }
 
