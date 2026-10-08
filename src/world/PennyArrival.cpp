@@ -39,10 +39,7 @@ void PennyArrival::Init(Cat* penny, const HouseRig& rig)
 		{15.0f, Ground + 0.02f, -8.1f},        // 8 onto the stair landing
 		{15.0f, Ground + 0.02f, StairBottomZ}, // 9 foot of the stairs
 		{15.0f, 0.02f, StairTopZ},             // 10 top of the stairs (slope 29.4 degrees)
-		{15.0f, 0.0f, 1.6f},                   // 11 into the hallway
-		{10.6f, 0.0f, 1.6f},                   // 12 through the toy room door
-		{8.0f, 0.0f, 1.4f},                    // 13 past the crate
-		{7.3f, 0.0f, -2.4f},                   // 14 in front of the bed
+		{13.3f, 0.0f, 4.5f},                   // 11 continues into the upper-floor hallway after the stairs
 	};
 	routeDistance.assign(route.size(), 0.0f);
 	for (size_t i = 1; i < route.size(); ++i)
@@ -72,9 +69,9 @@ void PennyArrival::Skip()
 {
 	stage = Stage::Done;
 	next = route.size();
-	cat->Root()->local.position = BedSpot();
-	cat->Root()->local.rotation = {0, -45, 0};
-	cat->SetPose(Cat::Pose::Sit);
+	cat->Root()->local.position = route.back();
+	cat->Root()->local.rotation = {0, -90, 0};
+	cat->SetPose(Cat::Pose::Walk);
 	cat->SetSlope(0);
 	exteriorVisible = false;
 	frontDoorAngle = 85.0f;
@@ -91,7 +88,8 @@ void PennyArrival::ApplyDoors(float dt, bool instant)
 	};
 	if (!instant) {
 		const glm::vec3 p = cat->Root()->local.position;
-		ease(frontDoorAngle, glm::distance(p, glm::vec3(12.0f, Ground, 9.2f)) < 4.0f || next > FrontDoorIndex ? 85.0f : 0.0f);
+		// Open for Penny as she approaches and crosses the threshold, then close behind her.
+		ease(frontDoorAngle, glm::distance(p, glm::vec3(12.0f, Ground, 9.2f)) < 4.0f ? 85.0f : 0.0f);
 		ease(roomDoorAngle, next > StairFootIndex && p.z > -2.0f ? 90.0f : 0.0f);
 		if (next > RoomDoorIndex) roomDoorAngle = std::max(roomDoorAngle, 89.0f); // never swings back
 		// The stair door is open while she climbs and swings shut once she is in the toy room.
@@ -115,7 +113,7 @@ void PennyArrival::Update(float dt)
 	if (stage == Stage::Walk) {
 		// Pause briefly on the pavement for the establishing shot, then trot along the route.
 		if (time > 1.5f && cat->FollowWaypoint(route[next], dt, 2.0f)) {
-			if (++next == route.size()) { stage = Stage::Jump; stageTime = 0.0f; jumpFrom = root->local.position; }
+			if (++next == route.size()) { stage = Stage::Done; stageTime = 0.0f; cat->Stop(); }
 		}
 		// Distance walked = route distance to the previous waypoint + progress along the current leg.
 		if (next < route.size())

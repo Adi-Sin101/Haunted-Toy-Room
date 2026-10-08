@@ -1,41 +1,40 @@
-# Toy Story: The Midnight Mission
+# Haunted Toy Room gameplay progression
 
-The default automatic mode performs one complete mission, then holds the ending. It replaces independent patrol loops. Scene transitions depend on arrival and interaction state, rather than teleporting toys after arbitrary delays.
+`src/world/StoryDirector.*` owns the single gameplay state machine. `PennyArrival` remains responsible for
+the original arrival route, environment transition, and arrival camera. When that prologue completes (or is
+skipped with **Y**), the director enters Stage 1 and the entrance closes behind Penny.
 
-**Prologue.** Before Scene 1, Penny the cat walks home from the street, through the front door, up the
-stairs and into the toy room, and jumps onto the bed to watch; the sun sets on the way
-([18](18-house-and-penny.md)). **Y** skips it.
+## States and transitions
 
-| Scene | Action and transition |
-|---|---|
-| 1. Discovery | Midnight. Woody looks toward the lost car beyond the obstructed doorway. |
-| 2. Moving Outside | Woody walks to the exit. Jessie approaches Bullseye, mounts through the existing local/world reparenting transition, and becomes a child of his saddle. Buzz climbs and flies to the obstacle. |
-| 3. Clearing the Path | Buzz aims at the crate. A real laser impulse must move it before it disappears and clears the path. |
-| 4. Reaching the Car | Woody walks through the doorway; Bullseye carries Jessie; Buzz flies beside them. All three must arrive before activation. |
-| 5. Activating the Car | Enter activates it, or unattended playback activates after three seconds. Its headlights illuminate and its wheels rotate as it follows a predefined route home. The friends wait clear of the route. |
-| 6. Returning Home | The car parks. Woody walks home, Bullseye carries Jessie home and she dismounts, and Buzz returns and lands. |
-| 7. Morning | Dawn brightens over twelve seconds, the lamp switches off, and every toy returns to its saved original pose. Penny curls up asleep on the bed. The camera pulls back, then holds the ending. |
+| State | Objective | Transition condition |
+|---|---|---|
+| `PROLOGUE` | Penny's arrival | Arrival completes or is skipped |
+| `PUZZLE` | Find the code: 3 clues | Puzzle is solved |
+| `TOY_RESCUE` | Free the Toys | Rescue switches are activated |
+| `BUZZ_RESCUE` | Free Buzz | Buzz's release mechanism is activated |
+| `FINAL_ESCAPE` | GET EVERYONE OUT | The escape completes |
+| `WIN` | THE TOYS ARE SAFE / YOU ESCAPED | Terminal ending state |
 
-## Taking control
+`StoryDirector::Advance` accepts guarded transition events. An event advances the director only from its
+matching state; out-of-order events are ignored. State queries expose puzzle/rescue availability, chase
+activity, Toy Room lock status, final-door seal status, and ending status so gameplay systems can bind to
+the progression without creating a second story manager.
 
-- Select any toy with its number, the compact buttons or a scene click to pause the coordinated story and enter manual mode.
-- **N** switches story/manual mode. Resuming continues the saved stage and waypoints. **Shift+N** restores the mission setup and replays from Discovery.
-- **P** pauses the mission clock. **Enter** activates the car in Scene 5. In manual mode, select the car or bring the driven toy within three units to interact; its route then runs without steering input.
-- Existing walking, riding, flying, laser, editing and camera controls remain available. Camera input overrides cinematic shots without stopping the story; N resumes cinematic camera control.
-- **H** expands the guide within the same corner panel. **G** hides all interface text, including the guide. Neither key affects the scene.
+## Implemented Stage 1 puzzle
 
-The room camera remains constrained to its original boundaries. Toys can cross the right-side doorway into the hallway, whose walls, ceiling and far end remain solid. Story paths use the same character animation and collision system as manual movement.
+`HallwayPuzzle` builds a two-car toy train, a wall clock displaying five, seven colored blocks arranged
+as a seven, and a physical keypad from the project's shared primitive meshes and materials. Their solid
+shapes join the existing physics scenery and render through both raster and ray-tracing traversal.
+Approach a clue and press **Enter** to inspect it. Approach the keypad, press **Enter**, enter three digits,
+then press **Enter** to submit; **Backspace** removes the last digit and **Esc** closes the keypad. The
+player must inspect all three clues before a correct submission unlocks the door and advances the state.
 
-## Implementation
+Remaining work includes Toy Room rescue switches, Jessie and Bullseye's high-switch sequence, Buzz's room
+and release interaction, hostile chase behavior, escape routes, final-door collision/destruction, Buzz's
+laser hit on the door, and the exterior ending camera and house-darkening sequence. Those systems should
+trigger the existing guarded state transitions while reusing the scene hierarchy, character movement,
+Buzz flight and laser, physics, environment, and camera systems already in the project.
 
-`StoryDirector` owns the scene state, routes and interaction state. Mount/dismount callbacks use `ToyRoomApp`'s existing hierarchy operations. `Character::FollowWaypoint` supplies distance-based motion and animation speed; `RCCar::Animate` rotates wheels from speed and wheel radius. Saved rest transforms stop idle head, tail and limb animation at the ending. The environment's clock is controlled by the film during playback, with manual scrubbing available outside it.
-
-Buzz uses a separate flight pose driven by actual horizontal speed, vertical movement and turning. Airborne motion suppresses the walking gait and footstep bob: cruising leans the body forward with both legs trailing, hovering stays upright, and turns bank the body. Takeoff and landing blend the poses and wing deployment smoothly. The laser wrist compensates for body lean and banking to preserve its aim.
-
-For a repeatable accelerated scene capture:
-
-```powershell
-bin\Release\HauntedToyRoom.exe --story --story-step 0.05 --story-steps 10 --size 1000,700 --frames 240 --capture screenshots\mission-end.bmp
-```
-
-`--story-step` supplies a fixed simulation delta for captures. `--story-steps` advances multiple simulation steps per rendered frame only for story captures. Normal interactive playback uses real elapsed time. The capture log reports reached scenes and final world positions.
+Manual character selection/control, object selection, and camera modes remain available through the
+existing controls. **N** switches manual/progression control; **Shift+N** restarts the arrival and state
+machine; **Y** skips the arrival.

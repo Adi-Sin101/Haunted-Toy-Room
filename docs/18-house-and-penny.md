@@ -240,6 +240,7 @@ While the arrival runs:
 * selection, camera keys and object controls are ignored; the HUD shows "Prologue: Penny comes home" with a
   caption per stage and "Y skip the arrival".
 
-When it ends the story starts (Scene 1, The Discovery) and its camera glides to the first shot. Penny is not
-part of the story's character list and not a collision actor: the toys' routes never come near the bed, and
-she can still be selected with the mouse and inspected (F orbit, V parts, edit mode).
+When it ends the director enters Stage 1 and the front door closes behind Penny. She remains outside the
+toy list but is registered as a selectable character and physics actor; clicking her enables the existing
+W/S/A/D character controls. During the arrival, `PennyArrival` still owns her movement and collisions stay
+disabled. See [the gameplay state machine](16-midnight-mission.md).

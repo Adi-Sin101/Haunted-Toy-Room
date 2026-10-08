@@ -60,6 +60,15 @@ void Assets::Load()
 	else {
 		AddTexture("poster", PT::PosterFallback(), PosterSlot);
 	}
+	const std::string clockPath = Paths::resolve("assets/textures/clock.bmp").string();
+	if (auto clock = Bmp::Load(clockPath)) {
+		AddTexture("toy-story-clock", *clock, ClockSlot);
+		std::cout << "Loaded " << clockPath << " (" << clock->width << "x" << clock->height << ")\n";
+	}
+	else {
+		AddTexture("toy-story-clock", PT::White(), ClockSlot);
+		std::cerr << "Missing Toy Story clock texture: " << clockPath << "\n";
+	}
 }
 
 const Texture* Assets::AddTexture(const std::string& name, const Image& image, int slot, bool nearest)

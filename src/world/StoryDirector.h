@@ -1,38 +1,50 @@
 #pragma once
+
 #include <functional>
 #include <string>
-#include <vector>
-#include <glm/glm.hpp>
-class Character; class Humanoid; class Bullseye; class Buzz; class RCCar;
-class SceneNode; class Environment; class PhysicsWorld;
 
-// Selection pauses the film. An explicitly activated car can finish its route in manual mode.
+class Character;
+class Humanoid;
+class Bullseye;
+class Buzz;
+class RCCar;
+class PhysicsWorld;
+
+// Owns the single progression state machine for the toy-room story.
 class StoryDirector {
 public:
- enum class Scene { Discovery, Departure, ClearPath, ReachCar, ActivateCar, ReturnHome, Morning, End };
- void Init(Humanoid*, Humanoid*, Bullseye*, Buzz*, RCCar*, SceneNode*, Environment*, PhysicsWorld*,
-  std::function<void()> mount, std::function<void()> dismount);
- void Restart(bool mounted);
- void Update(float dt, bool mounted, bool interact);
- void Pause();
- bool CarAutopilot() const { return activated && phase==Scene::ActivateCar; }
- std::string Title() const;
- std::string Caption() const;
- Scene CurrentScene() const { return phase; }
- float SceneTime() const { return elapsed; }
- bool enabled = true;
+	enum class GameplayState { PROLOGUE, PUZZLE, TOY_RESCUE, BUZZ_RESCUE, FINAL_ESCAPE, WIN };
+	enum class Transition { ARRIVAL_COMPLETE, PUZZLE_SOLVED, TOYS_FREED, BUZZ_FREED, ESCAPE_COMPLETE };
+
+	void Init(Humanoid*, Humanoid*, Bullseye*, Buzz*, RCCar*, PhysicsWorld*, std::function<void()> dismount);
+	void Restart(bool mounted);
+	void BeginGameplay();
+	bool Advance(Transition transition);
+	void Pause();
+
+	std::string Title() const;
+	std::string Caption() const;
+	std::string Objective() const;
+	GameplayState CurrentState() const { return state; }
+	bool PuzzleAvailable() const { return state == GameplayState::PUZZLE; }
+	bool EntranceDoorLocked() const { return state != GameplayState::PROLOGUE; }
+	bool ToyRescueAvailable() const { return state == GameplayState::TOY_RESCUE; }
+	bool BuzzRescueAvailable() const { return state == GameplayState::BUZZ_RESCUE; }
+	bool ChaseActive() const { return state == GameplayState::FINAL_ESCAPE; }
+	bool FinalDoorSealed() const { return state == GameplayState::FINAL_ESCAPE; }
+	bool Ending() const { return state == GameplayState::WIN; }
+	bool ToyRoomDoorLocked() const { return state == GameplayState::PUZZLE; }
+	bool enabled = true;
+
 private:
- struct Route { Character* actor; std::vector<glm::vec3> points; size_t next = 0; };
- bool Move(Character*, float dt);
- void Enter(Scene);
- void Routes(std::vector<Route>);
- Humanoid* woody=nullptr; Humanoid* jessie=nullptr;
- Bullseye* horse=nullptr; Buzz* buzz=nullptr; RCCar* car=nullptr;
- SceneNode* obstacle=nullptr; Environment* environment=nullptr; PhysicsWorld* physics=nullptr;
- std::function<void()> mount, dismount;
- std::vector<Route> routes;
- Scene phase=Scene::Discovery;
- float elapsed=0;
- bool activated=false, dismountRequested=false, obstacleHit=false;
- glm::vec3 obstacleHome{0};
+	void Enter(GameplayState next);
+
+	Humanoid* woody = nullptr;
+	Humanoid* jessie = nullptr;
+	Bullseye* horse = nullptr;
+	Buzz* buzz = nullptr;
+	RCCar* car = nullptr;
+	PhysicsWorld* physics = nullptr;
+	std::function<void()> dismount;
+	GameplayState state = GameplayState::PROLOGUE;
 };

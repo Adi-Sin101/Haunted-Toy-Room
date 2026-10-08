@@ -89,20 +89,17 @@ a chase camera, opening doors and a sunset — see [18](18-house-and-penny.md). 
 sleeping poses blend with exponential easing; while she watches the story her head turns towards the toy
 that is acting, and in the Morning scene she curls up asleep. **Y** skips the arrival.
 
-## 7. The Midnight Mission (StoryDirector)
+## 7. Gameplay progression (StoryDirector)
 
-Default playback follows seven coordinated scenes: Discovery, Moving Outside, Clearing the Path,
-Reaching the Car, Activating the Car, Returning Home and Morning. The right-side doorway connects
-with a bounded hallway, where the lost car waits. Buzz must hit the obstruction with a real laser
-impulse; arrival state gates each route. Jessie mounts Bullseye through the existing saddle hierarchy.
-The activated car drives a predefined path with rotating wheels. Finally the toys return to their
-saved positions and poses, the lamp turns off, dawn fades in and the camera pulls back.
+`StoryDirector` owns the explicit `PROLOGUE`, `PUZZLE`, `TOY_RESCUE`, `BUZZ_RESCUE`, `FINAL_ESCAPE`,
+and `WIN` state machine. PennyArrival continues to own the arrival route and environment transition;
+arrival completion advances the director into Stage 1. `StoryDirector::Advance` guards each transition
+against the current state and exposes stage availability for future puzzle, rescue, chase, and ending
+systems.
 
-Selecting a toy pauses the film for manual control. **N** resumes it; **Shift+N** restores the setup
-and restarts Discovery. **P** pauses the mission. **Enter** activates the car during Scene 5;
-unattended playback performs the interaction after three seconds. Camera input overrides cinematic
-shots without stopping the story. **H** expands the compact corner guide; **G** hides all text.
+The three-clue code and hallway keypad are implemented in `HallwayPuzzle`; rescue switches, hostile chase,
+and final escape actions remain later stages. Manual character controls, object selection, Jessie/Bullseye
+mounting, camera modes, and environment systems remain independent.
+**N** switches manual/progression control; **Shift+N** restarts; **Y** skips Penny's arrival.
 
-See [the complete mission and its implementation](16-midnight-mission.md). The optional haunting
-prop animations described above remain in Environment, while mission playback keeps the ball and
-ghost still. The film owns the midnight-to-morning clock; clock speed and scrubbing are manual controls.
+See [the gameplay state machine and Phase 2 work](16-midnight-mission.md).

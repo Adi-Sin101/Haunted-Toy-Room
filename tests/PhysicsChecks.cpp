@@ -8,6 +8,7 @@
 #include "scene/SceneNode.h"
 #include "world/PhysicsWorld.h"
 #include "world/Room.h"
+#include "world/PuzzleCode.h"
 
 namespace {
 int checks = 0;
@@ -18,6 +19,81 @@ void Require(bool condition, const char* message)
 }
 void Run()
 {
+	PuzzleCode puzzle;
+	Require(puzzle.Display() == "CODE: _ _ _", "three-digit puzzle starts with three blank slots");
+	Require(!puzzle.Found(PuzzleCode::Clue::Train), "clue starts undiscovered until inspection");
+	puzzle.Discover(PuzzleCode::Clue::Train);
+	puzzle.Discover(PuzzleCode::Clue::Train);
+	Require(puzzle.Found(PuzzleCode::Clue::Train) && puzzle.CluesFound() == 1, "repeated clue inspection counts only once");
+	puzzle.Reset();
+	Require(puzzle.AddDigit(2) && puzzle.Display() == "CODE: 2 _ _", "keypad entry updates the first code slot");
+	Require(puzzle.AddDigit(5) && puzzle.Display() == "CODE: 2 5 _", "keypad entry updates the second code slot");
+	Require(puzzle.Backspace() && puzzle.Display() == "CODE: 2 _ _", "keypad backspace removes the last digit");
+	Require(puzzle.AddDigit(5) && puzzle.AddDigit(7), "keypad accepts the remaining code digits");
+	Require(puzzle.Submit() == PuzzleCode::Result::MissingClues && !puzzle.Complete(), "correct code cannot bypass undiscovered clues");
+	Require(puzzle.Display() == "CODE: _ _ _", "missing-clue attempt clears the entered digits");
+	puzzle.Discover(PuzzleCode::Clue::Train);
+	puzzle.Discover(PuzzleCode::Clue::Clock);
+	puzzle.Discover(PuzzleCode::Clue::Blocks);
+	Require(puzzle.AllCluesFound() && puzzle.CluesFound() == 3, "all three physical clues can be recorded");
+	for (int digit : {2, 5, 8}) puzzle.AddDigit(digit);
+	Require(puzzle.Submit() == PuzzleCode::Result::Incorrect && !puzzle.Complete(), "wrong code remains locked");
+	Require(puzzle.Display() == "CODE: _ _ _", "wrong code clears without resetting clue progress");
+	for (int digit : {2, 5, 7}) puzzle.AddDigit(digit);
+	Require(puzzle.Submit() == PuzzleCode::Result::Correct && puzzle.Complete(), "257 unlocks after all clues are found");
+	Require(!puzzle.AddDigit(9) && puzzle.Display() == "CODE: 2 5 7", "completed code cannot be changed");
+
+	SceneNode hallway("Hallway");
+	Mesh hallwayDoorMesh("HallwayDoorMesh", PrimitiveType::Cube, Primitives::Cube());
+	SceneNode* closedDoor = hallway.AddShape("ClosedHallDoor", &hallwayDoorMesh, nullptr,
+		{10.05f, 2.35f, 4.0f}, {0.08f, 4.7f, 3.0f});
+	closedDoor->solid = true;
+	SceneNode* hallwayActor = hallway.AddChild("HallwayActor");
+	hallwayActor->local.position = {15.0f, 0.0f, 4.4f};
+	hallway.UpdateWorld(glm::mat4(1.0f));
+	PhysicsWorld hallwayPhysics;
+	hallwayPhysics.Init(hallway, {});
+	hallwayPhysics.EnableHallway(true);
+	hallwayPhysics.AddActor(hallwayActor, {0.34f, 0.48f, 0.42f}, {0, 0.48f, 0});
+	hallwayActor->local.position = {7.0f, 0.0f, 4.4f};
+	hallwayPhysics.ConstrainActor(hallwayActor, {15.0f, 0.0f, 4.4f});
+	Require(hallwayActor->local.position.x > 10.3f, "closed hallway door blocks Penny from returning to the Toy Room");
+
+	SceneNode boundedHallway("BoundedHallway");
+	Mesh hallWallMesh("HallWallMesh", PrimitiveType::Cube, Primitives::Cube());
+	SceneNode* upperHallWall = boundedHallway.AddShape("HallSide", &hallWallMesh, nullptr,
+		{13.5f, 2.4f, RoomSize::DoorHigh}, {RoomSize::HallEnd - RoomSize::HalfWidth, 4.8f, 0.16f});
+	upperHallWall->solid = true;
+	SceneNode* leftHinge = nullptr;
+	SceneNode* rightHinge = nullptr;
+	for (int side = 0; side < 2; ++side) {
+		SceneNode* hinge = boundedHallway.AddChild(side == 0 ? "RoomDoorLeft" : "RoomDoorRight");
+		(side == 0 ? leftHinge : rightHinge) = hinge;
+		hinge->local.position = {RoomSize::HalfWidth + 0.05f, 0.0f, side == 0 ? RoomSize::DoorLow : RoomSize::DoorHigh};
+		const float sign = side == 0 ? 1.0f : -1.0f;
+		SceneNode* leaf = hinge->AddShape("DoorLeaf", &hallWallMesh, nullptr,
+			{0.0f, 2.35f, sign * 1.5f}, {0.08f, 4.7f, 2.96f});
+		leaf->solid = true;
+	}
+	SceneNode* boundedActor = boundedHallway.AddChild("BoundedActor");
+	boundedActor->local.position = {15.0f, 0.0f, 4.4f};
+	boundedHallway.UpdateWorld(glm::mat4(1.0f));
+	PhysicsWorld boundsPhysics;
+	boundsPhysics.Init(boundedHallway, {});
+	boundsPhysics.EnableHallway(true);
+	boundsPhysics.AddActor(boundedActor, {0.34f, 0.48f, 0.42f}, {0, 0.48f, 0});
+	boundedActor->local.position = {4.0f, 0.0f, 8.5f};
+	boundsPhysics.ConstrainActor(boundedActor, {15.0f, 0.0f, 4.4f});
+	Require(boundedActor->local.position.z <= RoomSize::DoorHigh && boundedActor->local.position.x > 10.3f,
+		"hallway side wall blocks actors from leaving through its end");
+	leftHinge->local.rotation.y = 90.0f;
+	rightHinge->local.rotation.y = -90.0f;
+	boundedHallway.UpdateWorld(glm::mat4(1.0f));
+	boundsPhysics.Update(1.0f / 60.0f);
+	boundedActor->local.position = {8.0f, 0.0f, 4.4f};
+	boundsPhysics.ConstrainActor(boundedActor, {10.5f, 0.0f, 4.4f});
+	Require(boundedActor->local.position.x < 9.5f, "open Toy Room door lets Penny walk into the room");
+
 	Mesh cube("CheckCube", PrimitiveType::Cube, Primitives::Cube());
 	SceneNode scene("CheckScene");
 	SceneNode* wall = scene.AddShape("Wall", &cube, nullptr, {0, 1, 0}, {1, 2, 1}); wall->solid = true;

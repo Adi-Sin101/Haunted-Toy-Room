@@ -1,12 +1,9 @@
-# Toy Story: The Midnight Mission
+# Haunted Toy Room
 
-A computer graphics lab project in C++ and OpenGL 3.3: **Toy Story: The Midnight Mission**.
-It opens on a sunny street in front of a yellow two-storey house: Penny, a white cat with ginger patches,
-walks home through the garden, in at the front door and up the stairs to the toy room, where she settles
-on the bed as the sun sets (**Y** skips this prologue). At midnight the toys come alive. Woody discovers a lost car beyond the doorway, Jessie mounts Bullseye, and Buzz clears the obstacle
-with his laser. The friends reach the car, activate it, escort its automatic return and head home.
-Morning light fades in, the lamp switches off, the toys return to their original poses, and the camera
-pulls back. The complete seven-scene story plays automatically until you take manual control.
+A computer graphics lab project in C++ and OpenGL 3.3. Penny's existing arrival through the garden and
+house remains the prologue. The StoryDirector now owns an explicit gameplay state machine for the new
+sequence: entrance puzzle, toy rescue, Buzz rescue, final escape, and win ending. Stage 1 has three physical
+hallway clues and a keypad; the rescue, chase, and ending interactions are next-phase work.
 
 Every toy is built from hand-written primitives (plane, cube, sphere, cylinder, cone). The project also
 implements its own transformations, scene hierarchy, Phong illumination, Flat/Gouraud/Phong/Blinn shading,
@@ -33,14 +30,17 @@ feature independently. **G** hides the button, menu and the rest of the interfac
 them. All rendering implementations remain available. With lighting on and shading off, basic light
 colour and distance attenuation remain, while normal-based shading, highlights and shadows are skipped.
 
-Let the mission play, or select a toy to pause it and take manual control. **N** switches manual/story
-mode, **Shift+N** restarts the film, and **P** pauses it. **Enter** activates the car in Scene 5; unattended
-playback activates it after three seconds. Its wheels rotate as it drives its predefined route home.
+Use **N** to switch between manual control and gameplay progression, **Shift+N** to replay Penny's arrival
+and reset progression, and **P** to pause the world clock. **Y** skips Penny's arrival and starts Stage 1.
+During Stage 1 Penny is automatically selected and controlled with **W/S** to move, **A/D** to turn and
+**Space** to stop. Walk up to each hallway clue and press **Enter** to inspect it. At the keypad press
+**Enter**, type the digits, then press **Enter** to submit; **Backspace** edits and **Escape** cancels.
+Other character selection becomes available again after the puzzle is solved.
 The interface is one compact corner panel: **H** expands its guide; **G** hides all interface text.
 Camera inputs take over the cinematic view without interrupting the mission.
 Press **M** for continuous mouse-look, **Escape** to release the cursor, or hold right-click to turn.
 With no toy selected in Free camera mode, **W/A/S/D** moves around the room; **PgUp/PgDn** changes height.
-See [the seven-scene mission](docs/16-midnight-mission.md).
+See [the gameplay state machine and Phase 2 work](docs/16-midnight-mission.md).
 
 The room now has solid furniture and toys, a camera constrained to the room, a textured cratered moon,
 more detailed characters, lamp shadows and an on-screen guide. Press **H** for the guide or **G** to hide
@@ -59,7 +59,7 @@ and knock over the wooden blocks. **B** rebuilds the tower. You can also click a
 | **Tab**, **T**, J/L U/O I/K | edit mode: translate, rotate, scale or shear any object |
 | **F1 / F2 / F3** | wireframe, shading model, textures |
 | **F4** | real-time ray tracing (shadows, reflections, transparency) |
-| **N / Shift+N / P / Enter** | manual/story, replay, pause, activate car |
+| **N / Shift+N / P / Enter** | manual/progression, replay, pause, interact |
 | **[ ] / , .** | clock speed / scrub in manual mode |
 | **H / G** | expand corner guide / hide all text |
 | **Y** | skip Penny's arrival (Shift+N replays it with the story) |

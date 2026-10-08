@@ -9,8 +9,10 @@
 
 struct HudInfo {
 	std::string clock, selection, description, controls, camera, rendering, status;
+	std::string puzzleCode;
 	int selected = -1;
 	bool help = false, paused = false, edit = false, story = false, arrival = false;
+	bool puzzleStage = false, puzzleNotice = false;
 	bool settingsOpen = false, lighting = true, shading = true, rayTracing = true, textures = true;
 	bool mouseLook = false;
 	float fps = 0.0f;

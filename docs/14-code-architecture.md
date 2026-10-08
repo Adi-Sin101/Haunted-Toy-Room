@@ -42,7 +42,9 @@ characters, characters nothing about the application.
 | `characters/Character` | movement, walk phase, autopilot, transitions | `Drive`, `Stop`, `SteerTowards`, `StartTransition` |
 | `world/Room` | building the room and props | `BuildRoom` → `RoomRig` handles |
 | `world/Environment` | clock, sky, lamp, ball, ghost | `Update`, `Scrub`, `PushBall`, `DriveLamp` |
-| `world/StoryDirector` | coordinated seven-scene Midnight Mission and car autopilot | `Init`, `Restart`, `Update`, `Pause` |
+| `world/StoryDirector` | single-owner gameplay state machine and guarded stage transitions | `Init`, `Restart`, `Advance`, `Pause` |
+| `world/HallwayPuzzle` | hallway clues, keypad interaction and Toy Room door lock | `Build`, `Begin`, `Interact`, `Submit`, `Update` |
+| `world/PuzzleCode` | clue discovery, three-digit entry and answer validation | `Discover`, `AddDigit`, `Submit`, `Display` |
 | `world/House` | the house around the toy room: exterior, ground floor, stairs, doors | `BuildHouse` → `HouseRig` handles |
 | `world/PennyArrival` | the prologue: Penny's route, doors, chase camera, sunset clock, visibility switching | `Init`, `Restart`, `Skip`, `Update` |
 | `world/PhysicsWorld` | collision proxies, swept movement, camera constraint, block simulation, laser | `ConstrainActor`, `MoveCamera`, `Update`, `FireLaser` |

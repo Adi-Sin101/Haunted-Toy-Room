@@ -119,12 +119,34 @@ distance attenuation. Textures off uses flat preview colours so room surfaces re
 
 | Key | Action |
 |---|---|
-| Y | skip the arrival: Penny is placed on the bed, the doors open, the story begins |
+| Y | skip the arrival and begin the hallway puzzle with the entrance closed |
 | Shift+N | replay the arrival and the story from the start |
 | G / H | hide the interface / expand the guide (as always) |
 
 During the arrival the camera, selection and object controls are disabled; the clock and the camera are
 driven by the arrival.
+
+## Penny's hallway puzzle
+
+After the arrival, Penny is automatically selected as the player character and starts in the upper-floor
+hallway. Her movement uses the existing character controller and hallway collision bounds; character
+selection is held on Penny until the puzzle is solved.
+
+| Key | Action |
+|---|---|
+| W / S | move Penny forward / backward |
+| A / D | turn Penny left / right |
+| SPACE | stop Penny |
+| ENTER near a clue | inspect the toy train, old clock or colored blocks |
+| ENTER near the keypad | start keypad input |
+| 0-9 | enter keypad digits |
+| BACKSPACE | delete the last digit |
+| ENTER while entering | submit the three-digit code |
+| ESC while entering | cancel keypad mode; Penny movement resumes |
+
+The HUD shows the interaction prompt when Penny is close enough, clue progress, and the code. All three
+clues must be inspected before `257` unlocks the Toy Room door. A wrong answer clears the digits and allows
+another attempt. Character selection is available again after entering the Toy Rescue stage.
 
 ## World
 
@@ -133,9 +155,9 @@ driven by the arrival.
 | P | pause / resume the mission and clock |
 | [ / ] | time speed ×½ / ×2 |
 | , / . | scrub time backward / forward (brightness instead when the lamp is selected) |
-| N | switch manual control / coordinated Midnight Mission playback |
-| Shift+N | replay all seven scenes from the beginning |
-| Enter | activate the car in Scene 5; its return route runs automatically |
+| N | switch manual control / gameplay progression |
+| Shift+N | replay Penny's arrival and reset the gameplay state machine |
+| Enter | interact with a story object when an interaction is implemented |
 | H | expand / close the compact corner guide |
 | G | hide / show all interface text |
 | Esc | quit |

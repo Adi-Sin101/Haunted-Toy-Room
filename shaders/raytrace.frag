@@ -54,6 +54,7 @@ uniform sampler2D uTex11;
 uniform sampler2D uTex12;
 uniform sampler2D uTex13;
 uniform sampler2D uTex14;
+uniform sampler2D uTex15;
 
 const float INF = 1e20;
 const float EPS = 1e-4;
@@ -304,6 +305,7 @@ vec3 sampleSlot(int slot, vec2 uv)
 	if (slot == 12) return texture(uTex12, uv).rgb;
 	if (slot == 13) return texture(uTex13, uv).rgb;
 	if (slot == 14) return texture(uTex14, uv).rgb;
+	if (slot == 15) return texture(uTex15, uv).rgb;
 	return vec3(1.0);
 }
 

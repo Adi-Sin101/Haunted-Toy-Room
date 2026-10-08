@@ -19,6 +19,7 @@
 #include "world/StoryDirector.h"
 #include "world/House.h"
 #include "world/PennyArrival.h"
+#include "world/HallwayPuzzle.h"
 
 class Character;
 class Humanoid;
@@ -88,6 +89,7 @@ private:
 
 	// Input handling
 	void HandleGlobalKeys();
+	void HandlePuzzleInteraction();
 	void HandleSelection();
 	void HandleCamera(float dt);
 	void SetCursorCaptured(bool capture);
@@ -124,6 +126,7 @@ private:
 	StoryDirector story;
 	HouseRig house;
 	PennyArrival arrival;
+	HallwayPuzzle hallwayPuzzle;
 	std::unique_ptr<Cat> penny; // not in `characters`: the story and the collision solver ignore her
 	int pennyId = -1;
 	PhysicsWorld physics;

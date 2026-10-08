@@ -123,9 +123,10 @@ glm::vec3 PhysicsWorld::Move(const glm::vec3& from, const glm::vec3& to, const g
 {
 	const auto obstacles = Obstacles(ignore);
  const auto clamp = [&](glm::vec3 p, const glm::vec3& extent) {
-  if (hallway && ignore && p.x > RoomSize::HalfWidth - extent.x - Skin
-   && p.z >= RoomSize::DoorLow + extent.z + 0.1f && p.z <= RoomSize::DoorHigh - extent.z - 0.1f
-   && p.y + extent.y < RoomSize::DoorHeight - 0.1f) {
+  // Once an actor/camera is in the connected hallway, keep it in that corridor even
+  // when a requested step crosses a side boundary. Falling back to RoomClamp here
+  // teleports it through the connected doorway into the room at the corridor corner.
+  if (hallway && p.x > RoomSize::HalfWidth - extent.x - Skin) {
    return glm::clamp(p, glm::vec3(-RoomSize::HalfWidth+extent.x+Skin,extent.y+Skin,RoomSize::DoorLow+extent.z+0.1f),
     glm::vec3(RoomSize::HallEnd-extent.x-0.1f,RoomSize::DoorHeight-extent.y-0.1f,RoomSize::DoorHigh-extent.z-0.1f));
   }

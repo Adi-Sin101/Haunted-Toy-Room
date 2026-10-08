@@ -127,13 +127,18 @@ void Hud::Render(int width, int height, const HudInfo& info)
 	bodyVertices.clear(); titleVertices.clear();
 	const float scale = Scale(width, height), w = width / scale, h = height / scale;
  const float panelWidth=390, x=16, y=16;
- Rect(x,y,panelWidth,info.help ? 468.0f : 218.0f,Ink);
- Text("THE MIDNIGHT MISSION",x+14,y+10,0.61f,Gold);
+ Rect(x,y,panelWidth,info.help ? 468.0f : (info.puzzleStage || info.puzzleNotice) ? 242.0f : 218.0f,Ink);
+ Text("HAUNTED TOY ROOM",x+14,y+10,0.61f,Gold);
  Text(info.clock + " / " + (info.story ? "STORY" : "MANUAL"),x+14,y+32,0.55f,Muted);
  Text(info.selection,x+14,y+54,0.58f,Cream,panelWidth-28,true);
  Text(info.description,x+14,y+82,0.56f,Muted,panelWidth-28);
- Text(info.arrival ? "Y skip the arrival / Shift+N replay" : info.story ? "N manual / Enter activate / Shift+N replay" : info.controls,
+ Text(info.puzzleStage ? info.controls : info.arrival ? "Y skip the arrival / Shift+N replay" : info.story ? "N manual / Enter activate / Shift+N replay" : info.controls,
   x+14,y+119,0.55f,Cream,panelWidth-28);
+ if (info.puzzleStage) {
+  Text(info.puzzleCode,x+14,y+140,0.55f,Gold,panelWidth-28);
+ }
+	if ((info.puzzleStage || info.puzzleNotice) && !info.status.empty())
+		Text(info.status,x+14,y+218,0.50f,Cream,panelWidth-28);
  for (int i=0;i<9;++i) {
   const float bx=x+14+i*40;
   Rect(bx,y+160,35,22,(info.selected==i || (i==8 && info.selected>=8)) ? glm::vec4(0.38f,0.29f,0.16f,0.97f) : glm::vec4(0.12f,0.14f,0.16f,0.8f));
@@ -148,7 +153,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
    "W/S move / A/D turn / Shift run / Space stop",
    "Jessie + Bullseye: R mount or dismount nearby",
    "Buzz: Q/E altitude / L laser / Z/X aim / Alt+click target",
-   "Enter: activate car when the rescue party arrives",
+   "Enter: interact with an available story object",
    "M mouse-look / Esc cursor / C mode / Home reset",
    "No toy: W/A/S/D camera / PgUp-PgDn height / F orbit",
    "B rebuild blocks / P pause story / G hide all text",
