@@ -275,6 +275,14 @@ void ToyRoomApp::StepScene(float dt)
 		camera.orbitDistance = 4.0f;
    camera.target = penny->Root()->local.position + glm::vec3(0.0f, 0.65f, 0.0f);
    camera.position = {16.3f, 2.0f, 2.4f};
+   if (const Selectable* chosen = Selected(); chosen && selectedId != pennyId) {
+    // A manual launch can select a toy in the bedroom; start behind it instead of in the hallway.
+    // Use the follow offset directly so the camera never has to pass through the actor's own body.
+    const Character* driven = DrivenCharacter();
+    const glm::vec3 back = driven ? -driven->Forward() : glm::vec3(0.0f, 0.0f, 1.0f);
+    camera.target = chosen->node->WorldPosition() + glm::vec3(0.0f, chosen->focusHeight, 0.0f);
+    camera.position = camera.target + back * 3.8f + glm::vec3(0.0f, 1.24f, 0.0f);
+   }
    camera.LookAt(camera.target);
    previousCamera = camera.position;
    scene->UpdateWorld(glm::mat4(1.0f));
@@ -384,10 +392,17 @@ void ToyRoomApp::StepScene(float dt)
 	else {
 		if (camera.mode != CameraMode::Free) {
 			const Selectable* selected = Selected();
-			camera.position = physics.CameraSightline(camera.target, camera.position, selected ? selected->node : nullptr);
+			SceneNode* ignored = selected ? selected->node : nullptr;
+			const glm::vec3 sight = physics.CameraSightline(camera.target, camera.position, ignored);
+			glm::vec3 moved = physics.MoveCamera(previousCamera, sight);
+			// After a selection change the camera can sit on the far side of a wall from its new
+			// target, and sliding can never carry it through. Once it has no clear view of the
+			// target, jump to the unobstructed sightline position on the target's side.
+			if (glm::distance(physics.CameraSightline(camera.target, moved, ignored), moved) > 0.3f) moved = sight;
+			camera.position = moved;
+			camera.LookAt(camera.target);
 		}
-		camera.position = physics.MoveCamera(previousCamera, camera.position);
-		if (camera.mode != CameraMode::Free) camera.LookAt(camera.target);
+		else camera.position = physics.MoveCamera(previousCamera, camera.position);
 	}
     if (story.Ending()) {
         if (endingTime==0) storyCamera=true;

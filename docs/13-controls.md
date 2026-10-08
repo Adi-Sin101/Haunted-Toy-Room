@@ -56,7 +56,10 @@ focus releases capture and clears held movement keys.
 With **no toy selected** (press 0) and **Free** camera mode, **W/A/S/D** walks the camera relative to its
 view; **PgUp/PgDn** changes height and **Shift** moves faster. Selected toys retain their movement keys.
 Use **C** to cycle camera modes: mouse-look also orbits the target in Orbit and Follow modes. The camera
-remains constrained to the room and solid objects. Mouse input takes over the cinematic view without
+remains constrained to the room and solid objects. If a new selection leaves the Orbit or Follow camera
+behind a wall with no clear view of its target, it moves to the nearest clear point on the target's side
+instead of staying stuck against the wall. A manual launch with `--select` starts the Follow camera behind
+that toy. Mouse input takes over the cinematic view without
 pausing the mission. **G** hides the interface and center aiming marker.
 
 | Key / mouse | Free mode | Orbit mode | Follow mode |
