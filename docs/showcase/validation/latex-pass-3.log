@@ -96,34 +96,35 @@ ts/enc/dvips/base/8r.enc} <./KUET-LOGO.png>] [2] (Project-Report.toc
 (C:\Users\sarwa\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omsztmcm.fd)
 (C:\Users\sarwa\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omxztmcm.fd)
 (C:\Users\sarwa\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ptm.fd)
-[3]) [4] [5 <./diagrams/scene-overview.png (PNG copy)>] [6] [7 <./diagrams/pipe
-line-diagram.png (PNG copy)>] [8] [9 <./diagrams/primitive-diagram.png (PNG cop
-y)> <./diagrams/mesh-comparison.png (PNG copy)>] [10] [11 <./diagrams/hierarchy
--diagram.png (PNG copy)>] [12 <./diagrams/lighting-diagram.png (PNG copy)>]
-[13] [14 <./diagrams/uv-diagram.png (PNG copy)>] [15] [16 <./diagrams/ray-diagr
-am.png (PNG copy)>] [17 <./diagrams/bvh-diagram.png (PNG copy)>] [18] [19 <./fi
-gures/woody.png (PNG copy)> <./figures/jessie.png (PNG copy)>] [20 <./diagrams/
-rider-hierarchy.png (PNG copy)>] [21 <./figures/buzz.png (PNG copy)> <./figures
-/laser.png (PNG copy)>] [22 <./figures/car.png (PNG copy)> <./figures/penny.png
- (PNG copy)>] [23 <./diagrams/arrival-route.png (PNG copy)> <./figures/window.p
-ng (PNG copy)>] [24 <./diagrams/desk-bed.png (PNG copy)> <./diagrams/bookcase-p
-oster.png (PNG copy)>] [25 <./figures/blocks.png (PNG copy)>] [26 <./diagrams/f
-an-clock.png (PNG copy)> <./diagrams/ball-ghost.png (PNG copy)>] [27 <./figures
-/lamp.png (PNG copy)> <./figures/house.png (PNG copy)>] [28] [29 <./diagrams/li
-ght-comparison.png (PNG copy)> <./diagrams/shading-comparison.png (PNG copy)>]
-[30 <./diagrams/texture-atlas.png (PNG copy)>] [31] [32 <./figures/no-textures.
-png (PNG copy)> <./diagrams/ray-comparison.png (PNG copy)>] [33] [34 <./diagram
-s/interaction-ending.png (PNG copy)>] [35] [36] [37] [38] (Project-Report.aux)
-) <C:\Users\sarwa\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1
-200.pk><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
-s/cm/cmex10.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/publi
-c/amsfonts/cm/cmmi10.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/ty
-pe1/public/amsfonts/cm/cmr10.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/
-fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/sarwa/AppData/Local/Program
-s/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/sarwa/AppData/Local/Programs
-/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/sarwa/AppData/Local/Programs/
-MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/sarwa/AppData/Local/Programs/
-MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/sarwa/AppData/Local/Programs/
-MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on Project-Report.pdf (38 pages, 12595903 bytes).
+[3]) [4] [5] [6 <./diagrams/pipeline-diagram.png (PNG copy)>] [7] [8 <./diagram
+s/primitive-diagram.png (PNG copy)> <./diagrams/mesh-comparison.png (PNG copy)>
+] [9] [10 <./diagrams/hierarchy-diagram.png (PNG copy)>] [11 <./diagrams/lighti
+ng-diagram.png (PNG copy)>] [12] [13 <./diagrams/uv-diagram.png (PNG copy)>]
+[14] [15 <./diagrams/ray-diagram.png (PNG copy)>] [16 <./diagrams/bvh-diagram.p
+ng (PNG copy)>] [17] [18 <./figures/woody.png (PNG copy)> <./figures/jessie.png
+ (PNG copy)>] [19 <./diagrams/rider-hierarchy.png (PNG copy)>] [20 <./figures/b
+uzz.png (PNG copy)> <./figures/laser.png (PNG copy)>] [21 <./figures/car.png (P
+NG copy)> <./figures/penny.png (PNG copy)>] [22 <./diagrams/arrival-route.png (
+PNG copy)> <./figures/window.png (PNG copy)>] [23 <./diagrams/desk-bed.png (PNG
+ copy)> <./diagrams/bookcase-poster.png (PNG copy)>] [24 <./figures/blocks.png
+(PNG copy)>] [25 <./diagrams/fan-clock.png (PNG copy)> <./diagrams/ball-ghost.p
+ng (PNG copy)>] [26 <./figures/lamp.png (PNG copy)> <./figures/house.png (PNG c
+opy)>] [27 <./diagrams/puzzle-objects.png (PNG copy)>] [28 <./diagrams/escape-o
+bjects.png (PNG copy)>] [29] [30 <./diagrams/light-comparison.png (PNG copy)> <
+./diagrams/shading-comparison.png (PNG copy)>] [31 <./diagrams/texture-atlas.pn
+g (PNG copy)>] [32] [33 <./figures/no-textures.png (PNG copy)> <./diagrams/ray-
+comparison.png (PNG copy)>] [34] [35 <./diagrams/interaction-ending.png (PNG co
+py)>] [36] [37] [38] [39] (Project-Report.aux) ) <C:\Users\sarwa\AppData\Local\
+MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1200.pk><C:/Users/sarwa/AppData/L
+ocal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/sarwa/
+AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Use
+rs/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb
+><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/c
+msy10.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/
+usyr.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/u
+syr.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utm
+b8a.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utm
+r8a.pfb><C:/Users/sarwa/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utm
+ri8a.pfb>
+Output written on Project-Report.pdf (39 pages, 12205168 bytes).
 Transcript written on Project-Report.log.

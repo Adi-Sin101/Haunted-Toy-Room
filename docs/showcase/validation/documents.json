@@ -1,21 +1,23 @@
 {
-  "report_pages": 38,
-  "figures": 31,
-  "tables": 11,
-  "equation_groups": 28,
-  "scene_nodes": 699,
+  "figures": 32,
+  "tables": 12,
+  "nodes": 845,
+  "report_pages": 39,
+  "equation_groups": 29,
+  "scene_nodes": 845,
   "engine": "pdfLaTeX",
   "page_limit": 39,
   "content_scan": "passed",
   "overfull_boxes": 0,
   "chapter_start_pages": [
     5,
-    8,
-    18,
-    28
+    7,
+    17,
+    29
   ],
   "contents_start_page": 3,
   "contents_includes_sections": true,
+  "contents_section_entries": 33,
   "slides": 10,
   "embedded_video": true,
   "identity": true

@@ -52,7 +52,7 @@ October 2026
 
 \section*{Abstract}
 \addcontentsline{toc}{section}{Abstract}
-Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project in which a furnished toy room becomes the setting for a coordinated rescue story. Penny, a white cat with ginger patches, walks from the garden into a two-storey house and upstairs. At midnight Woody discovers a stranded car; Jessie rides Bullseye, Buzz clears a doorway obstacle with his laser, and the group escorts the car home. Morning lighting restores the toys to their resting poses.
+Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project in which a furnished toy room becomes the setting for a coordinated rescue story. Penny, a white cat with ginger patches, walks from the garden into a two-storey house and upstairs. Penny solves a hallway combination puzzle, frees the toys using three switches and releases Buzz from a rear holding area. A ghost pursues Penny downstairs. Buzz's actual laser impact breaks the locked entrance, and all five characters escape into the garden.
 
 The implementation uses C++ and an OpenGL 3.3 core pipeline. Five indexed primitive families form the complete environment and articulated models. Hand-authored homogeneous transformations support a scene hierarchy, multiple camera modes and an object inspector. A shared illumination model supplies ambient, diffuse and specular terms for directional, point and spot lights. Flat, Gouraud, Phong and Blinn-Phong shading can be compared in the raster path. Procedural surface maps and a custom BMP loader provide texture detail. The optional GPU ray tracer intersects transformed analytic primitives through a median-split bounding volume hierarchy, then evaluates shadow rays, mirror reflection and straight-through transparency. The project combines cinematic playback, live character takeover and full manual control so each graphics concept can be demonstrated independently.
 
@@ -65,18 +65,13 @@ The implementation uses C++ and an OpenGL 3.3 core pipeline. Five indexed primit
 \addcontentsline{toc}{subsection}{1.1 Project background and motivation}
 A room of articulated toys provides a practical setting for explaining geometry, local coordinate systems, surface appearance and motion together. The visual narrative gives a purpose to each operation: a wheel rotates because a car moves, a rider follows because her root belongs to the saddle, and a spotlight follows a moving lamp head because its anchor belongs to that head. The haunted atmosphere is expressed through night colours, lamp flicker, a translucent ghost and self-moving props.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth,height=0.22\textheight,keepaspectratio]{diagrams/scene-overview.png}
-\caption{The furnished toy room under moonlight, with the coordinated cast, furniture and animated props.}\label{fig:scene-overview}
-\end{figure}
 \subsection*{1.2 Objectives and scope}
 \addcontentsline{toc}{subsection}{1.2 Objectives and scope}
 The objectives are to construct a complete scene from reusable indexed geometry; implement and demonstrate three-dimensional transformations; compare Gouraud and Phong shading; explain three light types through one illumination equation; animate articulated and rolling objects with elapsed time; provide keyboard and mouse interaction; and extend the renderer with analytic ray tracing. Modelling, shader logic, procedural textures, BMP parsing, story choreography and the interface are implemented within the project. GLFW provides window/input services, GLAD loads OpenGL entry points, and GLM supplies vector and matrix storage and algebra.
 
 \subsection*{1.3 Proposed features and final implementation}
 \addcontentsline{toc}{subsection}{1.3 Proposed features and final implementation}
-The recorded concept specifies a child's toy room that comes alive at night, primitive-built controllable characters, Jessie riding Bullseye through a parent-child hierarchy, and a morning return. The final implementation realises these features and adds a connected house, Penny's arrival, collision-aware movement, detailed textures and two rendering paths. Table 1 maps the proposed functionality to the corresponding final modules.
+The recorded concept specifies a child's toy room that comes alive at night, primitive-built controllable characters, Jessie riding Bullseye through a parent-child hierarchy, and a quiet ending. The final implementation realises these features and adds a connected house, Penny's arrival, collision-aware movement, detailed textures and two rendering paths. Table 1 maps the proposed functionality to the corresponding final modules.
 
 {\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2300\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.4000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.3700\linewidth-2\tabcolsep\relax}}
@@ -89,14 +84,14 @@ The recorded concept specifies a child's toy room that comes alive at night, pri
 \textbf{Proposed functionality} & \textbf{Final implementation} & \textbf{Principal code} \\\midrule
 \endhead
 \bottomrule\endfoot
-A toy room becomes alive at night and quiet in the morning & Seven mission scenes, arrival prologue, night-to-dawn clock and restored rest poses & StoryDirector / PennyArrival / Environment \\
+A toy room becomes alive at night and quiet in the morning & Night arrival, clue puzzle, two rescues, pursuit and outdoor escape; daylight remains available for comparison & StoryDirector / PennyArrival / Environment \\
 Recognisable primitive-built toys & Woody, Jessie, Bullseye, Buzz and RC car; Penny and a ghost & Humanoid / Bullseye / RCCar / Cat \\
 At least four independently controlled objects & Five driveable toys, controllable ball and lamp; click-based inspection & Select / HandleObjectControl \\
 Jessie mounts and follows Bullseye & Saddle reparenting, a smooth seat transition and world-space dismount & Mount / Dismount / SceneNode \\
 Translation, rotation, scale and hierarchy & TRS, shear, reflection, normal correction and parent-child motion & Transform3D / Transform / SceneNode \\
 Lighting and shading & Directional, point and spot lights; Flat, Gouraud, Phong and Blinn-Phong & lighting.glsl / Renderer \\
 Moving environment & Lamp swivel/flicker, rolling ball, ghost motion, ceiling fan and clock hands & Environment / StepScene \\
-Texturing and bonus ray tracing & 21 mapped surfaces, own BMP loader, analytic GPU tracing with BVH, shadows and reflection & Assets / ProceduralTextures / RayTracer \\
+Texturing and bonus ray tracing & 22 mapped surfaces, own BMP loader, analytic GPU tracing with BVH, shadows and reflection & Assets / ProceduralTextures / RayTracer \\
 \end{longtable}
 }
 \subsection*{1.4 Project workflow and organisation}
@@ -273,7 +268,7 @@ F2 cycles the raster modes and automatically selects raster rendering. The ray t
 
 \subsection*{2.7 Texture mapping and procedural detail}
 \addcontentsline{toc}{subsection}{2.7 Texture mapping and procedural detail}
-Each primitive stores UV coordinates. A material's uvScale repeats its pattern over the model. Cube faces have separate rectangular charts, sphere UVs follow longitude and latitude, and cylinder/cone sides wrap their angular coordinate while caps use planar coordinates. Multiplying texture RGB by material RGB allows the same wood or greyscale siding pattern to take several colours. The raster textures preserve their native dimensions; all 21 ray-traced maps are bilinearly resampled into 512 \(\times\) 512 layers of one texture array.
+Each primitive stores UV coordinates. A material's uvScale repeats its pattern over the model. Cube faces have separate rectangular charts, sphere UVs follow longitude and latitude, and cylinder/cone sides wrap their angular coordinate while caps use planar coordinates. Multiplying texture RGB by material RGB allows the same wood or greyscale siding pattern to take several colours. The raster textures preserve their native dimensions; all 22 ray-traced maps are bilinearly resampled into 512 \(\times\) 512 layers of one texture array.
 
 {\small\begin{equation}\begin{gathered}
 \mathbf{uv}_s=\mathbf{uv}\odot\mathbf{uv}_{\rm scale},\qquad\mathbf{uv}_{\rm repeat}=\operatorname{fract}(\mathbf{uv}_s)\\
@@ -438,7 +433,7 @@ L toggles the laser; Z/X changes its aim and Alt+click aims at a visible surface
 \end{figure}
 \subsection*{3.5 RC car: wheels, headlights and route}
 \addcontentsline{toc}{subsection}{3.5 RC car: wheels, headlights and route}
-The car combines box chassis/body pieces, cabin, bumpers and grille with four cylinder wheels, hubs, axle details and an antenna. Wheel joints align cylinders with the axle and accumulate an angle equal to travelled distance divided by tyre radius. Two headlight anchors follow the car's world transform and emit forward/downward spotlights. L toggles manual headlights. During activation in the mission, headlights switch on and the car follows its route through the hallway into its home position.
+The car combines box chassis/body pieces, cabin, bumpers and grille with four cylinder wheels, hubs, axle details and an antenna. Wheel joints align cylinders with the axle and accumulate an angle equal to travelled distance divided by tyre radius. Two headlight anchors follow the car's world transform and emit forward/downward spotlights. L toggles manual headlights. The car remains an independently driveable demonstration prop with moving headlights and distance-driven wheels.
 
 {\small\begin{equation}\begin{gathered}
 \theta_{\rm wheel}\mathrel{+}=\frac{\Delta s}{r_{\rm wheel}},\quad
@@ -447,7 +442,7 @@ The car combines box chassis/body pieces, cabin, bumpers and grille with four cy
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth,height=0.22\textheight,keepaspectratio]{figures/car.png}
-\caption{The RC car in the connected hallway, with four wheels, body panels and headlight lenses.}\label{fig:car}
+\caption{The independently driveable RC car, with four wheels, body panels and headlight lenses.}\label{fig:car}
 \end{figure}
 \subsection*{3.6 Penny: curved anatomy and the arrival}
 \addcontentsline{toc}{subsection}{3.6 Penny: curved anatomy and the arrival}
@@ -458,12 +453,12 @@ Penny is built from ellipsoids for the body, head, muzzle, cheeks and paws; poin
 \includegraphics[width=\linewidth,height=0.22\textheight,keepaspectratio]{figures/penny.png}
 \caption{Penny's white coat, ginger patches, rounded head and seated pose on the bed.}\label{fig:penny}
 \end{figure}
-PennyArrival follows fifteen waypoints from the pavement through the gate, porch, ground-floor corridor, stairs and room. Each door is a child of a hinge joint and opens when Penny reaches the relevant part of the route. The stair flight has a 4.5-unit rise over an 8-unit run; the body pitch follows that slope. A 0.7-second eased interpolation with a sine lift produces the hop onto the bed. Route progress also drives sunset. The house exterior is hidden after the stairs are reached, and the downstairs interior is hidden after the arrival finishes.
+PennyArrival follows twelve waypoints from the pavement through the gate, porch, ground-floor corridor, stairs and room. Each door is a child of a hinge joint and opens when Penny reaches the relevant part of the route. The stair flight has a 4.5-unit rise over an 8-unit run; the body pitch follows that slope. The arrival ends at the upper hallway, before the locked puzzle door. Route progress keeps the arrival between 20:30 and 23:00. The exterior is culled indoors and returns after the entrance breaks; the downstairs remains connected for the escape. Grounded actors use support heights matching all eighteen rendered treads.
 
 {\small\begin{equation}\begin{gathered}
 \theta_{\rm stair}=\operatorname{atan2}(4.5,8)=29.36^\circ\\
-\mathbf p_{\rm jump}=(1-w)\mathbf p_0+w\mathbf p_{\rm bed}+(0,\sin(\pi q),0),\quad w=q^2(3-2q)\\
-h=16.3+7.6\operatorname{smoothstep}(s/S)
+n(z)=\operatorname{clamp}\left(\left\lfloor18(z+7)/8\right\rfloor+1,1,18\right),\quad y=-4.5+0.25n(z)\\
+h=20.5+2.5\operatorname{smoothstep}(s/S)
 \end{gathered}\label{eq:22}\end{equation}}
 \begin{figure}[H]
 \centering
@@ -498,7 +493,7 @@ The desk uses a box top, four legs, drawer and a spherical brass knob. A sketchb
 \end{figure}
 Desk and chair: box faces provide flat normals at the tabletop, drawer and leg edges; the brass knob uses a sphere with a stronger specular response. The three pencil cylinders and thin sketchbook remain decorative parts. Chair seat, back and four legs share the same wood material. Repeated wood UVs add grain without additional triangles, while solid furniture bounds keep driven characters outside the structure.
 
-Bed: the frame and headboard establish the solid silhouette, while separate mattress and blanket boxes permit different surface materials. Two flattened spheres form soft pillows. The fabric pattern uses the existing face UVs and repeat scale, so the checked blanket is coloured surface detail. The bed also supplies the final arrival target for Penny; the jump and sleeping pose use her original rig.
+Bed: the frame and headboard establish the solid silhouette, while separate mattress and blanket boxes permit different surface materials. Two flattened spheres form soft pillows. The fabric pattern uses the existing face UVs and repeat scale, so the checked blanket is coloured surface detail. The bed also supplies the final arrival target for Penny; sitting and walking poses reuse her original rig.
 
 \begin{figure}[H]
 \centering
@@ -507,7 +502,7 @@ Bed: the frame and headboard establish the solid silhouette, while separate matt
 \end{figure}
 Bookcase: uprights, backing and shelves are independent scaled boxes. Each shelf contains one textured book-row box; coloured spine bands suggest many books with fewer draw calls than individual book meshes. This is a deliberate surface-detail approximation. The frame retains geometric depth and cast-shadow structure, while the texture provides fine repetition that would otherwise require many small objects.
 
-A repeated fabric pattern covers eight curtain-fold cylinders. A wall poster is an independently UV-mapped plane. The rug uses concentric square colour bands on a plane just above the floor. Toy blocks are six cubes arranged as a tower; a larger doorway crate is a mission obstacle. Their star/bevel texture adds surface identity without adding bevel geometry. All leaf transforms and material assignments are recorded in objects.csv and the comprehensive construction notes; Appendix A indexes the complete scene groups.
+A repeated fabric pattern covers eight curtain-fold cylinders. A wall poster is an independently UV-mapped plane. The rug uses concentric square colour bands on a plane just above the floor. Toy blocks are six cubes arranged as a tower; a larger crate provides a collision demonstration clear of the hallway route. Their star/bevel texture adds surface identity without adding bevel geometry. All leaf transforms and material assignments are recorded in objects.csv and the comprehensive construction notes; Appendix A indexes the complete scene groups.
 
 Poster, curtains and rug: the poster is a plane with a single BMP image, giving a clear demonstration of file loading rather than procedural generation. Curtain folds use eight cylinders to produce an actual curved silhouette and changing normals. The rug is a slightly elevated plane with concentric colour bands. Small offsets prevent coincident surfaces from competing in the depth buffer.
 
@@ -516,7 +511,7 @@ Poster, curtains and rug: the poster is a plane with a single BMP image, giving 
 \includegraphics[width=\linewidth,height=0.22\textheight,keepaspectratio]{figures/blocks.png}
 \caption{The six-block tower and doorway crate. Boxes participate in gravity, separation and laser impulses.}\label{fig:blocks}
 \end{figure}
-Blocks and doorway crate: each rigid box has its own translation and orientation, allowing gravity, separation and laser impulses to act independently. The star-and-border map identifies the faces, but its apparent bevel is a colour pattern rather than extra edge polygons. The crate is the story obstacle; the small tower provides a visible test of falling and tumbling objects after an impulse.
+Blocks and doorway crate: each rigid box has its own translation and orientation, allowing gravity, separation and laser impulses to act independently. The star-and-border map identifies the faces, but its apparent bevel is a colour pattern rather than extra edge polygons. The crate is a movable demonstration prop; the small tower provides a visible test of falling and tumbling objects after an impulse.
 
 \subsection*{3.9 Fan, clock and haunted props}
 \addcontentsline{toc}{subsection}{3.9 Fan, clock and haunted props}
@@ -562,8 +557,50 @@ BuildHouse constructs a two-storey facade, pitched roof, gables, trim, porch, ga
 \end{figure}
 Exterior groups: scaled boxes form the house walls, porch, garage and pavement, with roof and trim elements preserving the architectural outline. Fence pickets use alpha coverage to cut holes in a textured surface; their silhouette is not a separate mesh for every opening. Grass, siding, shingles and brick have distinct UV repeats. Trees and garden elements give depth to the arrival view and remain selectable or inspectable through their scene-node records.
 
-The front door, double toy-room door and stair door use hinge roots: yaw rotates the door and handle together. Arrival stage and Penny's proximity drive exponentially eased opening. Cinematic visibility hides downstairs geometry after arrival while retaining its inventory records. The shared texture array supplies exterior maps to both raster and ray-traced rendering.
+The front door, double toy-room door and stair door use hinge roots: yaw rotates the door and handle together. Arrival stage and Penny's proximity drive exponentially eased opening. The downstairs remains connected; the stair door stays open, the toy-room door opens after the puzzle and the front door remains solid until laser impact. The shared texture array supplies exterior maps to both raster and ray-traced rendering.
 
+\subsection*{3.12 Puzzle, rescue and escape objects}
+\addcontentsline{toc}{subsection}{3.12 Puzzle, rescue and escape objects}
+The wooden train uses box chassis and cab pieces, a horizontal cylindrical boiler, chimney and cylinder wheels. Two separate cars and a raised seven-segment 2 identify its clue. Seven coloured cubes form the block clue's 7. The hallway clock has a circular cylinder case and a thin cylinder face. The provided BMP uses planar cap UVs; a negative v repeat corrects printed orientation after rotation. A raised 5 below the face keeps the clue readable. The combination keypad has a solid wood housing, steel plate, ten raised buttons, box-strip digit glyphs and a cylinder confirmation button. Its editable three-digit display is also exposed in the HUD.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.30\textheight,keepaspectratio]{diagrams/puzzle-objects.png}
+\caption{The four hallway puzzle objects: indexed primitive geometry, circular BMP face and raised keypad glyphs.}\label{fig:puzzle-objects}
+\end{figure}
+The rescue gate combines nine thin cylinders and a box rail. Its parent joint raises after two low switches and becomes hidden after the high switch. Each switch has a box backplate and a cylinder lever rotating from 20 to -45 degrees. Jessie's support platform is a solid 2.0 by 1.3 by 1.6 box; dismounting uses the existing eased rig transition. Buzz's holding area reuses the rear room floor, two box partitions and a cyan translucent barrier. Its red box release switch removes the barrier from drawing and contact tests. The entrance note is a thin paper box, accompanied by the arrival objective explaining that the toys need help.
+
+The front-door padlock belongs to the existing hinge: one metal body box, two upright cylinders and a rotated cylinder crown move with the door. Laser impact hides this assembly and activates six wood-textured box fragments. Gravity, contact separation and angular impulses use the existing fixed-step solver. The eighteen rendered stair treads each rise 0.25 units; the support function matches each tread rather than letting a character sink through a ramp. Grounded actors remain on the correct floor, while Buzz retains vertical flight. Final rest-pose restoration preserves each root transform so the ending cannot move the cast back indoors.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.30\textheight,keepaspectratio]{diagrams/escape-objects.png}
+\caption{Rescue platform, holding barrier, hinge-mounted lock, actual laser contact, debris and the eighteen connected stair treads.}\label{fig:escape-objects}
+\end{figure}
+{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
+\begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2300\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.4000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.3700\linewidth-2\tabcolsep\relax}}
+\caption{Interaction and contact conditions}\label{tab:5}\\
+\toprule
+\textbf{Mechanism} & \textbf{Location / value} & \textbf{Required condition} \\\midrule
+\endfirsthead
+\multicolumn{3}{l}{\small\itshape Table \thetable{} (continued)}\\
+\toprule
+\textbf{Mechanism} & \textbf{Location / value} & \textbf{Required condition} \\\midrule
+\endhead
+\bottomrule\endfoot
+Low switches & (7.1,0.75,2) and (7.1,0.75,5.8) & Penny within 1.7 horizontal units \\
+High switch & (2.5,3.25,4.5); platform top y=1.3 & Jessie: mounted approach, dismounted, y>1, within 1.5 units; transition finished \\
+Buzz release & (2.8,0.8,-3) & Penny within 1.8 horizontal units \\
+Entrance & (12,-4.5,9.2) & Penny nearby and downstairs; Buzz laser's nearest hit is the door for >0.65 s \\
+Stair flight & 18 treads; rise 0.25; width 3 & Support matches geometry; oversized rotated proxy centres safely \\
+Escape completion & Door broken; z>13 and y<-0.3 & All five actual character positions pass; virtual progress cannot substitute \\
+\end{longtable}
+}
+Exponential depth fog blends rendered RGB with (0.055,0.065,0.095). Transmission is exp(-density times distance): density is 0.008 during pursuit, 0.010 outdoors at night and zero otherwise. Raster uses eye-to-surface distance; analytic tracing uses primary-hit distance after accumulating local, reflected and transmitted colour. This is a depth cue rather than participating-medium transport.
+
+{\small\begin{equation}\begin{gathered}
+T=\exp(-\rho d),\qquad \mathbf C_{\rm fogged}=T\mathbf C_{\rm rendered}+(1-T)\mathbf C_{\rm fog}
+\end{gathered}\label{eq:26}\end{equation}}
 \clearpage
 \section*{CHAPTER IV --- Implementation, Results and Discussion}
 \addcontentsline{toc}{section}{CHAPTER IV --- Implementation, Results and Discussion}
@@ -571,7 +608,7 @@ The front door, double toy-room door and stair door use hinge roots: yaw rotates
 \addcontentsline{toc}{subsection}{4.1 Light sources and material response}
 {\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.1900\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.2800\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.2000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.3300\linewidth-2\tabcolsep\relax}}
-\caption{Scene light configuration}\label{tab:5}\\
+\caption{Scene light configuration}\label{tab:6}\\
 \toprule
 \textbf{Source} & \textbf{Type / control} & \textbf{Attenuation (kc,kl,kq)} & \textbf{Cone / visibility} \\\midrule
 \endfirsthead
@@ -612,11 +649,11 @@ The texture catalogue includes every sampled scene map and the white utility fal
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth,height=0.39\textheight,keepaspectratio]{diagrams/texture-atlas.png}
-\caption{All 21 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.}\label{fig:texture-atlas}
+\caption{All 22 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.}\label{fig:texture-atlas}
 \end{figure}
-{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
+{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2300\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.4400\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.3300\linewidth-2\tabcolsep\relax}}
-\caption{Surface-map construction and use}\label{tab:6}\\
+\caption{Surface-map construction and use}\label{tab:7}\\
 \toprule
 \textbf{Map / layer} & \textbf{Construction} & \textbf{Use} \\\midrule
 \endfirsthead
@@ -647,6 +684,7 @@ brick / 17; 256x256 & Eight running-bond courses, four bricks per row, half-bric
 grass / 18; 256x256 & Two noise scales: coarse clumps and fine elongated blade variation, tinted green. & Garden lawn \\
 window-pane / 19; 128x128 & Border/cross masks and a vertical glass gradient with a diagonal sheen; opaque colour map. & Exterior windows \\
 flower-bed / 20; 256x256 & Ten-by-ten hashed cells place blossom centres and choose among four colours over leaf noise. & Garden flower details \\
+toy-story-clock / 21; 447x447 & Provided BMP, custom row/RGB loader and planar cylinder-cap UVs; shared array layer for both renderers. & Hallway clock face \\
 \end{longtable}
 }
 \begin{figure}[H]
@@ -661,7 +699,7 @@ The scene and camera remain the same in the following comparisons. Raster mode a
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth,height=0.30\textheight,keepaspectratio]{diagrams/ray-comparison.png}
-\caption{Zero-continuation room view, two-continuation reflections and ray-traced exterior texture coverage.}\label{fig:ray-comparison}
+\caption{Raster room, zero-continuation primary view, two-continuation reflections and ray-traced exterior texture coverage.}\label{fig:ray-comparison}
 \end{figure}
 The shader uses quality thresholds to bound shadow work. Very weak light contributions are skipped; lights tagged for tracing cast an occlusion ray only when attenuation \(\times\) intensity \(\times\) max(N\(\cdot\)L,0) exceeds 0.02. Transparent and unlit instances are excluded from general shadow occlusion. These choices improve interactive cost but mean visibility is deliberately approximate for weak lights and translucent objects. The tracer does not provide physical refraction or indirect diffuse illumination.
 
@@ -669,7 +707,7 @@ The shader uses quality thresholds to bound shadow work. Very weak light contrib
 \addcontentsline{toc}{subsection}{4.5 Coordinated animation and interaction}
 {\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2300\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.4000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.3700\linewidth-2\tabcolsep\relax}}
-\caption{Story states and visible graphics operations}\label{tab:7}\\
+\caption{Story states and visible graphics operations}\label{tab:8}\\
 \toprule
 \textbf{Stage} & \textbf{Action} & \textbf{Graphics concept} \\\midrule
 \endfirsthead
@@ -678,28 +716,28 @@ The shader uses quality thresholds to bound shadow work. Very weak light contrib
 \textbf{Stage} & \textbf{Action} & \textbf{Graphics concept} \\\midrule
 \endhead
 \bottomrule\endfoot
-Arrival & Penny enters through doors, climbs and jumps to the bed & Waypoints, hinges, camera following, slope/jump, sunset \\
-1 Discovery & Woody looks toward the lost car & Yaw steering and establishing camera \\
-2 Departure & Jessie mounts; Buzz flies; Woody leads & Hierarchy, pose blend, translation and flight \\
-3 Clear path & Buzz's laser pushes the doorway obstacle & Ray picking, impulse, emissive geometry \\
-4 Reach car & The friends cross into the hallway & Coordinated waypoint routes and contacts \\
-5 Activate car & Enter or automatic activation starts its return & User interaction, headlights, wheel rotation \\
-6 Return home & Rider dismounts; toys return to their places & World/local conversion and independent control \\
-7 Morning / End & Lamp off, rest poses restored, Penny asleep & Clock-driven lighting and complete pose restoration \\
+Prologue & Penny enters the house at night & Waypoints, hinges, stair slope and camera \\
+Puzzle & Inspect train 2, clock 5, blocks 7; enter 257 & Proximity input, digit geometry, cap UVs, door yaw \\
+Toy rescue & Two low switches; mounted Jessie reaches the high platform & Hierarchy, pose transitions, lever rotation, raised gate \\
+Buzz rescue & Activate the rear holding-area release & Translucent barrier and collision removal \\
+Escape & Descend; ghost follows; Buzz breaks the entrance & Ground support, flight, nearest-hit laser, debris \\
+Win & All five are outside and idle in a night view & Actual-position guard; rest pose preserves placement \\
 \end{longtable}
 }
-The mission's transition guards test route completion, mounting state or laser impact. Enter explicitly activates the car in its activation scene; unattended playback performs that action after three seconds. Selecting a character during playback grants live ownership while the director continues other actors. The director never writes the owned actor's route, heading, special state or morning reset. A separate virtual route cursor advances at the scheduled speed, so a scene-completion guard cannot wait indefinitely for keyboard input. When Buzz is owned, the doorway opens after a three-second cinematic gate without changing his laser or aim. Scripted actors ignore the owned actor as a movement obstacle, while the owned actor retains furniture and wall contacts. Selecting a mounted rider or horse first detaches the rider for independent control; voluntarily remounting transfers the connected pair as one physical unit. Pressing 0 releases ownership and the actor steers from its current location toward the remaining route. N switches the complete scene to full manual mode or resumes story mode, Shift+N restarts the arrival and story, Y skips the arrival, and P pauses the story clock. The interface exposes the active rendering path and selected object. Penny can also be picked and driven after the arrival. A complete keyboard reference and a narration guide accompany the report.
+The keypad requires all three inspected clues and the code 257. A wrong code shows Incorrect Code and clears only the digits. Penny must approach both low switches. Jessie must have ridden Bullseye beneath the high switch, dismounted onto its platform and completed her transition before Enter activates it. The rear release belongs to Penny. At the ground-floor entrance, Enter starts Buzz's flight. The door breaks only after his nearest laser hit is the actual door for more than 0.65 seconds. Six preallocated boards receive impulses; the ghost pursues at 1.6 units per second. The ending requires the broken entrance and Penny plus all four rescued toys physically outside.
+
+Selection transfers input ownership to one character while other actors continue their routes and actions. The director skips motion and special-state writes for the owned actor; a separate virtual cursor keeps route progress. The final escape guard still requires every character's actual position outside. Releasing ownership chooses a waypoint on the actor's current floor and steers there without teleporting. A manually aimed Buzz laser follows the same real-hit rule as his scripted flight. Scripted actors ignore the owned actor as a contact obstacle, while its furniture and wall contacts remain active. Selecting a mounted rider or horse detaches the pair; remounting deliberately controls them together. Press 0 to release, N for full manual mode, Ctrl+0 for Penny, Enter to interact, Y to skip arrival, and Shift+N to restart.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth,height=0.30\textheight,keepaspectratio]{diagrams/interaction-ending.png}
-\caption{Live character takeover, daytime lighting and the completed morning return.}\label{fig:interaction-ending}
+\caption{Live character takeover, daytime lighting and the completed outdoor escape.}\label{fig:interaction-ending}
 \end{figure}
 {\small\begin{equation}\begin{gathered}
 \boldsymbol\delta=\mathbf q_{\rm next}-\mathbf p_v,\quad d=\|\boldsymbol\delta\|,\quad
 \mathbf p_{v,t+1}=\mathbf p_{v,t}+\boldsymbol\delta\frac{\min(d,v_{\rm route}\Delta t)}{d}\quad(d>0)\\
-G=G_{\rm owned,virtual}\land\bigwedge_{i\ne\rm owned}G_{i,\rm actual}
-\end{gathered}\label{eq:26}\end{equation}}
+G=G_{\rm door,broken}\land\bigwedge_i\{z_i>13\land y_i<-0.3\}
+\end{gathered}\label{eq:27}\end{equation}}
 \subsection*{4.6 Collision and frame-time control}
 \addcontentsline{toc}{subsection}{4.6 Collision and frame-time control}
 Moving actors and the camera use swept bounding boxes. Expanding an obstacle by the mover's half-size converts box movement into a segment/slab test. At contact the remaining motion loses its component into the contact normal, allowing sliding along furniture. Dynamic blocks use a fixed 1/120-second step with at most six steps per displayed frame. Gravity updates vertical speed, contact separation resolves overlaps and an impact transfers linear/angular velocity. This is a compact box approximation, not a full rigid-body constraint solver.
@@ -709,7 +747,7 @@ v_{y,t+1}=v_{y,t}-9.81\Delta t,\quad\mathbf p_{t+1}=\mathbf p_t+\mathbf v\Delta 
 B_{\rm expanded}=[\mathbf b_{\min}-\mathbf h,\mathbf b_{\max}+\mathbf h],\quad
 \Delta\mathbf p_{\rm slide}=\Delta\mathbf p-\mathbf n\min(0,\Delta\mathbf p\cdot\mathbf n)\\
 \Delta t_{\rm physics}=1/120\text{ s},\qquad N_{\rm substeps}\le6
-\end{gathered}\label{eq:27}\end{equation}}
+\end{gathered}\label{eq:28}\end{equation}}
 \subsection*{4.7 Optimisation decisions}
 \addcontentsline{toc}{subsection}{4.7 Optimisation decisions}
 Geometry buffers and materials are shared. Sphere detail levels contain 1656, 396 or 100 triangles; cylinder and cone levels use 32, 16 or 8 sectors. Projected-size estimates choose detail levels. Raster frustum planes cull only shapes whose conservative bounds are outside the view. Opaque draws are grouped within depth slices by material and mesh; transparent shapes are sorted far-to-near and disable depth writes. Uniform locations are cached. The shadow pass skips inactive lamps and tiny/out-of-cone shapes. The ray tracer reuses CPU vectors and avoids per-item general 4 \(\times\) 4 inversion by deriving inverse rows from the normal matrix. A single texture array prevents per-map sampler growth.
@@ -719,12 +757,12 @@ s=\frac{r}{\|\mathbf c-\mathbf e\|},\qquad
 \mathrm{LOD}(s)=\begin{cases}\text{low},&s<0.012\\\text{medium},&0.012\le s<0.06\\\text{full},&s\ge0.06\end{cases}\\
 (M^{-1})_{i,:}=(\mathbf n_i^T,-\mathbf n_i\cdot\mathbf t),\quad
 \mathbf n_i=\text{column }i\text{ of the normal matrix}
-\end{gathered}\label{eq:28}\end{equation}}
-Cinematic visibility removes the exterior and downstairs geometry when the arrival no longer exposes them. Surface patterns replace book-spine and fence geometry where a colour/coverage map is sufficient. Fixed physics work prevents stalls from scheduling unbounded catch-up work. Deterministic media capture uses a fixed simulation step and raw RGB frame recording; the media generator validates frame count before encoding. Benchmark timings are execution observations, not a guarantee for every environment.
+\end{gathered}\label{eq:29}\end{equation}}
+Cinematic visibility removes the exterior during indoor play and restores it when the entrance breaks; the connected downstairs remains available. Surface patterns replace book-spine and fence geometry where a colour/coverage map is sufficient. Fixed physics work prevents stalls from scheduling unbounded catch-up work. Deterministic media capture uses a fixed simulation step and raw RGB frame recording; the media generator validates frame count before encoding. Benchmark timings are execution observations, not a guarantee for every environment.
 
 {\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.1667\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1667\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1667\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1667\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1667\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1667\linewidth-2\tabcolsep\relax}}
-\caption{Observed rendering timings}\label{tab:8}\\
+\caption{Observed rendering timings}\label{tab:9}\\
 \toprule
 \textbf{Mode} & \textbf{Frames} & \textbf{ms/frame} & \textbf{FPS} & \textbf{Draws/frame} & \textbf{Geometry} \\\midrule
 \endfirsthead
@@ -733,19 +771,19 @@ Cinematic visibility removes the exterior and downstairs geometry when the arriv
 \textbf{Mode} & \textbf{Frames} & \textbf{ms/frame} & \textbf{FPS} & \textbf{Draws/frame} & \textbf{Geometry} \\\midrule
 \endhead
 \bottomrule\endfoot
-Raster Blinn-Phong & 200 & 0.84 & 1183.59 & 674 & 81603 \\
-Ray tracing (0.5 scale, 2 bounces) & 200 & 3.18 & 314.72 & 2 fullscreen passes & Analytic primitives \\
+Raster Blinn-Phong & 200 & 1.04 & 962.61 & 792 & 77172 \\
+Ray tracing (0.5 scale, 2 bounces) & 200 & 7.99 & 125.09 & 2 fullscreen passes & Analytic primitives \\
 \end{longtable}
 }
-These observations use the final Release executable at 1600 \(\times\) 900 with 60 warm-up frames followed by 200 timed frames, v-sync disabled, and the mission running without its arrival. The two rendering paths use their normal settings. Ray statistics refer to full-screen passes, not the raster triangle counters. Timing is influenced by scene progression and concurrent system work; it is not an isolated before/after experiment.
+These observations use the final Release executable at 1600 \(\times\) 900 with 60 warm-up frames followed by 200 timed frames, v-sync disabled, and a fixed manual room view. The two rendering paths use their normal settings. Ray statistics refer to full-screen passes, not the raster triangle counters. Timing is influenced by scene progression and concurrent system work; it is not an isolated before/after experiment.
 
 \subsection*{4.8 Verification and achieved objectives}
 \addcontentsline{toc}{subsection}{4.8 Verification and achieved objectives}
-The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding and hallway access. The full arrival/mission replay reaches The End, logs mounting and dismounting, and restores the driveable toys to their expected home positions. Captures exercise all four raster shading modes, all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
+The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding and hallway access. The fixed-step escape rehearsal uses normal movement, mounting, interaction and contacts, logs the real door hit and reaches WIN only when all five actors are outside. Captures exercise all four raster shading modes, all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
 
 {\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2300\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.4000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.3700\linewidth-2\tabcolsep\relax}}
-\caption{Verification evidence}\label{tab:9}\\
+\caption{Verification evidence}\label{tab:10}\\
 \toprule
 \textbf{Area} & \textbf{Method} & \textbf{Result} \\\midrule
 \endfirsthead
@@ -754,11 +792,11 @@ The final project is compiled in both Release and Debug configurations. The auto
 \textbf{Area} & \textbf{Method} & \textbf{Result} \\\midrule
 \endhead
 \bottomrule\endfoot
-Geometry / transforms / contacts & tests/PhysicsChecks.cpp & 36 checks passed \\
+Geometry / transforms / contacts & tests/PhysicsChecks.cpp & 63 checks passed \\
 Manual + mounted + live input & Actual Windows key messages into GLFW callbacks & All three scenarios passed \\
-Story completion & Arrival plus 300-second fixed-step replay & The End; mounts/dismounts; dawn/home positions \\
-Rendering & 42 deterministic PNG captures; capture checks GL errors & All paths completed \\
-Live takeover & Five independently owned toy replays plus real key ownership/release checks & All five reach The End; other toys return home \\
+Story completion & Fixed-step connected escape rehearsal & WIN; real door hit; all five actors outside \\
+Rendering & 55 deterministic PNG captures; capture checks GL errors & All paths completed \\
+Live takeover & Five ownership comparisons plus real key ownership/release checks & Owned transform retained; other route actions continue \\
 Video & 2880 frames, 1280 \(\times\) 720, 24 fps; complete decode & 120 seconds; passed \\
 \end{longtable}
 }
@@ -794,11 +832,11 @@ The project uses the graphics concepts and public library interfaces cited above
 
 \section*{Appendix A - Object construction index}
 \addcontentsline{toc}{section}{Appendix A - Object construction index}
-The scene export contains 699 nodes, including 600 mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.
+The scene export contains 845 nodes, including 735 mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.
 
-{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
+{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2900\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1800\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.5300\linewidth-2\tabcolsep\relax}}
-\caption{Complete scene coverage by construction group}\label{tab:10}\\
+\caption{Complete scene coverage by construction group}\label{tab:11}\\
 \toprule
 \textbf{Group} & \textbf{Nodes / shapes} & \textbf{Primitive families} \\\midrule
 \endfirsthead
@@ -822,22 +860,23 @@ RoomDoorLeft[10] & 5 / 4 & Cube, Sphere \\
 RoomDoorRight[11] & 5 / 4 & Cube, Sphere \\
 StairDoor[12] & 5 / 4 & Cube, Sphere \\
 HouseExterior[13] & 115 / 104 & Cube, Cylinder, Plane, Sphere \\
-FrontDoor[14] & 4 / 3 & Cube, Sphere \\
+FrontDoor[14] & 9 / 7 & Cube, Cylinder, Sphere \\
 Penny[15] & 45 / 36 & Cone, Cube, Cylinder, Sphere \\
-ContactShadow[16] & 1 / 1 & Sphere \\
-ContactShadow[17] & 1 / 1 & Sphere \\
-ContactShadow[18] & 1 / 1 & Sphere \\
-ContactShadow[19] & 1 / 1 & Sphere \\
-ContactShadow[20] & 1 / 1 & Sphere \\
+Hallway puzzle mechanisms & 109 / 103 & Cube, Cylinder, Sphere \\
+Toy rescue mechanisms & 21 / 17 & Cube, Cylinder \\
+Buzz holding area & 4 / 4 & Cube \\
+Entrance debris & 6 / 6 & Cube \\
+EntranceRescueNote[37] & 1 / 1 & Cube \\
+Character contact shadows & 5 / 5 & Sphere \\
 \end{longtable}
 }
 \section*{Appendix B - Material and study references}
 \addcontentsline{toc}{section}{Appendix B - Material and study references}
 Every material is recorded in materials.csv: colour, ambient/diffuse/specular coefficients, shininess, emission, opacity, mirror reflectivity, texture layer and UV scale. Representative coefficients below make the visual comparisons reproducible. Ghost opacity is a time-dependent value: 0.55 times visibility, or 0.55 while selected; the export records its initial hidden value of zero. The comprehensive notes retain the full material inventory. The Demonstration and Viva Guide supplies a timed two-minute narration, live-control rehearsal, theory questions and parameter-change practice. The numbered source documentation explains vertex/index construction, every object hierarchy, illumination, shading, textures and analytic ray tracing in greater depth.
 
-{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
+{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}
 \begin{longtable}{>{\raggedright\arraybackslash}p{\dimexpr0.2600\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.2300\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.1000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.2000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.2100\linewidth-2\tabcolsep\relax}}
-\caption{Representative actual material coefficients}\label{tab:11}\\
+\caption{Representative actual material coefficients}\label{tab:12}\\
 \toprule
 \textbf{Material} & \textbf{ka/kd/ks} & \textbf{n} & \textbf{alpha / rho} & \textbf{UV} \\\midrule
 \endfirsthead

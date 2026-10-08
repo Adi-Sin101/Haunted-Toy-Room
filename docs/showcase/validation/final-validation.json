@@ -1,43 +1,86 @@
 {
-  "date": "2026-10-08",
-  "builds": {
-    "Debug": "passed",
-    "Release": "passed"
-  },
-  "checks": 36,
-  "input_scenarios": 3,
-  "live_actor_replays": 5,
-  "unaffected_route_comparison": "passed",
-  "captures": 42,
-  "story": "The End",
-  "report_pages": 38,
-  "figures": 31,
-  "tables": 11,
-  "scene_nodes": 699,
-  "slides": 10,
-  "embedded_video_matches_mp4": true,
-  "video_seconds": 120,
-  "pdf_layout_bounds": "passed",
-  "report_content_scan": "passed",
-  "status": "passed",
-  "archived_runtime_smoke": "passed",
-  "equation_groups": 28,
+  "report_pages": 39,
+  "figures": 32,
+  "tables": 12,
+  "equation_groups": 29,
+  "scene_nodes": 845,
   "engine": "pdfLaTeX",
   "page_limit": 39,
   "content_scan": "passed",
   "overfull_boxes": 0,
-  "embedded_video": true,
-  "identity": true,
-  "report_engine": "pdfLaTeX",
-  "missing_glyphs": 0,
-  "unresolved_references": 0,
   "chapter_start_pages": [
     5,
-    8,
-    18,
-    28
+    7,
+    17,
+    29
   ],
   "contents_start_page": 3,
   "contents_includes_sections": true,
-  "contents_section_entries": 32
+  "contents_section_entries": 33,
+  "date": "2026-10-08",
+  "builds": {
+    "Release": "passed",
+    "Debug": "passed"
+  },
+  "checks": 63,
+  "input_scenarios": 3,
+  "live_takeover_comparisons": 5,
+  "other_actor_positions_match_baseline": true,
+  "escape_paths": [
+    {
+      "path": "flat",
+      "real_door_impact": true,
+      "WIN": true,
+      "all_five_actual_positions_outside": true,
+      "process_exit": 0
+    },
+    {
+      "path": "gouraud",
+      "real_door_impact": true,
+      "WIN": true,
+      "all_five_actual_positions_outside": true,
+      "process_exit": 0
+    },
+    {
+      "path": "phong",
+      "real_door_impact": true,
+      "WIN": true,
+      "all_five_actual_positions_outside": true,
+      "process_exit": 0
+    },
+    {
+      "path": "blinn",
+      "real_door_impact": true,
+      "WIN": true,
+      "all_five_actual_positions_outside": true,
+      "process_exit": 0
+    },
+    {
+      "path": "ray",
+      "real_door_impact": true,
+      "WIN": true,
+      "all_five_actual_positions_outside": true,
+      "process_exit": 0
+    },
+    {
+      "path": "debug",
+      "real_door_impact": true,
+      "WIN": true,
+      "all_five_actual_positions_outside": true,
+      "process_exit": 0
+    }
+  ],
+  "captures": 55,
+  "story": "WIN, all five actual characters outside",
+  "scene_shapes": 735,
+  "mapped_surfaces": 22,
+  "texture_array_layers": 23,
+  "slides": 10,
+  "embedded_video_matches_mp4": true,
+  "video_seconds": 120,
+  "video_decode": "passed",
+  "pdf_layout_bounds": "passed",
+  "status": "passed",
+  "archived_runtime_smoke": "passed",
+  "archived_runtime_sha256": "02c692c269c4b5223f6c7f7fe939f69c49cfc46b3dd1908cd760a662b3a406a3"
 }

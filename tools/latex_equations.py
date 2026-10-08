@@ -76,8 +76,8 @@ q=\operatorname{clamp}(t/T,0,1),\qquad w(q)=q^2(3-2q)""",
 r"""\theta_{\rm wheel}\mathrel{+}=\frac{\Delta s}{r_{\rm wheel}},\quad
 \mathbf p_l=M_{{\rm anchor},:,3},\quad\mathbf d_l=\operatorname{normalize}(\mathbf a_z+\mathbf d_{\rm tilt})""",
 r"""\theta_{\rm stair}=\operatorname{atan2}(4.5,8)=29.36^\circ\\
-\mathbf p_{\rm jump}=(1-w)\mathbf p_0+w\mathbf p_{\rm bed}+(0,\sin(\pi q),0),\quad w=q^2(3-2q)\\
-h=16.3+7.6\operatorname{smoothstep}(s/S)""",
+n(z)=\operatorname{clamp}\left(\left\lfloor18(z+7)/8\right\rfloor+1,1,18\right),\quad y=-4.5+0.25n(z)\\
+h=20.5+2.5\operatorname{smoothstep}(s/S)""",
 r"""a=(h-6)\pi/12,\quad H_s=\sin a,\quad
 \mathbf p_s=\mathbf c_s+(-3.2\cos a,3.1\sin a,0)\\
 \mathbf p_m=\operatorname{orbit}(a+\pi),\qquad
@@ -88,7 +88,7 @@ r"""\mathbf a=\operatorname{normalize}(\mathbf{up}\times\Delta\mathbf p),\quad\t
 \mathbf p_g=(4.5\sin(0.25t),\,4.2+0.35\sin(1.3t),\,3\cos(0.25t)-0.5)""",
 r"""\boldsymbol\delta=\mathbf q_{\rm next}-\mathbf p_v,\quad d=\|\boldsymbol\delta\|,\quad
 \mathbf p_{v,t+1}=\mathbf p_{v,t}+\boldsymbol\delta\frac{\min(d,v_{\rm route}\Delta t)}{d}\quad(d>0)\\
-G=G_{\rm owned,virtual}\land\bigwedge_{i\ne\rm owned}G_{i,\rm actual}""",
+G=G_{\rm door,broken}\land\bigwedge_i\{z_i>13\land y_i<-0.3\}""",
 r"""v_{y,t+1}=v_{y,t}-9.81\Delta t,\quad\mathbf p_{t+1}=\mathbf p_t+\mathbf v\Delta t\\
 B_{\rm expanded}=[\mathbf b_{\min}-\mathbf h,\mathbf b_{\max}+\mathbf h],\quad
 \Delta\mathbf p_{\rm slide}=\Delta\mathbf p-\mathbf n\min(0,\Delta\mathbf p\cdot\mathbf n)\\
@@ -98,3 +98,5 @@ r"""s=\frac{r}{\|\mathbf c-\mathbf e\|},\qquad
 (M^{-1})_{i,:}=(\mathbf n_i^T,-\mathbf n_i\cdot\mathbf t),\quad
 \mathbf n_i=\text{column }i\text{ of the normal matrix}""",
 ]
+
+EQUATIONS.insert(25,r"T=\exp(-\rho d),\qquad \mathbf C_{\rm fogged}=T\mathbf C_{\rm rendered}+(1-T)\mathbf C_{\rm fog}")

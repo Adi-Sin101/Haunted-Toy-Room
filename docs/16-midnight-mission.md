@@ -1,47 +1,25 @@
-# Haunted Toy Room gameplay progression
+# Haunted Toy Room: escape progression
 
-`src/world/StoryDirector.*` owns the single gameplay state machine. `PennyArrival` remains responsible for
-the original arrival route, environment transition, and arrival camera. When that prologue completes (or is
-skipped with **Y**), the director enters Stage 1 and the entrance closes behind Penny.
+`StoryDirector` owns one six-state progression machine. The night arrival ends at the upper hallway;
+Penny then solves the combination, frees the toys, releases Buzz and leads the cast outside.
 
-## States and transitions
+| State | Guard |
+| --- | --- |
+| PROLOGUE | Arrival completes or Y skips |
+| PUZZLE | All three clues inspected and 257 submitted |
+| TOY_RESCUE | Two Penny switches; Jessie rides, dismounts on the platform and activates the high switch |
+| BUZZ_RESCUE | Penny activates the rear release |
+| FINAL_ESCAPE | Entrance breaks from actual laser hits and all five actors are outside |
+| WIN | Idle cast, wide outdoor night camera and an inspectable scene |
 
-| State | Objective | Transition condition |
-|---|---|---|
-| `PROLOGUE` | Penny's arrival | Arrival completes or is skipped |
-| `PUZZLE` | Find the code: 3 clues | Puzzle is solved |
-| `TOY_RESCUE` | Free the Toys | Rescue switches are activated |
-| `BUZZ_RESCUE` | Free Buzz | Buzz's release mechanism is activated |
-| `FINAL_ESCAPE` | GET EVERYONE OUT | The escape completes |
-| `WIN` | THE TOYS ARE SAFE / YOU ESCAPED | Terminal ending state |
+Advance accepts each event only from its corresponding state. The keypad owns its own digit/clue
+state; the director owns progression. Door visibility and solid flags follow the same transitions.
+The front-door hit timer cannot be substituted by a timeout or a synthetic completion event.
 
-`StoryDirector::Advance` accepts guarded transition events. An event advances the director only from its
-matching state; out-of-order events are ignored. State queries expose puzzle/rescue availability, chase
-activity, Toy Room lock status, final-door seal status, and ending status so gameplay systems can bind to
-the progression without creating a second story manager.
+Select a character for live input while the other escape routes continue. Zero releases it; N
+switches all routes to manual control. Releasing control rejoins the current floor without
+teleporting. A mounted pair can be intentionally controlled together. The final guard always
+checks actual positions, including any owned character. Shift+N restores the complete setup.
 
-## Implemented Stage 1 puzzle
-
-`HallwayPuzzle` builds a two-car toy train, a wall clock displaying five, seven colored blocks arranged
-as a seven, and a physical keypad from the project's shared primitive meshes and materials. Their solid
-shapes join the existing physics scenery and render through both raster and ray-tracing traversal.
-Approach a clue and press **Enter** to inspect it. Approach the keypad, press **Enter**, enter three digits,
-then press **Enter** to submit; **Backspace** removes the last digit and **Esc** closes the keypad. The
-player must inspect all three clues before a correct submission unlocks the door and advances the state.
-- Select a toy with its number, the compact buttons or a scene click for live control while other actors continue. Press **0** to release it. **N** selects full manual mode.
-- **N** switches story/manual mode. Resuming continues the saved stage and waypoints. **Shift+N** restores the mission setup and replays from Discovery.
-- **P** pauses the mission clock. **Enter** activates the car in Scene 5. In manual mode, select the car or bring the driven toy within three units to interact; its route then runs without steering input.
-- Existing walking, riding, flying, laser, editing and camera controls remain available. Camera input overrides cinematic shots without stopping the story; N resumes cinematic camera control.
-- **H** expands the guide within the same corner panel. **G** hides all interface text, including the guide. Neither key affects the scene.
-
-The camera can inspect the connected hallway while preserving closed wall boundaries. Toys can cross the right-side doorway into the hallway, whose walls, ceiling and far end remain solid. Story paths use the same character animation and collision system as manual movement.
-
-Remaining work includes Toy Room rescue switches, Jessie and Bullseye's high-switch sequence, Buzz's room
-and release interaction, hostile chase behavior, escape routes, final-door collision/destruction, Buzz's
-laser hit on the door, and the exterior ending camera and house-darkening sequence. Those systems should
-trigger the existing guarded state transitions while reusing the scene hierarchy, character movement,
-Buzz flight and laser, physics, environment, and camera systems already in the project.
-
-Manual character selection/control, object selection, and camera modes remain available through the
-existing controls. **N** switches manual/progression control; **Shift+N** restarts the arrival and state
-machine; **Y** skips the arrival.
+See [the illustrated object, equation and implementation explanation](20-escape-gameplay.md)
+for switch distances, stair support, ray impact, debris, fog, ownership, source functions and tests.

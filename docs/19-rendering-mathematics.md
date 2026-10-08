@@ -161,9 +161,13 @@ transparency colour += throughput·α·local ;  throughput ·= (1 − α)
 | Lamp-spot lighting of a floor point: (0.968, 0.581, 0.286); the mirror point's highlight | [08 §9](08-illumination.md) |
 | A primary ray hitting the beach ball at t = 7.142 | [12 §3.3](12-ray-tracing.md) |
 | The roof pitch (28°) and the one-cube gable matrix | [04 §4.2](04-transformations.md) |
-| Penny's jump arc and the arrival's sunset clock | [18 §3](18-house-and-penny.md) |
+| Penny's night arrival and quantised stair support | [18 §3](18-house-and-penny.md) |
 | Building and traversing a four-shape BVH (3 box tests + 2 shape tests; a miss in 1 test) | [12 §4.2](12-ray-tracing.md) |
 | Shadow-ray culling for the lamp bulb at 5 / 12 / 25 / 30 units | [12 §5](12-ray-tracing.md) |
 | A penumbra pixel of the lamp's shadow map (vis = 6/9) and a light skipped before the lookup | [08 §6.2](08-illumination.md) |
 | Fence cut-out coordinates (uvScale 3.741; picket centre at u' = 0.0625) | [10](10-textures.md) |
 | Triangles saved by the texture swaps (books 288 → 48) | [03 §9](03-primitives.md) |
+
+## Escape depth fog
+
+`shaders/fog.glsl` applies `T=exp(-density*distance)` and `RGB=T*surfaceRGB+(1-T)*fogRGB`. Raster uses eye distance; tracing uses its first-hit distance after colour accumulation. See [20](20-escape-gameplay.md) for constants and a numeric example.

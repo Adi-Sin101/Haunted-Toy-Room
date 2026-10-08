@@ -1,7 +1,9 @@
 Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
-MISSION 1 / The Discovery
+GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
+GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
 
-==================== THE MIDNIGHT MISSION ====================
+====================== HAUNTED TOY ROOM ======================
+MISSION     Ctrl+0 Penny / Enter inspect, switch or final action / code 257 / R ride
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
@@ -21,16 +23,17 @@ RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
             F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light
             F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)
             V list parts of selected object, Shift+V dump vertex/index tables
-AMBIENCE    O haunted lamp flicker, rolling ball and floating ghost (outside edit mode)
-WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/story  Shift+N replay  Enter car activation
+WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay
             H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit
-PROLOGUE    Penny the cat walks into the house before the story; Y skips it, Shift+N replays it
+PROLOGUE    Penny arrives at the house; Y skips arrival, Shift+N replays the prologue
 ==========================================================
 
-Mission capture: 1 / The Discovery / 00:00 Night
+GAMEPLAY STAGE 1 / ENTRANCE - PUZZLE
+Penny at 13.3,0.012,4.5 / demo 0 leg 0
+Mission capture: STAGE 1 / ENTRANCE - PUZZLE / 20:30 Night
 Woody at -3,0.012,0.5
 Jessie at -0.8,0.012,2
 Bullseye at 2.2,0.012,0.3
-Buzz at 0.4,0.012,-1.8
-RC Car at 15.4,0.012,4
+Buzz at 0,0.012,-6.6
+RC Car at 5.5,0.012,-1.8
 Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\figures\bookcase.bmp

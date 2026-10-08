@@ -1,7 +1,9 @@
 Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
-MISSION 1 / The Discovery
+GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
+GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
 
-==================== THE MIDNIGHT MISSION ====================
+====================== HAUNTED TOY ROOM ======================
+MISSION     Ctrl+0 Penny / Enter inspect, switch or final action / code 257 / R ride
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
@@ -21,28 +23,77 @@ RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
             F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light
             F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)
             V list parts of selected object, Shift+V dump vertex/index tables
-AMBIENCE    O haunted lamp flicker, rolling ball and floating ghost (outside edit mode)
-WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/story  Shift+N replay  Enter car activation
+WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay
             H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit
-PROLOGUE    Penny the cat walks into the house before the story; Y skips it, Shift+N replays it
+PROLOGUE    Penny arrives at the house; Y skips arrival, Shift+N replays the prologue
 ==========================================================
 
+GAMEPLAY STAGE 1 / ENTRANCE - PUZZLE
+Selected: Woody  [W/S move  A/D turn  Shift run  SPACE stop]
+Live control: Woody
+Penny moving
+DEMO phase 1 time 1.65
+Penny stopped
+Penny moving
+DEMO phase 2 time 3.05
+Penny stopped
+Penny moving
+DEMO phase 3 time 4.2
+Penny stopped
+Penny moving
+GAMEPLAY STAGE 2 / TOY RESCUE
+DEMO phase 4 time 4.8
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+DEMO phase 5 time 7.85
+Penny stopped
+Penny moving
+DEMO phase 6 time 9.35
+Penny stopped
+Jessie moving
+Jessie mounted Bullseye.
+DEMO phase 7 time 10.25
+Bullseye stopped
+Bullseye moving
+Jessie dismounted.
+DEMO phase 8 time 13.45
+Jessie stopped
+GAMEPLAY STAGE 3 / BUZZ ROOM
+DEMO phase 9 time 14.25
+Penny moving
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+GAMEPLAY STAGE 4 / FINAL ESCAPE
+DEMO phase 10 time 18.95
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+DEMO phase 11 time 25.1
+Penny stopped
+Penny moving
+Penny stopped
+Penny moving
+DEMO phase 12 time 29.55
+Penny stopped
 Selected: Woody  [W/S move  A/D turn  Shift run  SPACE stop]
 Live control: Woody
 Woody moving
-MISSION 2 / Moving Outside
-Jessie mounted Bullseye.
-MISSION 3 / Buzz Clears the Path
-MISSION 4 / Reaching the Car
-MISSION 5 / Activating the Car
-MISSION 6 / Returning Home
-Jessie dismounted.
-MISSION 7 / Morning
-MISSION The End
-Mission capture: The End / 08:00 Day
-Woody at -3.78995,0.012,0.50787
-Jessie at -0.799998,0.012,2
-Bullseye at 2.2,0.012,0.3
-Buzz at 0.4,0.012,-1.8
+Penny at 11.9875,-4.48,7.24803 / demo 12 leg 0
+Mission capture: STAGE 4 / FINAL ESCAPE / 20:30 Night
+Woody at 15.9739,-0.488,-0.143969
+Jessie at 14.9311,0.012,1.04967
+Bullseye at 11.094,0.012,3.97711
+Buzz at 7.92409,0.012,1.99532
 RC Car at 5.5,0.012,-1.8
 Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\validation\live-0.bmp

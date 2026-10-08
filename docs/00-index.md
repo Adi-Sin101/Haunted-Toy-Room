@@ -87,3 +87,5 @@ in the toy room; then Stage 1 gameplay begins. **Y** skips the arrival.
 ## Showcase deliverables
 
 The final report, presentation, demo, study guide and validation records are linked from [START-HERE](showcase/START-HERE.md). Selection during mission playback now supports live takeover while other actors continue; 0 releases the actor, N retains full manual/story switching.
+
+- [20 - Escape gameplay](20-escape-gameplay.md): puzzle, rescue objects, stair contacts, live ownership, real laser impact and ending guards.

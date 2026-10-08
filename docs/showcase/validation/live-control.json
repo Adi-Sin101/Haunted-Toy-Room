@@ -1,36 +1,62 @@
 [
   {
     "owned": "Woody",
-    "mission": "The End",
-    "owned_pose_preserved": true,
-    "other_actors_home": true
+    "owned_input_changes_actual_pose": true,
+    "other_actor_position_differences": {
+      "Jessie": 0.0,
+      "Bullseye": 0.0,
+      "Buzz": 0.0,
+      "RC Car": 0.0
+    },
+    "simulation_seconds": 2
   },
   {
     "owned": "Jessie",
-    "mission": "The End",
-    "owned_pose_preserved": true,
-    "other_actors_home": true
+    "owned_input_changes_actual_pose": true,
+    "other_actor_position_differences": {
+      "Woody": 0.0,
+      "Bullseye": 0.0,
+      "Buzz": 0.0,
+      "RC Car": 0.0
+    },
+    "simulation_seconds": 2
   },
   {
     "owned": "Bullseye",
-    "mission": "The End",
-    "owned_pose_preserved": true,
-    "other_actors_home": true
+    "owned_input_changes_actual_pose": true,
+    "other_actor_position_differences": {
+      "Woody": 0.0,
+      "Jessie": 0.0,
+      "Buzz": 0.0,
+      "RC Car": 0.0
+    },
+    "simulation_seconds": 2
   },
   {
     "owned": "Buzz",
-    "mission": "The End",
-    "owned_pose_preserved": true,
-    "other_actors_home": true
+    "owned_input_changes_actual_pose": true,
+    "other_actor_position_differences": {
+      "Woody": 0.0,
+      "Jessie": 0.0,
+      "Bullseye": 0.0,
+      "RC Car": 0.0
+    },
+    "simulation_seconds": 2
   },
   {
     "owned": "RC Car",
-    "mission": "The End",
-    "owned_pose_preserved": true,
-    "other_actors_home": true
+    "owned_input_changes_actual_pose": true,
+    "other_actor_position_differences": {
+      "Woody": 0.0,
+      "Jessie": 0.0,
+      "Bullseye": 0.0,
+      "Buzz": 0.0
+    },
+    "simulation_seconds": 2
   },
   {
-    "comparison": "8-second replay with and without Woody takeover",
-    "other_actors_match": true
+    "escape_rehearsal": "WIN",
+    "nearest_hit_door_impact": true,
+    "all_five_actual_positions_outside": true
   }
 ]

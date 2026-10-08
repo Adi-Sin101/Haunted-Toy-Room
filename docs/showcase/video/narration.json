@@ -2,79 +2,79 @@
   {
     "start": 0,
     "end": 10,
-    "title": "Welcome home",
-    "narration": "Penny's route links the garden, doorway, stairs and toy room."
+    "title": "The haunted house",
+    "narration": "Penny enters at night through hinged doors and the connected staircase."
   },
   {
     "start": 10,
     "end": 20,
     "title": "A furnished world",
-    "narration": "Five reusable primitives build the house, furniture and articulated toys."
+    "narration": "Five indexed primitive families form furniture and articulated toys."
   },
   {
     "start": 20,
-    "end": 32,
-    "title": "Hierarchy in motion",
-    "narration": "Jessie attaches to Bullseye's saddle; one parent transform moves both."
+    "end": 30,
+    "title": "Inspect the three clues",
+    "narration": "Train 2, clock 5, blocks 7. The code opens the real toy-room doors."
   },
   {
-    "start": 32,
-    "end": 44,
-    "title": "Flight, laser and collision",
-    "narration": "Buzz aims at the obstacle. The nearest ray hit receives an impulse."
+    "start": 30,
+    "end": 42,
+    "title": "Rescue through hierarchy",
+    "narration": "Penny activates two switches. Jessie rides Bullseye and dismounts onto the high platform."
   },
   {
-    "start": 44,
-    "end": 56,
-    "title": "Rescue and return",
-    "narration": "The car follows waypoints. Wheel rotation uses distance divided by radius."
+    "start": 42,
+    "end": 52,
+    "title": "Buzz and the pursuit",
+    "narration": "The release removes a translucent barrier. The ghost follows Penny to the stairs."
   },
   {
-    "start": 56,
-    "end": 66,
+    "start": 52,
+    "end": 62,
     "title": "Live character takeover",
-    "narration": "Woody follows your controls while Jessie and Buzz continue the mission; 0 releases him, N enters full manual."
+    "narration": "Woody follows your input while the others continue. Zero releases ownership; N enters full manual mode."
   },
   {
-    "start": 66,
-    "end": 74,
+    "start": 62,
+    "end": 70,
     "title": "Directional, point and spot",
-    "narration": "Moonlight is directional. The lamp adds a point source and a soft cone."
+    "narration": "Moonlight is directional; the lamp adds a point source and soft spotlight."
   },
   {
-    "start": 74,
-    "end": 80,
+    "start": 70,
+    "end": 76,
     "title": "Gouraud shading",
-    "narration": "Light is evaluated at vertices; the rasterizer interpolates the result."
+    "narration": "Lighting is evaluated at vertices and interpolated across triangles."
   },
   {
-    "start": 80,
-    "end": 86,
+    "start": 76,
+    "end": 82,
     "title": "Phong shading",
-    "narration": "Interpolated normals are normalized; the reflection-vector highlight is per pixel."
+    "narration": "Interpolated normals are normalised before per-fragment illumination."
   },
   {
-    "start": 86,
-    "end": 94,
-    "title": "Procedural textures",
-    "narration": "UVs map grain, wallpaper, fabric and lunar craters onto shared geometry."
+    "start": 82,
+    "end": 90,
+    "title": "Texture coordinates",
+    "narration": "UVs map wood, wallpaper, fabric and lunar craters onto shared geometry."
   },
   {
-    "start": 94,
-    "end": 106,
-    "title": "Ray tracing",
-    "narration": "A BVH finds analytic hits; shadow rays and mirror bounces reveal the polished floor."
+    "start": 90,
+    "end": 100,
+    "title": "Analytic ray tracing",
+    "narration": "A BVH accelerates exact primitive hits, shadows, mirror paths and straight transparency."
   },
   {
-    "start": 106,
+    "start": 100,
     "end": 112,
-    "title": "A quiet morning",
-    "narration": "The lamp turns off, the toys return home and Penny falls asleep."
+    "title": "The entrance breaks",
+    "narration": "Buzz flies and aims. Only a nearest-hit laser impact releases six physical wood fragments."
   },
   {
     "start": 112,
     "end": 120,
-    "title": "Thank you",
-    "narration": "Adiba Tahsin | Roll 2107031 | CSE-4102"
+    "title": "The toys are safe",
+    "narration": "Every character is physically outside. The cast idles in the garden. Adiba Tahsin / 2107031 / CSE-4102."
   }
 ]

@@ -1,6 +1,6 @@
 # 13 — Complete Controls Reference
 
-Press **H** in the program to print this list to the console. The window title always shows the clock,
+Press **H** in the program to expand the on-screen guide. The window title always shows the clock,
 the selected object, edit mode, camera mode, render mode and FPS. The console reports state changes
 (selection, moving/stopped, mount/dismount, toggles) — once per change, never every frame.
 
@@ -16,6 +16,7 @@ the selected object, edit mode, camera mode, render mode and FPS. The console re
 | 6 | Beach ball |
 | 7 | Desk lamp |
 | 8 | Ghost |
+| Ctrl+0 | Penny |
 | 0 | release live ownership; the mission continues |
 | Left click | the object under the mouse (ray picking) |
 
@@ -157,11 +158,8 @@ another attempt. Character selection is available again after entering the Toy R
 | , / . | scrub time backward / forward (brightness instead when the lamp is selected) |
 | N | switch manual control / gameplay progression |
 | Shift+N | replay Penny's arrival and reset the gameplay state machine |
-| Enter | interact with a story object when an interaction is implemented |
-| N | switch manual control / coordinated Midnight Mission playback |
+| Enter | inspect clues, submit the keypad or activate a nearby rescue/escape mechanism |
 | O | toggle haunted ambience outside edit mode: ghost, rolling ball and moving/flickering lamp |
-| Shift+N | replay all seven scenes from the beginning |
-| Enter | activate the car in Scene 5; its return route runs automatically |
 | H | expand / close the compact corner guide |
 | G | hide / show all interface text |
 | Esc | quit |
@@ -183,7 +181,7 @@ HauntedToyRoom.exe --hour 12 --select 2 --mount --orbit 60,15,5 --capture mounte
 ```
 
 `--no-raytrace` starts in raster mode (ray tracing is on by default, like lighting, shading and
-textures). `--no-intro` starts directly with the story (Penny is already on the bed); `--intro` keeps Penny's arrival
+textures). `--no-intro` starts directly with the story (Penny is at the upper hallway); `--intro` keeps Penny's arrival
 in a scripted capture (captures skip it otherwise). Example: `--intro --no-hud --story-step 0.05 --frames 160
 --capture garden.bmp` shows Penny on the garden path 8 s into the arrival.
 
@@ -207,4 +205,21 @@ Recording writes bottom-up RGB24 frames at the requested fixed simulation rate. 
 
 ## Live takeover during simulation
 
-Select any toy during playback to control that actor while the others continue. Press 0 to release it to its remaining route. N retains full manual/story switching. Route gates use independent virtual progress for an owned actor; Buzz takeover opens the cinematic doorway after three seconds without overriding his laser. Scripted actors ignore the owned actor as a movement obstacle. Owned actors retain wall/furniture contacts. Selecting mounted Jessie or Bullseye detaches Jessie; voluntarily remounting controls the connected pair. Penny can be clicked and driven after her arrival. Tab edits the selected object without globally stopping the mission.
+After the puzzle, select a character while the other actors continue. The owned actor retains wall
+and furniture contact. Its virtual route cursor never writes its actual pose or special action.
+Press 0 to release; the route rejoins on the current floor without teleporting. The ending requires
+all five actual characters outside. Buzz's manually aimed laser follows the same real-door-hit rule.
+Selecting a mounted rider or horse detaches Jessie; remounting deliberately controls the pair.
+N pauses all coordinated routes for full manual control and resumes the saved stage.
+
+## Complete rescue sequence
+
+Penny activates the two low red switches. Select Jessie (2), approach Bullseye and press R, ride to
+the high platform, R dismounts onto it, then Enter activates the high switch. Ctrl+0 returns to Penny.
+The rear red release frees Buzz. Descend the stairs, approach the sealed entrance and press Enter.
+Keep Buzz's laser line clear, exit when the wood breaks, and wait for the other toys outside.
+See [the illustrated escape explanation](20-escape-gameplay.md).
+
+`--gameplay-demo` runs the physical rehearsal. `--seek seconds` advances it before capture.
+`--rehearsal-stop` stops only the rehearsal's player input after the seek, leaving NPC routes active;
+`--select`, `--drive`, `--turn` and `--fly` then support reproducible live takeover checks.

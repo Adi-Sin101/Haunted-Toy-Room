@@ -7,7 +7,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 def compact_blocks(blocks, objects, materials, textures, texture_rules, out, path_for):
     diagrams=out/'diagrams'
     groups=[
-        ('scene-overview',['room-night'],1,'The furnished toy room under moonlight, with the coordinated cast, furniture and animated props.'),
         ('mesh-comparison',['wireframe','normals'],2,'Unit primitive construction, triangulated Buzz and transformed normals. Indexed triangles approximate curved surfaces in raster rendering.'),
         ('arrival-route',['garden','stairs'],2,'The garden approach and stair connection used by Penny during the arrival sequence.'),
         ('rider-hierarchy',['bullseye','mounted'],2,'Bullseye and the mounted rider: ellipsoid anatomy, saddle attachment and articulated legs.'),
@@ -17,10 +16,12 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
         ('ball-ghost',['ball','ghost'],2,'Rolling beach ball and translucent ghost: spherical UVs, accumulated rotation and time-dependent opacity.'),
         ('light-comparison',['directional','point','spot','ambient','diffuse','specular'],2,'Isolated directional, point and spot sources (top rows), followed by ambient, diffuse and specular terms. All views are captured from the application.'),
         ('shading-comparison',['flat','gouraud','phong','blinn'],2,'Matched Flat, Gouraud, Phong and Blinn-Phong views. The shading model changes while geometry, material and camera remain fixed.'),
-        ('ray-comparison',['ray-zero','room-ray','house-ray'],2,'Zero-continuation room view, two-continuation reflections and ray-traced exterior texture coverage.'),
-        ('interaction-ending',['live-control','room-day','story-end'],2,'Live character takeover, daytime lighting and the completed morning return.'),
+        ('ray-comparison',['room-night','ray-zero','room-ray','house-ray'],2,'Raster room, zero-continuation primary view, two-continuation reflections and ray-traced exterior texture coverage.'),
+        ('interaction-ending',['live-control','room-day','story-end'],2,'Live character takeover, daytime lighting and the completed outdoor escape.'),
     ]
+    groups.extend([('puzzle-objects',['train-clue','clock-clue','block-clue','keypad'],2,'The four hallway puzzle objects: indexed primitive geometry, circular BMP face and raised keypad glyphs.'),('escape-objects',['high-switch','buzz-barrier','entrance-lock','door-impact','door-debris','stair-descent'],3,'Rescue platform, holding barrier, hinge-mounted lock, actual laser contact, debris and the eighteen connected stair treads.')])
     lookup={name:(key,names,cols,caption) for key,names,cols,caption in groups for name in names}
+    lookup.update({key:(key,names,cols,caption) for key,names,cols,caption in groups})
     seen=set();result=[]
     label_font=ImageFont.truetype('C:/Windows/Fonts/segoeuib.ttf',23)
     def montage(key,names,cols,texture=False):
@@ -34,7 +35,10 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
             sheet.paste(image,(x+(tile_w-image.width)//2,y+(tile_h-42-image.height)//2))
             draw.text((x+10,y+tile_h-34),name.replace('-',' ').upper(),font=label_font,fill=(15,25,47))
         sheet.save(diagrams/(key+'.png'))
+    introduction=True
     for block in blocks:
+        if block[0]=='heading' and block[1].startswith('CHAPTER II'): introduction=False
+        if introduction and block[0]=='figure' and block[1]=='room-night': continue
         if block[0]=='heading' and block[1].startswith('Appendix A'):break
         if block[0]=='figure' and block[1] in lookup:
             key,names,cols,caption=lookup[block[1]]
@@ -46,17 +50,23 @@ def compact_blocks(blocks, objects, materials, textures, texture_rules, out, pat
             if 'texture-atlas' not in seen:
                 names=[r['name'] for r in sorted(textures,key=lambda r:int(r['ray_layer']))]
                 montage('texture-atlas',names,5,True)
-                result.append(('figure','texture-atlas','All 21 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.'))
+                result.append(('figure','texture-atlas','All 22 mapped surfaces and the white fallback. Picket holes are shown against a checkerboard; they carry alpha coverage rather than geometric displacement.'))
                 result.append(('table','Surface-map construction and use',['Map / layer','Construction','Use'],[
                     [r['name']+' / '+r['ray_layer']+'; '+r['width']+'x'+r['height'],texture_rules[r['name']][1],texture_rules[r['name']][0]] for r in sorted(textures,key=lambda r:int(r['ray_layer']))]))
                 seen.add('texture-atlas')
         else:result.append(block)
     grouped=defaultdict(list)
     for row in objects:
-        parts=row['path'].split('/');grouped[parts[1] if len(parts)>1 else 'World'].append(row)
+        parts=row['path'].split('/'); group=parts[1] if len(parts)>1 else 'World'
+        if group.startswith(('Clue','TrainClue','ToyRoomCombination')): group='Hallway puzzle mechanisms'
+        elif group.startswith(('RescueSwitch','ToyRescue','HighSwitch')): group='Toy rescue mechanisms'
+        elif group.startswith(('BuzzRoom','BuzzEnergy','BuzzRelease')): group='Buzz holding area'
+        elif group.startswith('DoorDebris'): group='Entrance debris'
+        elif group.startswith('ContactShadow'): group='Character contact shadows'
+        grouped[group].append(row)
     result.extend([
         ('heading','Appendix A - Object construction index',0),
-        ('paragraph','The scene export contains 699 nodes, including 600 mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.'),
+        ('paragraph',f'The scene export contains {len(objects)} nodes, including {sum(r["primitive"]!="Joint" for r in objects)} mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.'),
         ('table','Complete scene coverage by construction group',['Group','Nodes / shapes','Primitive families'],[
             [name,str(len(rows))+' / '+str(sum(r['primitive']!='Joint' for r in rows)),', '.join(sorted(set(r['primitive'] for r in rows if r['primitive']!='Joint')))] for name,rows in grouped.items()]),
         ('heading','Appendix B - Material and study references',0),

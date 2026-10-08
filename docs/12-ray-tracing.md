@@ -302,7 +302,7 @@ For the sphere: the mesh puts ring i at latitude `φ = 90° − i·180°/stacks`
 and `y = ½ sin φ` → `φ = asin(2y)`; longitude `θ = atan2(x, z)` because `x = r cos φ sin θ`,
 `z = r cos φ cos θ`.
 
-The sample is `texture(uSurfaceMaps, vec3(uv * uvScale, slot))`. A single `sampler2DArray` contains 21 surface layers: floor, wall, rug, ball, block, poster, stars, moon, cotton, denim, leather, plaid, cow print, book spines, pickets, siding, shingles, brick, grass, window panes and flower bed. Source maps are bilinearly resampled to 512 × 512 per layer and mipmaps are generated. Array-layer selection is legal in GLSL 3.30 and avoids a branch ladder and the previous 15 separate sampler bindings. Exterior maps therefore also appear in ray-traced views. The instance buffer uses texture unit 0, the surface array unit 1 and presentation unit 2.
+The sample is `texture(uSurfaceMaps, vec3(uv * uvScale, slot))`. A single `sampler2DArray` contains 22 mapped layers plus a white fallback: floor, wall, rug, ball, block, poster, stars, moon, cotton, denim, leather, plaid, cow print, book spines, pickets, siding, shingles, brick, grass, window panes, flower bed and the provided hallway clock BMP. Source maps are bilinearly resampled to 512 × 512 per layer and mipmaps are generated. Array-layer selection is legal in GLSL 3.30 and avoids a branch ladder and the previous 15 separate sampler bindings. Exterior maps therefore also appear in ray-traced views. The instance buffer uses texture unit 0, the surface array unit 1 and presentation unit 2.
 
 **Cut-outs.** The picket fence and the porch railings are single boxes whose texture has alpha = 0
 between the pickets ([10](10-textures.md)). For a shape with the cut-out flag, every candidate hit — in

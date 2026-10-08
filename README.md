@@ -1,13 +1,14 @@
 # Haunted Toy Room
 
 A computer graphics lab project in C++ and OpenGL 3.3: **Toy Story: The Midnight Mission**.
-It opens on a sunny street in front of a yellow two-storey house: Penny, a white cat with ginger patches,
-walks home through the garden, in at the front door and up the stairs to the toy room, where she settles
-on the bed as the sun sets (**Y** skips this prologue). At midnight the toys come alive. Woody discovers a lost car beyond the doorway, Jessie mounts Bullseye, and Buzz clears the obstacle
-with his laser. The friends reach the car, activate it, escort its automatic return and head home.
-Morning light fades in, the lamp switches off, the toys return to their original poses, and the camera
-pulls back. The seven-scene story supports live takeover of a selected character and a separate full manual mode.
+Penny arrives at night, enters the existing house and climbs to a locked toy-room door.
+Inspect the train, clock and blocks to solve the combination. Penny activates two low switches;
+Jessie rides Bullseye and reaches the high platform. Release Buzz, return downstairs while the ghost
+follows, and trigger Buzz's flight at the entrance. His nearest-hit laser breaks the door into physical
+wood fragments. The ending requires Penny and all four rescued toys outside.
 
+During progression you can take over one character while the others continue. Press **0** to release
+that character, **N** for full manual mode, and **Ctrl+0** to select Penny.
 Every toy is built from hand-written primitives (plane, cube, sphere, cylinder, cone). The project also
 implements its own transformations, scene hierarchy, Phong illumination, Flat/Gouraud/Phong/Blinn shading,
 procedural textures, a BMP loader and a real-time GPU ray tracer. The only libraries are GLFW, GLAD and
@@ -33,14 +34,15 @@ feature independently. **G** hides the button, menu and the rest of the interfac
 them. All rendering implementations remain available. With lighting on and shading off, basic light
 colour and distance attenuation remain, while normal-based shading, highlights and shadows are skipped.
 
-Let the mission play, or select a toy for live control while the other actors continue. **N** switches manual/story
-mode, **Shift+N** restarts the film, and **P** pauses it. **Enter** activates the car in Scene 5; unattended
-playback activates it after three seconds. Its wheels rotate as it drives its predefined route home.
+Use **Enter** near clues, the keypad, rescue switches and the sealed entrance. The keypad requires
+all three clues and code **257**. A wrong answer clears the digits. **N** switches manual/progression;
+**Shift+N** restarts; **P** pauses. The optional `--gameplay-demo` rehearsal uses the same movement,
+interaction and collision paths to demonstrate the whole escape.
 The interface is one compact corner panel: **H** expands its guide; **G** hides all interface text.
 Press **0** to release the selected actor back to its remaining route. Camera inputs take over the cinematic view without interrupting the mission. Mounted Jessie and Bullseye detach when selected for independent control; remounting intentionally drives the connected pair.
 Press **M** for continuous mouse-look, **Escape** to release the cursor, or hold right-click to turn.
 With no toy selected in Free camera mode, **W/A/S/D** moves around the room; **PgUp/PgDn** changes height.
-See [the gameplay state machine and Phase 2 work](docs/16-midnight-mission.md).
+See [the completed escape state machine](docs/16-midnight-mission.md).
 
 The room now has solid furniture and toys, a camera constrained to the room, a textured cratered moon,
 more detailed characters, lamp shadows and an on-screen guide. Press **H** for the guide or **G** to hide
@@ -71,7 +73,7 @@ Full key list: [docs/13-controls.md](docs/13-controls.md).
 [docs/00-index.md](docs/00-index.md) lists every chapter: pipeline basics, the vertex and index tables of
 each primitive, transformation matrices, the camera, the scene graph and mounting, the characters,
 illumination, shading, textures, animation, ray tracing, the code architecture, performance, the house and
-Penny, and a formula-by-formula reference of one rendered frame
+Penny, the [escape objects and logic](docs/20-escape-gameplay.md), and a formula-by-formula reference of one rendered frame
 ([docs/19-rendering-mathematics.md](docs/19-rendering-mathematics.md)).
 
 ## Project layout

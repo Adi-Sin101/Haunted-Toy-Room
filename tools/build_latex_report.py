@@ -95,7 +95,8 @@ def table(caption, headers, rows, number):
     else:fractions=[1/n]*n
     spec=''.join(r'>{\raggedright\arraybackslash}p{\dimexpr'+f'{f:.4f}'+r'\linewidth-2\tabcolsep\relax}' for f in fractions)
     heading=' & '.join(r'\textbf{'+escape(c)+'}' for c in headers)+r' \\\midrule'
-    lines=[r'{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}',
+    size=r'\footnotesize' if caption.startswith(('Surface-map','Complete scene','Representative actual')) else r'\small'
+    lines=['{'+size+r'\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}',
            r'\begin{longtable}{'+spec+'}',r'\caption{'+escape(caption)+r'}\label{tab:'+str(number)+r'}\\',
            r'\toprule',heading,r'\endfirsthead',r'\multicolumn{'+str(n)+r'}{l}{\small\itshape Table \thetable{} (continued)}\\',r'\toprule',heading,r'\endhead',r'\bottomrule\endfoot']
     for row in rows:lines.append(' & '.join(escape(c) for c in row)+r' \\')

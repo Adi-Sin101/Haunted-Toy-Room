@@ -1,0 +1,64 @@
+PASS three-digit puzzle starts with three blank slots
+PASS clue starts undiscovered until inspection
+PASS repeated clue inspection counts only once
+PASS keypad entry updates the first code slot
+PASS keypad entry updates the second code slot
+PASS keypad backspace removes the last digit
+PASS keypad accepts the remaining code digits
+PASS correct code cannot bypass undiscovered clues
+PASS missing-clue attempt clears the entered digits
+PASS all three physical clues can be recorded
+PASS wrong code remains locked
+PASS wrong code clears without resetting clue progress
+PASS 257 unlocks after all clues are found
+PASS completed code cannot be changed
+PASS closed hallway door blocks Penny from returning to the Toy Room
+PASS hallway side wall blocks actors from leaving through its end
+PASS open Toy Room door lets Penny walk into the room
+PASS sheared culling sphere contains every transformed corner
+PASS inverse transpose preserves normal perpendicularity under shear
+PASS analytic sphere nearest hit
+PASS analytic cube nearest hit
+PASS analytic cylinder side hit
+PASS analytic cone side hit
+PASS one-sided plane front hit
+PASS one-sided plane back miss
+PASS ray originating inside a cube finds exit
+PASS axial cylinder ray hits cap
+PASS cone generatrix parallel ray solves linear equation
+PASS scaled object rays preserve world parameter
+PASS optimised transform equals TRS product with shear
+PASS fast actor movement cannot tunnel through furniture
+PASS camera sweep cannot tunnel through furniture
+PASS camera slides along a contacted face
+PASS camera recovers from an overlapping edited object
+PASS camera stays inside all six room boundaries
+PASS characters remain separated from other characters
+PASS live-owned actor cannot obstruct another actor's route
+PASS releasing live ownership restores actor collision
+PASS scripted routes do not depend on another actor's collision or ownership
+PASS oversized edited actors fit the room
+PASS thin barriers stop very large camera steps
+PASS a resting two-block stack remains stable
+PASS laser ray transfers an impulse to the nearest block
+PASS laser impact starts block tumbling
+PASS struck block moves away from its stack
+PASS gravity preserves floor and ceiling clearance
+PASS moving blocks stay within the room
+PASS gravity preserves floor and ceiling clearance
+PASS moving blocks stay within the room
+PASS rebuild restores the complete stack and clears velocity
+PASS furniture blocks the laser before a hidden block
+PASS orbit and follow sightlines shorten before an obstruction
+PASS camera can inspect toys in the connected hallway
+PASS hallway access preserves the closed wall boundaries
+PASS grounded actor walks down all eighteen stairs to the landing
+PASS grounded actor climbs the stairs and crosses the stair-head threshold
+PASS stair support agrees with the first rendered tread
+PASS last rendered tread reaches the upper floor
+PASS wide turning actor stays centred in the stair flight without reversed clamp limits
+PASS closed entrance physically blocks an exterior-access actor
+PASS ground-floor laser reports the real static entrance as its nearest hit
+PASS hidden broken entrance no longer blocks the exterior path
+PASS ground-floor overlap recovery cannot move an actor through the upper slab
+63 physics checks passed.

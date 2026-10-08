@@ -4,21 +4,12 @@ Files: `src/world/House.*` (the house), `src/characters/Cat.*` (Penny), `src/wor
 prologue), `src/world/Room.h` (`RoomSize` dimensions), `src/render/ProceduralTextures.cpp` (siding,
 shingles, brick, grass), `Environment::OutdoorSunPosition`.
 
-Before the Midnight Mission starts, the program opens on a sunny street in front of a yellow two-storey
-house. **Penny**, a white cat with ginger patches, walks home: along the pavement, through the garden
-gate, up the porch, in through the front door, along the hall, up the stairs and through the toy room's
-double door. She jumps onto the bed and sits there to watch the story. The sun sets while she walks, so it
-is night when she reaches the toy room. In the morning, at the end of the story, she is asleep on her side.
+The project opens at night. Penny walks through the garden, front door, corridor and staircase,
+then stops at the upper hallway before the combination-locked toy-room door. Y skips the arrival;
+Shift+N restarts it. The downstairs remains connected for the final escape.
 
-**Y** skips the arrival; **Shift+N** replays it together with the story; `--no-intro` starts directly with
-the story. Scripted captures skip it unless `--intro` is given.
-
-| | |
-|---|---|
-| ![The house](images/house-exterior.png) | ![Penny in the garden](images/penny-garden.png) |
-| Late afternoon: the establishing shot (16:18, sun in the sky) | The chase camera follows Penny through the gate |
-| ![Up the stairs](images/penny-stairs.png) | ![On the bed](images/penny-bed.png) |
-| Up the 18 steps to the hallway; the car waits upstairs | On the orange plaid bed, night outside |
+![Night exterior](showcase/figures/house.png)
+![Connected staircase](showcase/figures/stair-descent.png)
 
 ## 1. The house around the toy room
 
@@ -29,7 +20,7 @@ below it (`RoomSize` in `Room.h`):
 | Part | Dimensions (world units) |
 |---|---|
 | Toy room (upper floor) | x ∈ [−10, 10], z ∈ [−9, 9], y ∈ [0, 7.5] |
-| Hallway (upper floor) | x ∈ [10, 17], z ∈ [1, 7], height 4.8; the car waits here |
+| Hallway (upper floor) | x ∈ [10, 17], z ∈ [1, 7], height 4.8; the three clues and keypad stand here |
 | Ground floor | y = −4.5 (`Ground`); ceiling = underside of the upper floor at y = −0.3 (`Slab`) |
 | Corridor | x ∈ [10.5, 13.5], from the front door (z = 9.2) to the back wall (z = −9) |
 | Stairs | x ∈ [13.5, 16.5]; 18 steps from z = −7 (y = −4.5) to z = 1 (y = 0): rise 0.25, tread 0.444, pitch atan(4.5 / 8) = 29.4° |
@@ -87,19 +78,10 @@ pillows of the photos of Penny asleep.
 
 ### Visibility switching
 
-None of the outside can be seen from inside the house, and nothing downstairs can be seen from the upper
-floor once the stair door is shut. So:
-
-```
-HouseExterior.visible = Penny has not yet reached the foot of the stairs
-HouseInterior.visible = the arrival is still running (the stair door shuts behind Penny)
-```
-
-A hidden subtree is skipped by both the world-matrix update and the draw list ([06](06-scene-graph-hierarchy.md)),
-so during the story the house costs nothing but its three doors. Without this the ground floor's large walls
-would be shaded behind the room's walls every frame (overdraw), and in ray tracing they would be tested by
-every ray they could reach. (Since the ray tracer uses a BVH a ray only reaches shapes along its path,
-but hidden shapes still cost box tests and the per-frame BVH build.)
+The exterior is visible during the garden approach and after the entrance breaks. Indoor play
+hides the exterior subtree. The ground-floor interior stays visible and traversable throughout
+gameplay so every rescued actor can descend the stairs. Hidden ancestors remove both draws and
+static contacts; changing a door's visible/solid state is reflected by the physics scenery refresh.
 
 ## 2. Penny (`class Cat : Character`)
 
@@ -165,82 +147,25 @@ eyes      closed when sleepBlend > 0.5, plus a 0.13 s blink every 4.1 s
 During the story she sits on the bed and her head follows the action — Buzz while his laser is on, else
 Bullseye while Jessie rides him, else Woody. When the story reaches **Morning** she lies down and sleeps.
 
-## 3. The arrival (`PennyArrival`)
+## 3. Night arrival and connected movement
 
-### Route
-15 waypoints in 3D (the y coordinate climbs the porch steps and the stairs):
+`PennyArrival` follows twelve 3D waypoints from the pavement through the gate, porch, entrance,
+ground-floor corridor, landing and stairs to `(13.3,0,4.5)`. Arrival uses the cat's temporary vertical
+route movement; completion restores grounded character input. The toy-room door stays locked;
+the front door closes behind Penny and the stair door stays open.
 
-| # | Waypoint | Leg length |
-|---|---|---|
-| 0 → 1 | pavement (2, −4.5, 23.4) → (11, −4.5, 23.3) | 9.0 |
-| 2, 3 | through the gate (12, −4.5, 21.9), up the path to (12, −4.5, 14) | 9.6 |
-| 4, 5 | up the porch steps to (12, −4.05, 12.5), across the porch to (12, −4.05, 9.9) | 4.2 |
-| 6, 7 | over the threshold, along the corridor to (12, −4.48, −7.9) | 17.9 |
-| 8, 9 | onto the landing (15, −4.48, −8.1), foot of the stairs (15, −4.48, −7) | 4.1 |
-| 10 | top of the stairs (15, 0.02, 1) | 9.2 |
-| 11 → 14 | hallway, through the toy room door, past the crate, in front of the bed (7.3, 0, −2.4) | 11.5 |
-
-Total 65.4 units at 2 units/s (`Character::FollowWaypoint`): ~33 s, plus a 1.5 s pause for the opening
-shot, a 0.7 s jump and a 2 s settle — **about 37 s**.
-
-`FollowWaypoint` turns the heading towards the waypoint at most `turnRate·dt` per frame and moves
-`min(distance, speed·dt)` along the straight line, so she walks at constant speed and turns smoothly at
-corners. The walk cycle uses `speed = step / dt`, so her legs match her speed.
-
-**The jump** onto the bed (from (7.3, 0, −2.4) to (7.5, 1.17, −4.9), 0.7 s):
+The 4.5-unit stair rise over an 8-unit run gives pitch `atan2(4.5,8)=29.36 degrees`. Gameplay support
+matches eighteen steps, each 0.25 high. The whole cast uses the same stair contacts during escape.
+See [the support equation and floor guards](20-escape-gameplay.md).
 
 ```
-p(t) = mix(start, end, s(t)) + (0, 1.0 · sin(π t), 0)        s(t) = t²(3 − 2t)
+q = distanceWalked / totalRouteLength
+hour = 20.5 + 2.5 * q*q*(3-2*q)
+angle += (target-angle) * (1-exp(-2.5*dt))
+camera += (desired-camera) * (1-exp(-2.6*dt))
 ```
 
-The arc's peak is 1 unit above the straight line, so she clears the bed frame (0.82) and lands on the
-blanket (1.16).
-
-### Doors
-Each hinge angle eases exponentially towards its target, `angle += (target − angle)(1 − e^(−2.5·dt))`:
-
-| Door | Opens when | Angle |
-|---|---|---|
-| Front door | Penny within 4 units of it | 85° inward |
-| Stair door | she reaches the foot of the stairs | 90°, then shuts once she is in the toy room |
-| Toy room double door | she is near the top of the stairs (z > −2) | ±90° into the hallway, stays open for the story |
-
-### Camera
-```
-0 – 6 s     establishing shot: from (0, 9, 52) pushing in to (6, 4, 36), looking at the house (3.5, 3, 0)
-3 – 7 s     blend from the establishing shot to the chase camera, weight smoothstep((t − 3) / 4)
-chase       target position = Penny − forward · back + (0, up, 0)     back/up = 4.2/1.9 outside, 2.4/1.3 indoors
-            look-at          = Penny + forward · 1.2 + (0, 0.6, 0)
-            camera += (target − camera) · (1 − e^(−2.6·dt))                    first-order exponential smoothing
-toy room    fixed vantage (3.2, 3.4, 2.6) looking at Penny's head while she crosses the room and jumps
-```
-
-The exponential factor `1 − e^(−k·dt)` makes the smoothing independent of the frame rate: two frames of
-dt/2 move the camera exactly as far as one frame of dt.
-
-### Clock and sun
-```
-progress = distance walked / 65.4
-hour     = 16.3 + 7.6 · smoothstep(progress)          16:18 on the street, ~18:40 at the front door (progress 0.37),
-                                                      23:54 in front of the bed, midnight once she has jumped
-```
-
-The sky, the ambient light and the sun/moon light follow the hour exactly as in [08 §5](08-illumination.md).
-The garden's sun disc (radius 3.5, with a translucent halo) is placed at
-`(−60 cos a, 4 + 55 sin a, −37)` with `a = (hour − 6)/12 · π`; at 16:18 it stands high to the right of the
-house and sinks while Penny walks. The story then sets the clock to midnight.
-
-## 4. Integration (`ToyRoomApp::StepScene`)
-
-While the arrival runs:
-
-* the arrival owns the camera (the room's camera collision is not applied: the camera flies through the
-  garden and the house) and the clock;
-* the toys keep the rest pose given by the story's restart (they are only toys until midnight);
-* selection, camera keys and object controls are ignored; the HUD shows "Prologue: Penny comes home" with a
-  caption per stage and "Y skip the arrival".
-
-When it ends the director enters Stage 1 and the front door closes behind Penny. She remains outside the
-toy list but is registered as a selectable character and physics actor; clicking her enables the existing
-W/S/A/D character controls. During the arrival, `PennyArrival` still owns her movement and collisions stay
-disabled. See [the gameplay state machine](16-midnight-mission.md).
+The establishing camera blends to a chase view. The route clock stays at night; manual clock
+controls still demonstrate daylight. The entrance note and arrival objective introduce the rescue.
+At the hallway, the normal follow camera and Penny's controls take over. The exterior is hidden
+indoors and restored when the front door breaks; the downstairs is kept visible and traversable.
