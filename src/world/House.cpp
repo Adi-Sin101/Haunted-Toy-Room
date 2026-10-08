@@ -80,14 +80,14 @@ void Window(SceneNode& parent, Assets& a, const glm::vec3& centre, float w, floa
 
 // A picket-fence / railing panel: ONE thin box whose texture has transparent gaps (alpha cut-out), in
 // place of a row of picket cubes and rails. `spacing` = distance between pickets (8 per texture repeat).
-void CutoutPanel(SceneNode& parent, Assets& a, const std::string& name, const glm::vec3& lo, const glm::vec3& hi, float spacing)
+SceneNode* CutoutPanel(SceneNode& parent, Assets& a, const std::string& name, const glm::vec3& lo, const glm::vec3& hi, float spacing)
 {
 	Material& m = a.Mat("cutout-" + name, {0.97f, 0.97f, 0.95f}, 0.2f, 24.0f);
 	m.texture = a.SlotTexture(Assets::PicketSlot);
 	m.rtTextureSlot = Assets::PicketSlot;
 	m.cutout = true;
 	m.uvScale = {(hi.x - lo.x) / (8.0f * spacing), 1.0f};
-	Box(parent, name.c_str(), a.Cube(), m, lo, hi);
+	return Box(parent, name.c_str(), a.Cube(), m, lo, hi);
 }
 
 // A tree: trunk cylinder and three overlapping foliage spheres (drawn with the low-detail mesh when far).
@@ -98,7 +98,7 @@ void Tree(SceneNode& parent, Assets& a, const glm::vec3& foot, float height)
 	Material& leavesLight = a.Mat("tree-leaves-light", {0.36f, 0.60f, 0.24f}, 0.05f);
 	SceneNode* tree = parent.AddChild("Tree");
 	tree->local.position = foot;
-	tree->AddShape("Trunk", &a.Cylinder(), &bark, {0, height * 0.3f, 0}, {0.6f, height * 0.6f, 0.6f});
+	tree->AddShape("Trunk", &a.Cylinder(), &bark, {0, height * 0.3f, 0}, {0.6f, height * 0.6f, 0.6f})->solid = true;
 	tree->AddShape("Foliage", &a.Sphere(), &leaves, {0, height * 0.72f, 0}, glm::vec3(height * 0.55f));
 	tree->AddShape("Foliage", &a.Sphere(), &leavesLight, {height * 0.2f, height * 0.88f, height * 0.12f}, glm::vec3(height * 0.40f));
 	tree->AddShape("Foliage", &a.Sphere(), &leaves, {-height * 0.22f, height * 0.62f, -height * 0.1f}, glm::vec3(height * 0.42f));
@@ -139,7 +139,18 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	auto wall = [&](const char* name, const glm::vec3& centre, float yaw, float width, float height) {
 		inside->AddShape(name, &plane, &hallWall, centre, {width, 1, height}, {90, yaw, 0});
 	};
-	wall("CorridorLeftWall", {CorridorLeft, Ground + h * 0.5f, 0}, 90, 18.1f, h);
+	// The corridor's left wall: a plane in front of the Toy Room's footprint, and a solid divider beside
+	// Buzz's bedroom with an ordinary doorway in it (its door is built with the story props).
+	wall("CorridorLeftWall", {CorridorLeft, Ground + h * 0.5f, (BuzzFront + 9.05f) * 0.5f}, 90, 9.05f - BuzzFront, h);
+	const float wallLo = CorridorLeft - 0.07f, wallHi = CorridorLeft + 0.01f;
+	Box(*inside, "BuzzRoomDivider", cube, hallWall, {wallLo, Ground, -9.05f}, {wallHi, Slab, BuzzDoorLow})->solid = true;
+	Box(*inside, "BuzzRoomDivider", cube, hallWall, {wallLo, Ground, BuzzDoorHigh}, {wallHi, Slab, BuzzFront})->solid = true;
+	Box(*inside, "BuzzRoomLintel", cube, hallWall, {wallLo, Ground + BuzzDoorHeight, BuzzDoorLow}, {wallHi, Slab, BuzzDoorHigh})->solid = true;
+	Material& casing = a.Mat("buzz-door-casing", {0.93f, 0.90f, 0.82f}, 0.25f, 24.0f);
+	for (float z : {BuzzDoorLow - 0.08f, BuzzDoorHigh + 0.08f})
+		inside->AddShape("BuzzDoorCasing", &cube, &casing, {CorridorLeft + 0.04f, Ground + BuzzDoorHeight * 0.5f, z}, {0.08f, BuzzDoorHeight, 0.16f});
+	inside->AddShape("BuzzDoorCasing", &cube, &casing, {CorridorLeft + 0.04f, Ground + BuzzDoorHeight + 0.08f, (BuzzDoorLow + BuzzDoorHigh) * 0.5f},
+		{0.08f, 0.16f, BuzzDoorHigh - BuzzDoorLow + 0.32f});
 	wall("CorridorRightWall", {CorridorRight, Ground + h * 0.5f, (StairBottomZ + 9.05f) * 0.5f}, -90, 9.05f - StairBottomZ, h);
 	const float well = DoorHeight - Ground;                  // stairwell: ground floor up to the hall ceiling
 	wall("StairwellEnd", {(CorridorLeft + StairRight) * 0.5f, Ground + well * 0.5f, -9.05f}, 0, StairRight - CorridorLeft, well);
@@ -205,8 +216,9 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	const float top = Height;                                        // the walls reach the toy room's ceiling
 
 	// Walls (cubes 0.3 thick, outside the room's one-sided walls)
-	SidedBox(*ext, a, "front-left", yellow, {HouseLeft, Ground, 9.05f}, {FrontDoorLeft, top, HouseFront});
-	SidedBox(*ext, a, "front-right", yellow, {FrontDoorRight, Ground, 9.05f}, {HouseRight, top, HouseFront});
+	// The front walls are solid while Penny explores the garden (the exterior is hidden indoors).
+	SidedBox(*ext, a, "front-left", yellow, {HouseLeft, Ground, 9.05f}, {FrontDoorLeft, top, HouseFront})->solid = true;
+	SidedBox(*ext, a, "front-right", yellow, {FrontDoorRight, Ground, 9.05f}, {HouseRight, top, HouseFront})->solid = true;
 	SidedBox(*ext, a, "front-over-door", yellow, {FrontDoorLeft, Ground + FrontDoorHeight, 9.05f}, {FrontDoorRight, top, HouseFront});
 	SidedBox(*ext, a, "back-left", yellow, {HouseLeft, Ground, HouseBack}, {0.5f, top, -9.05f});
 	SidedBox(*ext, a, "back-right", yellow, {4.5f, Ground, HouseBack}, {HouseRight, top, -9.05f});
@@ -280,11 +292,11 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	}
 	const float porchRoofY = Slab + 0.1f;
 	for (float x : {8.35f, 15.65f}) {
-		Box(*ext, "ColumnBase", cube, brick, {x - 0.35f, porchTop, porchFront - 0.75f}, {x + 0.35f, porchTop + 1.3f, porchFront - 0.05f});
+		Box(*ext, "ColumnBase", cube, brick, {x - 0.35f, porchTop, porchFront - 0.75f}, {x + 0.35f, porchTop + 1.3f, porchFront - 0.05f})->solid = true;
 		Box(*ext, "Column", cube, trim, {x - 0.17f, porchTop + 1.3f, porchFront - 0.57f}, {x + 0.17f, porchRoofY - 1.4f, porchFront - 0.23f});
 	}
-	CutoutPanel(*ext, a, "railing-left", {8.7f, porchTop, porchFront - 0.43f}, {10.7f, porchTop + 0.95f, porchFront - 0.37f}, 0.4f);
-	CutoutPanel(*ext, a, "railing-right", {13.3f, porchTop, porchFront - 0.43f}, {15.3f, porchTop + 0.95f, porchFront - 0.37f}, 0.4f);
+	CutoutPanel(*ext, a, "railing-left", {8.7f, porchTop, porchFront - 0.43f}, {10.7f, porchTop + 0.95f, porchFront - 0.37f}, 0.4f)->solid = true;
+	CutoutPanel(*ext, a, "railing-right", {13.3f, porchTop, porchFront - 0.43f}, {15.3f, porchTop + 0.95f, porchFront - 0.37f}, 0.4f)->solid = true;
 	const float porchHalf = 4.6f, porchRise = 1.4f, porchDepth = porchFront + 0.5f - HouseFront;
 	const float porchSlope = std::atan2(porchRise, porchHalf), porchSlab = std::sqrt(porchHalf * porchHalf + porchRise * porchRise);
 	Material& porchShingles = Tinted(a, "porch-shingles", {0.86f, 0.42f, 0.28f}, "shingles", {3, 2}, 0.12f, 12.0f);
@@ -300,7 +312,7 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	ext->AddShape("PorchPlant", &sphere, &a.Mat("tree-leaves-light", {0.36f, 0.60f, 0.24f}, 0.05f), {14.4f, porchTop + 1.2f, HouseFront + 0.8f}, {1.1f, 0.9f, 1.1f});
 	Material& porchLight = a.Mat("porch-lantern", glm::vec3(0.1f), 0.0f);
 	porchLight.unlit = true; porchLight.emissive = {1.0f, 0.85f, 0.55f};
-	ext->AddShape("PorchLantern", &cube, &porchLight, {10.5f, Ground + 2.6f, HouseFront + 0.15f}, {0.22f, 0.4f, 0.22f});
+	ext->AddShape("PorchLantern", &cube, &porchLight, {10.3f, Ground + 2.6f, HouseFront + 0.15f}, {0.22f, 0.4f, 0.22f});
 
 	// Garage on the left with its own small gable roof
 	const float gx0 = -19.0f, gx1 = HouseLeft, gz0 = -5.0f, gz1 = 7.5f, gTop = Ground + 4.5f;
@@ -329,16 +341,16 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 
 	Material& picket = a.Mat("picket-white", {0.97f, 0.97f, 0.95f}, 0.2f, 24.0f);
 	const float fenceZ = 21.5f, fenceLeft = gx1 + 0.5f, fenceRight = 26.0f;
-	CutoutPanel(*ext, a, "fence-left", {fenceLeft, Ground, fenceZ - 0.04f}, {11.0f, Ground + 1.4f, fenceZ + 0.04f}, 0.7f);
-	CutoutPanel(*ext, a, "fence-right", {13.0f, Ground, fenceZ - 0.04f}, {fenceRight, Ground + 1.4f, fenceZ + 0.04f}, 0.7f);
+	CutoutPanel(*ext, a, "fence-left", {fenceLeft, Ground, fenceZ - 0.04f}, {11.0f, Ground + 1.4f, fenceZ + 0.04f}, 0.7f)->solid = true;
+	CutoutPanel(*ext, a, "fence-right", {13.0f, Ground, fenceZ - 0.04f}, {fenceRight, Ground + 1.4f, fenceZ + 0.04f}, 0.7f)->solid = true;
 	for (float x : {11.0f, 13.0f})
-		Box(*ext, "GatePost", cube, picket, {x - 0.15f, Ground, fenceZ - 0.15f}, {x + 0.15f, Ground + 1.75f, fenceZ + 0.15f});
+		Box(*ext, "GatePost", cube, picket, {x - 0.15f, Ground, fenceZ - 0.15f}, {x + 0.15f, Ground + 1.75f, fenceZ + 0.15f})->solid = true;
 	Box(*ext, "MailboxPost", cube, a.Mat("tree-bark", {0.36f, 0.25f, 0.16f}, 0.05f), {14.4f, Ground, fenceZ - 0.6f}, {14.55f, Ground + 1.3f, fenceZ - 0.45f});
 	ext->AddShape("Mailbox", &cylinder, &trim, {14.48f, Ground + 1.45f, fenceZ - 0.52f}, {0.4f, 0.7f, 0.4f}, {90, 0, 0});
 
 	Material& shrub = a.Mat("shrub", {0.22f, 0.45f, 0.20f}, 0.05f);
 	for (float x : {-8.5f, -5.0f, -1.0f, 5.8f, 16.6f})
-		ext->AddShape("Shrub", &sphere, &shrub, {x, Ground + 0.35f, HouseFront + 0.9f}, {1.6f, 1.0f, 1.2f});
+		ext->AddShape("Shrub", &sphere, &shrub, {x, Ground + 0.35f, HouseFront + 0.9f}, {1.6f, 1.0f, 1.2f})->solid = true;
 	Tree(*ext, a, {-26.0f, Ground, 12.0f}, 9.0f);
 	Tree(*ext, a, {24.0f, Ground, 14.0f}, 8.0f);
 	Tree(*ext, a, {-14.0f, Ground, -15.0f}, 10.0f);

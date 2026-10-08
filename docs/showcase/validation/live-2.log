@@ -1,9 +1,8 @@
 Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
-GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
-GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
+GAMEPLAY STAGE 0 / NIGHT OUTSIDE THE HOUSE
 
 ====================== HAUNTED TOY ROOM ======================
-MISSION     Ctrl+0 Penny / Enter inspect, switch or final action / code 257 / R ride
+MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
@@ -25,75 +24,55 @@ RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
             V list parts of selected object, Shift+V dump vertex/index tables
 WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay
             H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit
-PROLOGUE    Penny arrives at the house; Y skips arrival, Shift+N replays the prologue
+STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> morning
+            Y skips the opening shot, Shift+N replays the story from the street
 ==========================================================
 
-GAMEPLAY STAGE 1 / ENTRANCE - PUZZLE
-Selected: Bullseye  [W/S move  A/D turn  Shift run  SPACE stop  R mount/dismount]
-Live control: Bullseye
+Bullseye is still trapped
 Penny moving
-DEMO phase 1 time 1.65
+GAMEPLAY STAGE 1 / UPSTAIRS HALLWAY - 257 PUZZLE
+STORY the main door closed and locked behind Penny
+DEMO phase 1 time 4.9
+DEMO phase 2 time 4.95
+DEMO phase 3 time 11.7
+DEMO phase 4 time 12.7
+DEMO phase 5 time 13.25
+GAMEPLAY STAGE 2 / THE TOY CHEST
+DEMO phase 6 time 13.95
 Penny stopped
 Penny moving
-DEMO phase 2 time 3.05
+STORY chest button pressed
+INTERACT Penny presses the big red wind-up button. The chest springs open!
+DEMO phase 7 time 17.95
 Penny stopped
+STORY the toys are alive
+GAMEPLAY STAGE 3 / DOWNSTAIRS TO BUZZ'S ROOM
+DEMO phase 8 time 25.1
 Penny moving
-DEMO phase 3 time 4.2
+GAMEPLAY STAGE 4 / CUPBOARD RESCUE
+INTERACT Penny opens the door: an ordinary bedroom, with a big wooden wardrobe at the back.
+DEMO phase 9 time 32.25
 Penny stopped
+DEMO phase 10 time 33.5
 Penny moving
-GAMEPLAY STAGE 2 / TOY RESCUE
-DEMO phase 4 time 4.8
+DEMO phase 11 time 35.3
 Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-DEMO phase 5 time 7.85
-Penny stopped
-Penny moving
-DEMO phase 6 time 9.35
-Penny stopped
-Jessie moving
+STORY Jessie and Bullseye start the wardrobe rescue
 Jessie mounted Bullseye.
-DEMO phase 7 time 10.25
-Bullseye stopped
-Bullseye moving
+STORY wardrobe opened
+STORY Buzz is free
+GAMEPLAY STAGE 5 / THE LOCKED MAIN DOOR
+DEMO phase 12 time 46.5
+Penny moving
 Jessie dismounted.
-DEMO phase 8 time 13.45
-Jessie stopped
-GAMEPLAY STAGE 3 / BUZZ ROOM
-DEMO phase 9 time 14.25
-Penny moving
-Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-GAMEPLAY STAGE 4 / FINAL ESCAPE
-DEMO phase 10 time 18.95
-Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-DEMO phase 11 time 25.1
-Penny stopped
-Penny moving
-Penny stopped
-Penny moving
-DEMO phase 12 time 29.55
-Penny stopped
-Selected: Bullseye  [W/S move  A/D turn  Shift run  SPACE stop  R mount/dismount]
+Selected: Bullseye  [W/S move  A/D turn  Shift run  SPACE stop  L jump  R mount/dismount]
 Live control: Bullseye
 Bullseye moving
-Penny at 11.9875,-4.48,7.24803 / demo 12 leg 0
-Mission capture: STAGE 4 / FINAL ESCAPE / 20:30 Night
-Woody at 14.9503,-1.238,-1.34992
-Jessie at 14.9311,0.012,1.04967
-Bullseye at 8.66257,0.012,4.78827
-Buzz at 7.92409,0.012,1.99532
+Penny at 11.7461,-4.48,-5.64081 / demo 12 leg 2
+Mission capture: STAGE 5 / THE LOCKED MAIN DOOR / 23:33 Night
+Woody at 11.5288,-4.48,-5.68241
+Jessie at 10.5466,-4.48,-5.79181
+Bullseye at 5.1217,-4.48,-6.03977
+Buzz at 11.5259,-4.48,-5.67659
 RC Car at 5.5,0.012,-1.8
 Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\validation\live-2.bmp

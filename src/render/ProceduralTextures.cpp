@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include <glm/gtc/constants.hpp>
 
@@ -47,6 +48,23 @@ Image Generate(int w, int h, F&& texel)
 		for (int x = 0; x < w; ++x)
 			img.Set(x, y, texel((static_cast<float>(x) + 0.5f) / w, (static_cast<float>(y) + 0.5f) / h));
 	return img;
+}
+
+// True when (x, y) lies inside a five-pointed star of outer radius r (one point up).
+// The plane is folded into one tenth of the star, where the outline is a single edge between an
+// inner vertex and an outer vertex; the point is inside when it lies on the centre's side of it.
+bool InStar(float x, float y, float r, float inner = 0.42f)
+{
+	const float sector = glm::two_pi<float>() / 5.0f;
+	float a = std::atan2(y, x) - glm::half_pi<float>();
+	a = std::fmod(a, sector);
+	if (a < 0.0f) a += sector;
+	const float b = sector * 0.5f - std::abs(a - sector * 0.5f); // 0 = outer vertex, sector/2 = inner vertex
+	const float d = std::sqrt(x * x + y * y);
+	const glm::vec2 q(d * std::cos(b), d * std::sin(b));
+	const glm::vec2 out(r, 0.0f), in(r * inner * std::cos(sector * 0.5f), r * inner * std::sin(sector * 0.5f));
+	const glm::vec2 edge = in - out;
+	return edge.x * (q.y - out.y) - edge.y * (q.x - out.x) > 0.0f;
 }
 
 } // namespace
@@ -366,6 +384,117 @@ Image PosterFallback(int width, int height)
 		if (u < 0.04f || u > 0.96f || v < 0.03f || v > 0.97f)
 			c = glm::vec3(0.9f);
 		return c;
+	});
+}
+
+// Painted chest front (2:1): three red planks, worn to bare wood at the edges, with yellow stars,
+// two white clouds and a cartoon rocket, as on the reference toy chest.
+Image ChestPaint(int width, int height)
+{
+	struct Star { float x, y, r; bool orange; };
+	static const Star stars[] = {{0.30f, 0.80f, 0.075f, false}, {0.62f, 0.62f, 0.055f, false}, {0.86f, 0.30f, 0.10f, false},
+		{0.47f, 0.33f, 0.035f, true}, {1.08f, 0.80f, 0.06f, false}, {1.62f, 0.78f, 0.075f, false},
+		{1.80f, 0.55f, 0.045f, true}, {0.20f, 0.52f, 0.04f, true}, {1.48f, 0.20f, 0.035f, true}, {0.97f, 0.55f, 0.03f, true}};
+	return Generate(width, height, [&](float u, float v) {
+		const float x = u * 2.0f, y = v;                                       // isotropic paint space
+		const float plank = std::floor(v * 3.0f), pv = v * 3.0f - plank;
+		const float grain = Fbm(u * 3.0f + plank * 7.0f, v * 40.0f);
+		const glm::vec3 bare = glm::vec3(0.62f, 0.42f, 0.25f) * (0.8f + 0.4f * grain);
+		glm::vec3 c = glm::vec3(0.55f, 0.15f, 0.09f) * (0.82f + 0.3f * grain) * (0.9f + 0.2f * Hash(plank, 4.0f));
+		// Clouds: unions of four circles.
+		auto cloud = [&](float cx, float cy, float s) {
+			const glm::vec3 lumps[4] = {{-0.10f, 0.0f, 0.08f}, {0.0f, 0.05f, 0.10f}, {0.11f, 0.01f, 0.08f}, {0.0f, -0.03f, 0.09f}};
+			for (const glm::vec3& l : lumps) if (glm::length(glm::vec2(x - cx - l.x * s, y - cy - l.y * s)) < l.z * s) return true;
+			return false;
+		};
+		if (cloud(0.34f, 0.24f, 1.5f) || cloud(1.74f, 0.28f, 1.1f)) c = glm::vec3(0.86f, 0.84f, 0.78f);
+		for (const Star& s : stars)
+			if (InStar(x - s.x, y - s.y, s.r)) c = s.orange ? glm::vec3(0.93f, 0.48f, 0.16f) : glm::vec3(0.93f, 0.75f, 0.22f);
+		// Rocket in its own frame: rx along the body (nose = +rx), ry across it; tilted 55 degrees.
+		const float angle = glm::radians(55.0f);
+		const float rx = (x - 1.27f) * std::cos(angle) + (y - 0.42f) * std::sin(angle);
+		const float ry = -(x - 1.27f) * std::sin(angle) + (y - 0.42f) * std::cos(angle);
+		const bool body = (rx / 0.30f) * (rx / 0.30f) + (ry / 0.10f) * (ry / 0.10f) < 1.0f;
+		const bool fin = rx < -0.08f && rx > -0.30f && std::abs(ry) > 0.05f && std::abs(ry) < 0.08f + (-0.08f - rx) * 0.75f;
+		const bool flame = rx < -0.26f && rx > -0.42f && std::abs(ry) < (rx + 0.42f) * 0.35f;
+		if (flame) c = glm::vec3(0.98f, 0.62f, 0.15f);
+		if (fin) c = ry > 0.0f ? glm::vec3(0.75f, 0.12f, 0.10f) : glm::vec3(0.22f, 0.32f, 0.62f);
+		if (body) {
+			c = rx > 0.17f ? glm::vec3(0.82f, 0.16f, 0.12f) : glm::vec3(0.90f, 0.88f, 0.82f);
+			const float window = glm::length(glm::vec2(rx - 0.04f, ry));
+			if (window < 0.062f) c = glm::vec3(0.82f, 0.18f, 0.12f);
+			if (window < 0.045f) c = glm::vec3(0.30f, 0.50f, 0.78f);
+		}
+		// Wear: paint chipped where noise is high, more often near plank edges and the panel border.
+		const float edge = std::min({pv, 1.0f - pv, u * 6.0f, (1.0f - u) * 6.0f});
+		const float wear = Fbm(u * 18.0f, v * 9.0f) + std::max(0.0f, 0.25f - edge);
+		if (wear > 0.66f) c = glm::mix(c, bare, 0.85f);
+		if (std::abs(std::sin(u * 220.0f + v * 31.0f)) > 0.995f && Hash(std::floor(u * 40.0f), plank) > 0.6f) c *= 0.75f;
+		if (pv < 0.025f || pv > 0.975f) c *= 0.35f;                            // plank seams
+		return c;
+	});
+}
+
+// Blue wallpaper with soft stripes and two gold stars per tile, for Buzz's bedroom.
+Image StarWallpaper(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		glm::vec3 c = (static_cast<int>(std::floor(u * 8.0f)) % 2 == 0) ? glm::vec3(0.24f, 0.32f, 0.52f) : glm::vec3(0.21f, 0.29f, 0.48f);
+		if (InStar(u - 0.27f, v - 0.70f, 0.11f) || InStar(u - 0.76f, v - 0.24f, 0.075f)) c = glm::vec3(0.86f, 0.70f, 0.30f);
+		return c * (0.94f + 0.06f * ValueNoise(u * 70.0f, v * 70.0f));
+	});
+}
+
+// Patchwork quilt: navy squares with a gold star alternate with blue-and-white plaid squares.
+Image StarQuilt(int size)
+{
+	return Generate(size, size, [&](float u, float v) {
+		const float cells = 4.0f;
+		const int i = static_cast<int>(u * cells), j = static_cast<int>(v * cells);
+		const float pu = u * cells - i - 0.5f, pv = v * cells - j - 0.5f;
+		glm::vec3 c;
+		if ((i + j) % 2 == 0) {
+			c = glm::vec3(0.13f, 0.19f, 0.40f);
+			if (InStar(pu, pv + 0.02f, 0.33f)) c = glm::vec3(0.90f, 0.72f, 0.26f);
+		} else {
+			const bool a = std::fmod(u * 32.0f, 1.0f) < 0.35f, b = std::fmod(v * 32.0f, 1.0f) < 0.35f;
+			c = a && b ? glm::vec3(0.16f, 0.24f, 0.48f) : (a || b) ? glm::vec3(0.45f, 0.55f, 0.75f) : glm::vec3(0.86f, 0.88f, 0.92f);
+		}
+		if (std::max(std::abs(pu), std::abs(pv)) > 0.47f) c *= 0.55f;          // stitched seams
+		return c * (0.9f + 0.1f * ValueNoise(u * 120.0f, v * 120.0f));
+	});
+}
+
+// Gold star on a transparent background (alpha cut-out decal).
+Image StarDecal(int size)
+{
+	Image img(size, size);
+	for (int y = 0; y < size; ++y) for (int x = 0; x < size; ++x) {
+		const float u = (x + 0.5f) / size - 0.5f, v = (y + 0.5f) / size - 0.5f;
+		const float shade = 0.85f + 0.3f * (0.5f - std::sqrt(u * u + v * v));
+		img.Set(x, y, glm::vec3(0.95f, 0.76f, 0.30f) * shade, InStar(u, v, 0.48f) ? 1.0f : 0.0f);
+	}
+	return img;
+}
+
+// Football: black pentagons centred on the twelve vertices of an icosahedron, white hexagons between.
+Image Soccer(int width, int height)
+{
+	const float g = (1.0f + std::sqrt(5.0f)) * 0.5f;
+	std::vector<glm::vec3> centres;
+	for (float s1 : {-1.0f, 1.0f}) for (float s2 : {-1.0f, 1.0f}) {
+		centres.push_back(glm::normalize(glm::vec3(0, s1, s2 * g)));
+		centres.push_back(glm::normalize(glm::vec3(s1, s2 * g, 0)));
+		centres.push_back(glm::normalize(glm::vec3(s2 * g, 0, s1)));
+	}
+	return Generate(width, height, [&](float u, float v) {
+		const float lon = u * glm::two_pi<float>(), lat = (v - 0.5f) * glm::pi<float>();
+		const glm::vec3 p(std::cos(lat) * std::cos(lon), std::sin(lat), std::cos(lat) * std::sin(lon));
+		float best = -1.0f;
+		for (const glm::vec3& c : centres) best = std::max(best, glm::dot(p, c));
+		if (best > 0.955f) return glm::vec3(0.08f);
+		if (best > 0.945f) return glm::vec3(0.35f);
+		return glm::vec3(0.93f);
 	});
 }
 

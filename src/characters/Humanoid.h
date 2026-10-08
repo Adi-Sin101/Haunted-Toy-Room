@@ -49,6 +49,10 @@ public:
 	// Riding pose (legs astride, hands forward on the reins).
 	void SetSeated(bool value) { seated = value; }
 	bool Seated() const { return seated; }
+	// Story gestures: Reach raises the right arm up and out (to a high handle); Cheer waves both
+	// arms overhead for `seconds` (the toys coming alive).
+	void SetReach(bool value) { reach = value; }
+	void Cheer(float seconds) { cheerTime = seconds; }
 
 	static constexpr float HipHeight = 0.85f;
 
@@ -66,6 +70,8 @@ protected:
 	float rightArmOverride = 0.0f; // Buzz raises his arm to fire the laser (blend 0..1)
 	float laserPitch = 0.0f;
 	float groundMotion = 1.0f; // suppress gait and footstep bob during flight
+	bool reach = false;
+	float reachBlend = 0.0f, cheerTime = 0.0f, cheerBlend = 0.0f;
 };
 
 // Buzz Lightyear: humanoid + wings that open while flying + wrist laser.

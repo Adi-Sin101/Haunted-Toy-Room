@@ -1,9 +1,8 @@
 Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
-GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
-GAMEPLAY STAGE 0 / PROLOGUE - ARRIVAL
+GAMEPLAY STAGE 0 / NIGHT OUTSIDE THE HOUSE
 
 ====================== HAUNTED TOY ROOM ======================
-MISSION     Ctrl+0 Penny / Enter inspect, switch or final action / code 257 / R ride
+MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
@@ -25,21 +24,23 @@ RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
             V list parts of selected object, Shift+V dump vertex/index tables
 WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay
             H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit
-PROLOGUE    Penny arrives at the house; Y skips arrival, Shift+N replays the prologue
+STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> morning
+            Y skips the opening shot, Shift+N replays the story from the street
 ==========================================================
 
-GAMEPLAY STAGE 1 / ENTRANCE - PUZZLE
 Jessie mounted Bullseye.
-Manual control / N resumes gameplay
-Selected: Jessie (riding Bullseye - W/S/A/D drive Bullseye, R dismount)
-Bullseye moving
-Bullseye stopped
-Bullseye stopped
+Gameplay progression active
 Jessie dismounted.
+Selected: Jessie  [W/S move  A/D turn  Shift run  SPACE stop  R mount/dismount]
+Live control: Jessie
 Jessie moving
+Jessie stopped
+Jessie stopped
+Jessie mounted Bullseye.
+Bullseye moving
 Shading: Flat
 Shading: Gouraud
-Jessie stopped
+Bullseye stopped
 Shading: Phong
 Ambient: OFF
 Diffuse: OFF
@@ -57,8 +58,10 @@ Selected: Desk Lamp  [A/D swivel  W/S tilt  R power  ,/. brightness]
 Lamp OFF
 Lamp ON
 Selected: Buzz  [W/S move  A/D turn  Shift run  SPACE stop  Q/E up/down  L laser]
+Live control: Buzz
 Buzz: laser toggled
 Buzz: laser toggled
 Selected: RC Car  [W/S move  A/D turn  Shift run  SPACE stop  L headlights]
+Live control: RC Car
 RC Car: headlights toggled
 RC Car: headlights toggled

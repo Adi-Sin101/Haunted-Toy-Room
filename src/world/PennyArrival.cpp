@@ -3,151 +3,59 @@
 #include <algorithm>
 #include <cmath>
 
-#include <glm/gtc/constants.hpp>
-
 #include "Room.h"
 #include "characters/Cat.h"
 #include "scene/SceneNode.h"
 
 namespace {
-using namespace RoomSize;
-
 float Smooth(float t)
 {
 	t = std::clamp(t, 0.0f, 1.0f);
 	return t * t * (3.0f - 2.0f * t);
 }
-
-// Waypoint indices that mark story beats along the route.
-constexpr size_t GateIndex = 2, FrontDoorIndex = 6, StairFootIndex = 9, StairTopIndex = 10;
 }
 
 void PennyArrival::Init(Cat* penny, const HouseRig& rig)
 {
 	cat = penny;
 	house = rig;
-	const float porch = Ground + 0.45f;
-	route = {
-		{2.0f, Ground, 23.4f},                 // 0 on the pavement
-		{11.0f, Ground, 23.3f},                // 1 along the pavement
-		{12.0f, Ground, 21.9f},                // 2 through the gate
-		{12.0f, Ground, 14.0f},                // 3 up the garden path
-		{12.0f, porch, 12.5f},                 // 4 up the porch steps
-		{12.0f, porch, 9.9f},                  // 5 across the porch
-		{12.0f, Ground + 0.02f, 8.6f},         // 6 over the threshold
-		{12.0f, Ground + 0.02f, -7.9f},        // 7 along the corridor
-		{15.0f, Ground + 0.02f, -8.1f},        // 8 onto the stair landing
-		{15.0f, Ground + 0.02f, StairBottomZ}, // 9 foot of the stairs
-		{15.0f, 0.02f, StairTopZ},             // 10 top of the stairs (slope 29.4 degrees)
-		{13.3f, 0.0f, 4.5f},                   // 11 continues into the upper-floor hallway after the stairs
-	};
-	routeDistance.assign(route.size(), 0.0f);
-	for (size_t i = 1; i < route.size(); ++i)
-		routeDistance[i] = routeDistance[i - 1] + glm::distance(route[i - 1], route[i]);
 	Restart();
 }
 
 void PennyArrival::Restart()
 {
-	cat->EnableArrivalMotion(true);
-	stage = Stage::Walk;
-	next = 1;
-	time = stageTime = travelled = 0.0f;
-	cat->Root()->local.position = route[0];
-	cat->Root()->local.rotation = {0, 90, 0};
-	cat->SetPose(Cat::Pose::Walk);
-	cat->SetSlope(0);
-	cat->StopLooking();
-	exteriorVisible = true;
-	hour = 20.5f;
-	frontDoorAngle = roomDoorAngle = stairDoorAngle = 0.0f;
-	ApplyDoors(0.0f, true);
-	cameraPos = {0.0f, 9.0f, 52.0f};
-	cameraTarget = {3.5f, 3.0f, 0.0f};
+	active = true;
+	time = 0.0f;
+	cat->EnableArrivalMotion(false);
+	cat->SetPose(Cat::Pose::Sit);
+	Update(0.0f);
 }
 
 void PennyArrival::Skip()
 {
-	stage = Stage::Done;
-	next = route.size();
-	cat->Root()->local.position = route.back();
-	cat->Root()->local.rotation = {0, -90, 0};
+	active = false;
 	cat->SetPose(Cat::Pose::Walk);
-	cat->SetSlope(0);
-	exteriorVisible = false;
-	frontDoorAngle = 85.0f;
-	roomDoorAngle = 0.0f;
-	stairDoorAngle = 0.0f;
-	ApplyDoors(0.0f, true);
-	hour = 20.5f;
-}
-
-void PennyArrival::ApplyDoors(float dt, bool instant)
-{
-	auto ease = [&](float& angle, float target) {
-		angle = instant ? target : angle + (target - angle) * (1.0f - std::exp(-dt * 2.5f));
-	};
-	if (!instant) {
-		const glm::vec3 p = cat->Root()->local.position;
-		// Open for Penny as she approaches and crosses the threshold, then close behind her.
-		ease(frontDoorAngle, glm::distance(p, glm::vec3(12.0f, Ground, 9.2f)) < 4.0f ? 85.0f : 0.0f);
-        ease(roomDoorAngle,0.0f); // The combination door is locked throughout the arrival.
-        ease(stairDoorAngle,next>=StairFootIndex ? 90.0f : 0.0f);
-	}
-	house.frontDoor->local.rotation.y = frontDoorAngle;
-	house.roomDoorLeft->local.rotation.y = roomDoorAngle;
-	house.roomDoorRight->local.rotation.y = -roomDoorAngle;
-	house.stairDoor->local.rotation.y = stairDoorAngle;
+	cat->StopLooking();
 }
 
 void PennyArrival::Update(float dt)
 {
-	if (stage == Stage::Done)
-		return;
+	if (!active) return;
 	time += dt;
-	stageTime += dt;
-	const float k = 1.0f - std::exp(-dt * 2.6f);
-	SceneNode* root = cat->Root();
-
-	if (stage == Stage::Walk) {
-		// Pause briefly on the pavement for the establishing shot, then trot along the route.
-		if (time > 1.5f && cat->FollowWaypoint(route[next], dt, 2.0f)) {
-			if (++next == route.size()) { stage = Stage::Done; stageTime = 0.0f; cat->Stop(); }
-		}
-		// Distance walked = route distance to the previous waypoint + progress along the current leg.
-		if (next < route.size())
-			travelled = routeDistance[next - 1] + glm::distance(route[next - 1], root->local.position);
-		// On the flight of stairs the body pitches nose-up by the stair angle.
-		cat->SetSlope(next == StairTopIndex ? glm::degrees(std::atan2(-Ground, StairTopZ - StairBottomZ)) : 0.0f);
-		if (next >= StairFootIndex) exteriorVisible = false;
-	}
-	ApplyDoors(dt, false);
-
-	// Stay at night as the route progresses from 20:30 to about 23:00.
-	const float total = routeDistance.back();
-	hour = std::fmod(20.5f + 2.5f * Smooth(travelled / total) + (stage != Stage::Walk ? 0.1f : 0.0f), 24.0f);
-
-	// Camera: establishing push-in for 5 s, then a chase camera; inside the toy room a fixed vantage.
-	const glm::vec3 p = root->local.position;
-	const float h = glm::radians(cat->Heading());
-	const glm::vec3 forward(std::sin(h), 0.0f, std::cos(h));
-	glm::vec3 desiredPos, desiredTarget;
-	const bool outside = next <= FrontDoorIndex;
-    const float back=outside ? 4.2f : 2.4f, up=outside ? 1.9f : 1.3f;
-    desiredPos=p-forward*back+glm::vec3(0,up,0);
-    desiredTarget=p+forward*1.2f+glm::vec3(0,0.6f,0);
-	const float establishing = Smooth((time - 3.0f) / 4.0f);           // 0 for 3 s, then blends over 4 s
-	const glm::vec3 shotPos = glm::mix(glm::vec3(0.0f, 9.0f, 52.0f), glm::vec3(6.0f, 4.0f, 36.0f), Smooth(time / 6.0f));
-	const glm::vec3 shotTarget(3.5f, 3.0f, 0.0f);
-	cameraPos += (glm::mix(shotPos, desiredPos, establishing) - cameraPos) * (establishing < 1.0f ? 1.0f : k);
-	cameraTarget += (glm::mix(shotTarget, desiredTarget, establishing) - cameraTarget) * (establishing < 1.0f ? 1.0f : k * 1.5f);
-	(void)GateIndex;
+	const glm::vec3 p = cat->Root()->local.position;
+	const glm::vec3 forward = cat->Forward();
+	// Penny looks up at the house while the camera cranes down behind her.
+	cat->LookAt({12.0f, RoomSize::Ground + 5.0f, 9.0f});
+	cat->SetPose(time > Duration - 1.5f ? Cat::Pose::Walk : Cat::Pose::Sit);
+	const float s = Smooth(time / (Duration - 0.5f));
+	const glm::vec3 high(-4.0f, 14.0f, 48.0f), chase = p - forward * 4.4f + glm::vec3(0.0f, 1.5f, 0.0f);
+	const glm::vec3 facade(9.0f, RoomSize::Ground + 4.5f, 2.0f), focus = p + glm::vec3(0.0f, 0.65f, 0.0f);
+	cameraPos = glm::mix(high, chase, s);
+	cameraTarget = glm::mix(facade, focus, s * s);
+	if (time >= Duration) Skip();
 }
 
 std::string PennyArrival::Caption() const
 {
-	if (next <= GateIndex) return "Night. Penny approaches the haunted house; the toys need help.";
-	if (next <= FrontDoorIndex) return "Through the garden gate and up the porch. The front door swings open for her.";
-	if (next <= StairFootIndex) return "Inside, the hall leads to the stairs. The entrance has closed behind her.";
-	return "The note says the toys need help. Inspect the three hallway clues to open the toy-room door.";
+	return "Night. Penny arrives at the abandoned house. The front door stands open...";
 }

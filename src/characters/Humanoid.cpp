@@ -5,6 +5,7 @@
 
 #include "render/Assets.h"
 #include "scene/SceneNode.h"
+#include "world/PhysicsWorld.h"
 
 namespace {
 
@@ -205,7 +206,16 @@ void Humanoid::Animate(float dt, float time)
 	const glm::vec3 leftArm = glm::mix(glm::vec3(-swing * 0.8f, 0, 6), glm::vec3(-50, 0, 8), seatBlend);
 	glm::vec3 rightArm = glm::mix(glm::vec3(swing * 0.8f, 0, -6), glm::vec3(-50, 0, -8), seatBlend);
 	rightArm = glm::mix(rightArm, glm::vec3(-90 + laserPitch, 0, 0), rightArmOverride);
-	leftShoulder->local.rotation = leftArm;
+	// Gestures blend on top of walking and riding.
+	const float k = std::min(1.0f, dt * 6.0f);
+	reachBlend += ((reach ? 1.0f : 0.0f) - reachBlend) * k;
+	cheerTime = std::max(0.0f, cheerTime - dt);
+	cheerBlend += ((cheerTime > 0.0f ? 1.0f : 0.0f) - cheerBlend) * k;
+	const float wave = std::sin(time * 9.0f) * 18.0f;
+	glm::vec3 left = glm::mix(leftArm, glm::vec3(-10, 0, 150 + wave), cheerBlend);
+	rightArm = glm::mix(rightArm, glm::vec3(-10, 0, -150 - wave), cheerBlend);
+	rightArm = glm::mix(rightArm, glm::vec3(-25, 0, -140), reachBlend);
+	leftShoulder->local.rotation = left;
 	rightShoulder->local.rotation = rightArm;
 
 	// Body bob while walking, idle "looking around" when standing still.
@@ -328,7 +338,8 @@ void Buzz::AimAt(const glm::vec3& point)
 void Buzz::Animate(float dt, float time)
 {
 	const float k = 1.0f - std::exp(-dt * 8.0f);
-	const bool flying = root->local.position.y > 0.06f;
+	// Flying = above the floor under him (upper floor, ground floor, a stair tread or the garden).
+	const bool flying = root->local.position.y > PhysicsWorld::FloorHeight(root->local.position) + 0.06f;
 	const glm::vec3 displacement = root->local.position - previousFlightPosition;
 	// Use actual movement: climbing and hovering must not look like running.
 	const glm::vec3 velocity = dt > 0.0001f && glm::length(displacement) < 1.0f

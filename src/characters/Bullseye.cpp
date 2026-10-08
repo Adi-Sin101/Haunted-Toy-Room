@@ -1,5 +1,6 @@
 #include "Bullseye.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <glm/gtc/constants.hpp>
@@ -117,4 +118,18 @@ void Bullseye::Animate(float dt, float time)
 	tail->local.rotation.z = std::sin(time * 2.5f) * 20.0f * idle;
 	tail->local.rotation.x = -30.0f - 30.0f * moveBlend;
 	head->local.rotation.y = std::sin(time * 0.5f) * 20.0f * idle;
+
+	// Jump: lift = H sin(pi t) over the jump; front legs fold forward, back legs push back.
+	jumpLift = 0.0f;
+	if (jumpTime >= 0.0f) {
+		jumpTime += dt;
+		const float t = std::min(1.0f, jumpTime / JumpDuration);
+		const float arc = std::sin(t * glm::pi<float>());
+		jumpLift = JumpHeight * arc;
+		body->local.position.y += jumpLift;
+		body->local.rotation.x = -12.0f * std::sin(t * glm::two_pi<float>());   // nose up, then down
+		legs[0]->local.rotation.x = legs[1]->local.rotation.x = -55.0f * arc;
+		legs[2]->local.rotation.x = legs[3]->local.rotation.x = 40.0f * arc;
+		if (t >= 1.0f) { jumpTime = -1.0f; body->local.rotation.x = 0.0f; }
+	}
 }

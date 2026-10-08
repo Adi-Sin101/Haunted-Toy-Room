@@ -18,7 +18,8 @@ public:
 	// Layers in the ray tracer's shared surface texture array.
 	enum TextureSlot : int { FloorSlot = 0, WallSlot, RugSlot, BallSlot, BlockSlot, PosterSlot, StarsSlot,
 		MoonSlot, FabricSlot, DenimSlot, LeatherSlot, PlaidSlot, CowSlot, BookSlot, PicketSlot,
-		SidingSlot, ShingleSlot, BrickSlot, GrassSlot, WindowSlot, FlowerSlot, ClockSlot, SlotCount };
+		SidingSlot, ShingleSlot, BrickSlot, GrassSlot, WindowSlot, FlowerSlot, ClockSlot,
+		ChestSlot, StarWallSlot, QuiltSlot, StarDecalSlot, SoccerSlot, SlotCount };
 
 	void Load();
 	~Assets();

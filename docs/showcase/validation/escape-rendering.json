@@ -2,42 +2,42 @@
   {
     "path": "flat",
     "real_door_impact": true,
-    "WIN": true,
+    "free_exploration": true,
     "all_five_actual_positions_outside": true,
     "process_exit": 0
   },
   {
     "path": "gouraud",
     "real_door_impact": true,
-    "WIN": true,
+    "free_exploration": true,
     "all_five_actual_positions_outside": true,
     "process_exit": 0
   },
   {
     "path": "phong",
     "real_door_impact": true,
-    "WIN": true,
+    "free_exploration": true,
     "all_five_actual_positions_outside": true,
     "process_exit": 0
   },
   {
     "path": "blinn",
     "real_door_impact": true,
-    "WIN": true,
+    "free_exploration": true,
     "all_five_actual_positions_outside": true,
     "process_exit": 0
   },
   {
     "path": "ray",
     "real_door_impact": true,
-    "WIN": true,
+    "free_exploration": true,
     "all_five_actual_positions_outside": true,
     "process_exit": 0
   },
   {
     "path": "debug",
     "real_door_impact": true,
-    "WIN": true,
+    "free_exploration": true,
     "all_five_actual_positions_outside": true,
     "process_exit": 0
   }

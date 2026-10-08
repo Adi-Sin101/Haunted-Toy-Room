@@ -138,8 +138,9 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	room->AddShape("Poster", &plane, &posterMat, { -HalfWidth + 0.02f, 3.8f, 2.2f }, { 2.0f, 1.0f, 3.0f }, { 90, 90, 0 });
 
 	const glm::vec3 blockColors[3] = { { 0.9f, 0.2f, 0.2f }, { 0.2f, 0.4f, 0.95f }, { 1.0f, 0.8f, 0.15f } };
-	const glm::vec3 blockPos[6] = { { 4.8f, 0.3f, 3.8f }, { 5.42f, 0.3f, 3.8f }, { 6.04f, 0.3f, 3.8f },
-		{4.8f, 0.9f, 3.8f}, {5.42f, 0.9f, 3.8f}, {4.8f, 1.5f, 3.8f} };
+	// The block tower stands near the front wall, clear of the route from the chest to the door.
+	const glm::vec3 blockPos[6] = { { 4.8f, 0.3f, 6.9f }, { 5.42f, 0.3f, 6.9f }, { 6.04f, 0.3f, 6.9f },
+		{4.8f, 0.9f, 6.9f}, {5.42f, 0.9f, 6.9f}, {4.8f, 1.5f, 6.9f} };
 	SceneNode* blocks = room->AddChild("ToyBlocks");
 	Material& obstacleMat = Textured(a,"mission-crate",{0.60f,0.33f,0.13f},Assets::BlockSlot,{1,1},0.1f);
 	rig.missionObstacle = solid(blocks->AddShape("DoorwayObstacle",&cube,&obstacleMat,{8.8f,1.0f,4},{1.2f,2.0f,3.0f}));

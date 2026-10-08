@@ -66,6 +66,7 @@ public:
 	// Smooth move of the root's local transform (used by mount / dismount so nothing teleports).
 	void StartTransition(const glm::vec3& toPos, float toYaw, float duration);
 	bool InTransition() const { return transition.active; }
+	void CancelTransition() { transition.active = false; }
 
 	// Keeps the character inside the room (simple bounds, not collision detection).
 	bool clampToRoom = true;

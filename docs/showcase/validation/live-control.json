@@ -26,7 +26,6 @@
     "owned_input_changes_actual_pose": true,
     "other_actor_position_differences": {
       "Woody": 0.0,
-      "Jessie": 0.0,
       "Buzz": 0.0,
       "RC Car": 0.0
     },
@@ -55,7 +54,7 @@
     "simulation_seconds": 2
   },
   {
-    "escape_rehearsal": "WIN",
+    "escape_rehearsal": "FREE_EXPLORATION",
     "nearest_hit_door_impact": true,
     "all_five_actual_positions_outside": true
   }

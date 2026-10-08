@@ -78,13 +78,15 @@ void ToyRoomApp::BuildScene()
 {
 	scene = std::make_unique<SceneNode>("World");
 	const RoomRig rig = BuildRoom(*scene, assets);
-    rig.missionObstacle->local.position.x=-4.0f; rig.missionObstacle->local.position.z=6.0f;
+	// The big wooden crate stands tidily against the left wall, out of every walking route.
+	rig.missionObstacle->local.position = {-9.0f, 1.0f, 6.9f};
 	environment.Init(rig);
 
-	auto woodyPtr = std::make_unique<Humanoid>(*scene, assets, WoodyStyle(), glm::vec3(-3.0f, 0.0f, 0.5f), 20.0f);
-	auto jessiePtr = std::make_unique<Humanoid>(*scene, assets, JessieStyle(), glm::vec3(-0.8f, 0.0f, 2.0f), 0.0f);
-	auto bullseyePtr = std::make_unique<Bullseye>(*scene, assets, glm::vec3(2.2f, 0.0f, 0.3f), -30.0f);
-	auto buzzPtr = std::make_unique<Buzz>(*scene, assets, glm::vec3(0.4f, 0.0f, -1.8f), 10.0f);
+	// Home positions = where the toys stand once they are out: a tidy line in front of the toy chest.
+	auto woodyPtr = std::make_unique<Humanoid>(*scene, assets, WoodyStyle(), glm::vec3(-1.6f, 0.0f, 3.4f), 10.0f);
+	auto jessiePtr = std::make_unique<Humanoid>(*scene, assets, JessieStyle(), glm::vec3(0.7f, 0.0f, 3.7f), -5.0f);
+	auto bullseyePtr = std::make_unique<Bullseye>(*scene, assets, glm::vec3(3.4f, 0.0f, 3.1f), 60.0f);
+	auto buzzPtr = std::make_unique<Buzz>(*scene, assets, glm::vec3(-3.2f, 0.0f, 1.6f), 35.0f);
 	auto carPtr = std::make_unique<RCCar>(*scene, assets, glm::vec3(5.5f, 0.0f, -1.8f), -90.0f);
 	woody = woodyPtr.get();
 	jessie = jessiePtr.get();
@@ -106,21 +108,26 @@ void ToyRoomApp::BuildScene()
 	for (size_t i = 0; i < rig.blocks.size(); ++i)
 		AddSelectable(rig.blocks[i]==rig.missionObstacle ? "Doorway crate" : "Wooden block " + std::to_string(i), rig.blocks[i], nullptr, 0, 0.0f, 2.4f);
 
-	// The house around the toy room, and Penny the cat who walks into it before the story begins.
+	// The house around the toy room, the story props, and Penny the cat.
 	house = BuildHouse(*scene, assets);
+	storyProps = BuildStoryProps(*scene, assets);
 	penny = std::make_unique<Cat>(*scene, assets, glm::vec3(2.0f, RoomSize::Ground, 23.4f), 90.0f);
 	pennyId = static_cast<int>(selectables.size());
 	AddSelectable("Penny", penny->Root(), penny.get(), 0, 0.5f, 3.0f);
-	for (const char* name : {"Desk", "DeskChair", "Bed", "Bookcase", "CeilingFan", "WallClock", "Window", "Poster", "Rug", "Moon"}) {
+	for (const char* name : {"Desk", "DeskChair", "Bed", "Bookcase", "CeilingFan", "WallClock", "Window", "Poster", "Rug", "Moon", "ToyChest", "Wardrobe", "BuzzRoomBed"}) {
 		if (SceneNode* node=scene->Find(name)) AddSelectable(name,node,nullptr,0,0.5f,4.0f);
 	}
 	arrival.Init(penny.get(), house);
 	hallwayPuzzle.Build(*scene, assets, house);
- story.Init(woody,jessie,bullseye,buzz,car,&physics,
-  [this]() { scene->UpdateWorld(glm::mat4(1)); Dismount(); });
-    story.Build(*scene,assets,house,penny.get(),rig.ghost);
-	// Penny uses the existing hallway-aware PhysicsWorld clamp rather than Character's room-only clamp.
+	StoryDirector::Hooks hooks;
+	hooks.mount = [this]() { scene->UpdateWorld(glm::mat4(1)); if (!jessieMounted) Mount(); };
+	hooks.dismount = [this]() { scene->UpdateWorld(glm::mat4(1)); if (jessieMounted) Dismount(); };
+	hooks.mounted = [this]() { return jessieMounted; };
+	story.Init(penny.get(), woody, jessie, bullseye, buzz, car, &physics, hooks);
+	story.Build(*scene, assets, house, storyProps);
+	// Everyone uses the house-aware PhysicsWorld bounds rather than the room-only clamp in Character.
 	penny->clampToRoom = false;
+	for (Character* c : std::vector<Character*>{woody, jessie, bullseye, buzz, car}) c->clampToRoom = false;
 	if (SceneNode* leaf = house.frontDoor ? house.frontDoor->Find("FrontDoorLeaf") : nullptr)
 		leaf->solid = true;
 
@@ -170,7 +177,7 @@ void ToyRoomApp::BuildScene()
 	physics.EnableHallway(true);
 	for (const auto& c : characters) {
 		glm::vec3 half(0.40f, 1.08f, 0.60f), offset(0, 1.08f, 0);
-		if (c.get() == bullseye) { half = {0.52f, 1.30f, 1.45f}; offset = {0, 1.30f, 0.12f}; }
+		if (c.get() == bullseye) { half = {0.8f, 1.30f, 0.8f}; offset = {0, 1.30f, 0.12f}; }
 		if (c.get() == car) { half = {0.64f, 0.65f, 0.85f}; offset = {0, 0.65f, 0}; }
 		physics.AddActor(c->Root(), half, offset);
 		Material& shadow = assets.Mat("contact-shadow", {0.012f, 0.018f, 0.03f}, 0.0f);
@@ -183,7 +190,7 @@ void ToyRoomApp::BuildScene()
 	physics.AddActor(rig.lamp, {0.55f, 0.90f, 0.75f}, {0, 0.90f, 0});
 	physics.AddActor(penny->Root(), {0.34f, 0.48f, 0.42f}, {0, 0.48f, 0});
 	physics.EnableActor(penny->Root(), false); // Arrival controls her route until Stage 1 begins.
- story.Restart(false);
+ story.Restart(true);
  environment.hauntingEnabled=false;
  scene->UpdateWorld(glm::mat4(1));
 }
@@ -231,14 +238,14 @@ void ToyRoomApp::StepScene(float dt)
 	if (arrival.Active() && input.Pressed(GLFW_KEY_Y)) arrival.Skip();
 	const bool arriving = arrival.Active();
 	if (!arriving) {
-		if (story.CurrentState() == StoryDirector::GameplayState::PUZZLE && story.enabled)
-			selectedId = pennyId;
+		if (story.enabled && !story.SelectionOpen())
+			selectedId = pennyId; // only Penny exists until the toys come alive
 		else
 			HandleSelection();
 		HandleCamera(dt);
 		Character* driver=story.enabled ? DrivenCharacter() : nullptr;
 		story.SetControlled(driver,driver==bullseye && jessieMounted ? jessie : nullptr);
-		if ((!story.enabled || (Selected() && !story.Ending())) && !hallwayPuzzle.KeypadActive()) {
+		if ((!story.enabled || (Selected() && !cinematic)) && !hallwayPuzzle.KeypadActive()) {
 			if (editMode) HandleEditMode(dt); else HandleObjectControl(dt);
 		}
 	}
@@ -250,17 +257,15 @@ void ToyRoomApp::StepScene(float dt)
  }
  if (arriving) { arrival.Update(dt); environment.hour = arrival.Hour(); }
  else {
-  if (story.CurrentState() == StoryDirector::GameplayState::PROLOGUE) {
+  if (!gameplayStarted) {
+   // The establishing shot is over: hand Penny to the player in the garden (story) or the hallway (sandbox).
+   gameplayStarted = true;
    penny->EnableArrivalMotion(false);
-   story.BeginGameplay();
    hallwayPuzzle.Begin();
-   penny->Root()->local.rotation.y = -90.0f;
+   if (story.Sandbox()) hallwayPuzzle.Open();
    penny->StopLooking();
    penny->SetPose(Cat::Pose::Walk);
-   // The arrival ends at the upper stair landing; start the physics sweep at that
-   // existing route position rather than Penny's stale bed/prologue matrix.
    previousPenny = penny->Root()->local.position;
-   house.frontDoor->local.rotation.y = 0.0f; // Penny is inside; the entrance closes behind her.
    if (house.stairDoor) house.stairDoor->local.rotation.y = 90.0f; // Keep the stair landing visible and connected.
    selectedId = pennyId;
    editMode = false;
@@ -272,9 +277,9 @@ void ToyRoomApp::StepScene(float dt)
 		// stair landing and clue route readable around Penny.
 		camera.orbitYaw = 0.0f;
 		camera.orbitPitch = 18.0f;
-		camera.orbitDistance = 4.0f;
+		camera.orbitDistance = story.Sandbox() ? 4.0f : 4.6f;
    camera.target = penny->Root()->local.position + glm::vec3(0.0f, 0.65f, 0.0f);
-   camera.position = {16.3f, 2.0f, 2.4f};
+   camera.position = story.Sandbox() ? glm::vec3(16.3f, 2.0f, 2.4f) : camera.target - penny->Forward() * 4.4f + glm::vec3(0.0f, 1.5f, 0.0f);
    if (const Selectable* chosen = Selected(); chosen && selectedId != pennyId) {
     // A manual launch can select a toy in the bedroom; start behind it instead of in the hallway.
     // Use the follow offset directly so the camera never has to pass through the actor's own body.
@@ -289,14 +294,11 @@ void ToyRoomApp::StepScene(float dt)
   }
  }
  HandlePuzzleInteraction();
- if (story.EntranceDoorLocked() && house.frontDoor)
-  house.frontDoor->local.rotation.y = 0.0f;
  hallwayPuzzle.Update(dt);
- physics.SetScriptedActors(story.enabled && story.ChaseActive());
- if (story.ChaseActive()) environment.hauntingEnabled=true;
- if (story.Ending()) { environment.hauntingEnabled=false; environment.lampPower=false; environment.lampManual=true; }
+ // Followers ignore each other's bodies (they keep formation slots) but still collide with the house.
+ physics.SetScriptedActors(story.FollowersActive());
  const bool userPaused=environment.paused;
- if (story.enabled) environment.paused=true;
+ if (story.enabled && !story.Sandbox()) { environment.paused=true; if (!arriving) environment.hour=story.Hour(); }
  environment.Update(dt,static_cast<float>(time),selectedId==lampId,selectedId==ballId,selectedId==ghostId);
  environment.paused=userPaused;
  if (!userPaused && environment.Rig().fanRotor) {
@@ -305,43 +307,42 @@ void ToyRoomApp::StepScene(float dt)
  }
 
     if (!arriving && !userPaused && launch.demo) DemoMission(dt);
-    if (!arriving && !userPaused) story.Update(dt,jessieMounted);
-    if (story.ChaseActive()) {
-        environment.ghostVisibility=0.7f;
-        environment.Rig().ghostMaterial->opacity=0.40f;
-        environment.Rig().ghost->visible=true;
-    }
+    if (!arriving && !userPaused) story.Update(dt);
     scene->UpdateWorld(glm::mat4(1));
 	if (!arriving) // during the arrival the toys keep the rest pose the story's restart gave them
 		for (auto& c : characters)
 			c->Animate(dt, static_cast<float>(time));
 	// Penny uses the existing character controller once selected; otherwise she watches the active toy from her current position.
 	if (!arriving) {
-		if (DrivenCharacter() == penny.get()) {
-			penny->SetPose(Cat::Pose::Walk);
+		if (DrivenCharacter() == penny.get() || penny->IsMoving()) {
+			penny->SetPose(Cat::Pose::Walk); // driven by the player, or following the toys
 			penny->StopLooking();
 		} else {
 			penny->SetPose(Cat::Pose::Sit);
 			const Character* focus = buzz->LaserOn() ? static_cast<const Character*>(buzz) : jessieMounted ? static_cast<const Character*>(bullseye) : woody;
-			penny->LookAt(focus->Root()->WorldPosition() + glm::vec3(0.0f, 1.0f, 0.0f));
+			if (focus->Root()->visible) penny->LookAt(focus->Root()->WorldPosition() + glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 	}
 	penny->Animate(dt, static_cast<float>(time));
-	house.exterior->visible = arrival.ExteriorVisible() || story.DoorBroken();
- house.interior->visible = arrival.InteriorVisible() || story.CurrentState()!=StoryDirector::GameplayState::PROLOGUE;
+	house.exterior->visible = arrival.ExteriorVisible() || (story.ExteriorVisible() && !story.Sandbox());
+	house.interior->visible = true;
 	house.outdoorSun->local.position = environment.OutdoorSunPosition();
 	house.outdoorSun->visible = environment.SunHeight() > -0.08f;
-	physics.EnableActor(jessie->Root(), !jessieMounted);
+	for (const auto& c : characters) // toys still hidden in the chest or wardrobe are not bodies yet
+		physics.EnableActor(c->Root(), !story.Hidden(c.get()) && !(c.get() == jessie && jessieMounted));
 	physics.EnableActor(penny->Root(), !arriving);
-	physics.EnableActor(environment.Rig().ghost, environment.Rig().ghost->visible && !story.ChaseActive());
+	physics.EnableActor(environment.Rig().ghost, environment.Rig().ghost->visible);
 	const bool buzzAirborne = buzz->Root()->local.position.y > PhysicsWorld::FloorHeight(buzz->Root()->local.position)+0.06f;
     physics.SetActorGrounded(buzz->Root(),false);
 	physics.SetActorShape(buzz->Root(), {buzzAirborne ? 0.92f : 0.42f, buzzAirborne ? 0.60f : 1.08f, buzzAirborne ? 1.0f : 0.60f}, {0, buzzAirborne ? 0.60f : 1.08f, 0});
-	physics.SetActorShape(bullseye->Root(), {jessieMounted ? 0.64f : 0.52f, jessieMounted ? 1.75f : 1.30f, 1.45f}, {0, jessieMounted ? 1.75f : 1.30f, 0.12f});
+	// A square footprint: its rotated bounds stay narrow enough for Bullseye to turn in the 3-unit
+	// corridor and pass the bedroom doorway (a 2.9-long box could not turn there at all).
+	physics.SetActorShape(bullseye->Root(), {0.8f, jessieMounted ? 1.75f : 1.30f, 0.8f}, {0, jessieMounted ? 1.75f : 1.30f, 0.12f});
 	for (size_t i = 0; i < characters.size(); ++i) {
 		Character* c = characters[i].get();
-		if (!c->clampToRoom && c==jessie && jessieMounted) continue;
-		if (c == jessie && c->InTransition()) continue; // mounting changes parent space; preserve the hop off the saddle
+		if (c == jessie && jessieMounted) continue;
+		// Mounting hops, climbing out of the chest and Buzz's first flight are scripted transitions.
+		if (c->InTransition() || story.Hidden(c) || story.Scripted(c)) continue;
 		const glm::vec3 wanted = c->Root()->local.position;
 		physics.ConstrainActor(c->Root(), previousPositions[i]);
 		if (c == DrivenCharacter() && glm::distance(wanted, c->Root()->local.position) > 0.04f) {
@@ -356,7 +357,7 @@ void ToyRoomApp::StepScene(float dt)
 		}
 	}
 	physics.ConstrainActor(environment.Rig().ball, previousBall);
-	if (!story.ChaseActive()) physics.ConstrainActor(environment.Rig().ghost, previousGhost);
+	physics.ConstrainActor(environment.Rig().ghost, previousGhost);
 	physics.ConstrainActor(environment.Rig().lamp, previousLamp);
 	physics.Update(dt);
 	for (size_t i = 0; i < contactShadows.size(); ++i) {
@@ -365,7 +366,7 @@ void ToyRoomApp::StepScene(float dt)
 		// Contact cues belong on the current tread or floor, not the upstairs y=0 plane.
 		// An airborne or elevated actor has no contact with this support surface.
 		contactShadows[i]->local.position = {p.x, support + 0.012f, p.z};
-		contactShadows[i]->visible = settings.lighting && settings.shadingEnabled && !settings.rayTracing &&
+		contactShadows[i]->visible = characters[i]->Root()->visible && settings.lighting && settings.shadingEnabled && !settings.rayTracing &&
 			!(characters[i].get() == jessie && jessieMounted) && std::abs(p.y - support) < 0.06f;
 	}
 
@@ -375,13 +376,6 @@ void ToyRoomApp::StepScene(float dt)
 		buzz->SetLaserLength(physics.FireLaser(buzz->LaserTip(), buzz->LaserDirection(), dt, buzz->Root()));
 		scene->UpdateWorld(glm::mat4(1.0f));
 	}
- if (story.enabled && storyCamera && !arriving && !story.Ending()) {
-  camera.mode=CameraMode::Free;
-  const glm::vec3 shot(-4.5f,4.6f,7.8f), focus(4,1.4f,2.5f);
-  const float k=std::min(1.0f,dt);
-  camera.position=glm::mix(camera.position,shot,k);
-  camera.target=glm::mix(camera.target,focus,k); camera.LookAt(camera.target);
- }
 	if (arriving) {
 		// The arrival camera moves freely through the garden and the house; the room's camera
 		// constraints apply again at the upper hallway.
@@ -404,18 +398,20 @@ void ToyRoomApp::StepScene(float dt)
 		}
 		else camera.position = physics.MoveCamera(previousCamera, camera.position);
 	}
-    if (story.Ending()) {
-        if (endingTime==0) storyCamera=true;
-        endingTime+=dt;
-        if (storyCamera) {
-        camera.mode=CameraMode::Free;
-        const float k=1.0f-std::exp(-dt*1.5f);
-        camera.position=glm::mix(camera.position,glm::vec3(3,5.5f,30),k);
-        camera.LookAt({9,RoomSize::Ground+2,12});
-        }
-        environment.Rig().ghost->visible=false;
-        environment.ghostVisibility=0;
-    } else endingTime=0;
+	// Story shots (the morning pull-back over the house) take over the camera, then hand it back.
+	glm::vec3 shotPosition, shotTarget;
+	if (!arriving && story.enabled && story.Cinematic(shotPosition, shotTarget)) {
+		if (!cinematic) { cinematic = true; cinematicTarget = camera.target; }
+		camera.mode = CameraMode::Free;
+		const float k = 1.0f - std::exp(-dt * 0.9f);
+		camera.position = glm::mix(camera.position, shotPosition, k);
+		cinematicTarget = glm::mix(cinematicTarget, shotTarget, k);
+		camera.target = cinematicTarget;
+		camera.LookAt(cinematicTarget);
+	} else if (cinematic) {
+		cinematic = false;
+		camera.mode = CameraMode::Follow;
+	}
 	UpdateLights();
 
 	// Console feedback only when the driven character starts / stops.
@@ -526,10 +522,11 @@ void ToyRoomApp::HandleGlobalKeys()
  }
 	if (input.Pressed(GLFW_KEY_N)) {
   if (input.ShiftDown()) {
-   story.Restart(jessieMounted); arrival.Restart(); hallwayPuzzle.Reset();
+   // Replay the whole story from the street, whatever mode the session started in.
+   story.Restart(true); arrival.Restart(); hallwayPuzzle.Reset();
    for (int id : {ballId,lampId,ghostId}) selectables[static_cast<size_t>(id)].node->local=selectables[static_cast<size_t>(id)].initial;
    scene->UpdateWorld(glm::mat4(1)); camera.Reset(); missionRestarted=true;
-   demoPhase=demoLeg=0;demoWait=endingTime=0;
+   demoPhase=demoLeg=0;demoWait=0; gameplayStarted=false; launch.manual=false; cinematic=false;
    environment.lampPower=true;environment.lampManual=false;environment.hauntingEnabled=false;environment.paused=false;
   }
   else if (story.CurrentState() == StoryDirector::GameplayState::PUZZLE && story.enabled) {
@@ -539,8 +536,7 @@ void ToyRoomApp::HandleGlobalKeys()
   else { story.enabled=!story.enabled; if (!story.enabled) story.Pause(); }
   if (story.enabled) {
    editMode=false;
-   storyCamera=story.CurrentState()==StoryDirector::GameplayState::PROLOGUE;
-   selectedId=story.CurrentState()==StoryDirector::GameplayState::PUZZLE ? pennyId : pennyId;
+   selectedId=pennyId;
   }
   statusText=story.enabled ? "Gameplay progression active" : "Manual control / N resumes gameplay"; statusTimer=3;
   std::cout<<statusText<<"\n";
@@ -569,20 +565,28 @@ void ToyRoomApp::HandleGlobalKeys()
 
 void ToyRoomApp::HandlePuzzleInteraction()
 {
-    if (!input.Pressed(GLFW_KEY_ENTER) || arrival.Active() || hallwayPuzzle.KeypadActive() || !story.enabled) return;
-    if (story.PuzzleAvailable() && DrivenCharacter()==penny.get()) {
+    if (arrival.Active() || hallwayPuzzle.KeypadActive() || !story.enabled) return;
+    // L fires Buzz's laser from the story layer while he waits in position and the player drives
+    // someone without an L action of their own (Penny, Woody, Jessie).
+    Character* driven = DrivenCharacter();
+    if (input.Pressed(GLFW_KEY_L) && (!driven || !driven->SpecialName()) && story.RequestLaser()) {
+        statusText = "Buzz fires his laser at the door!"; statusTimer = 4;
+        return;
+    }
+    if (!input.Pressed(GLFW_KEY_ENTER)) return;
+    if (story.PuzzleAvailable() && driven==penny.get()) {
         statusText=hallwayPuzzle.Interact(penny->Root()->WorldPosition());
         if (hallwayPuzzle.KeypadActive()) penny->Stop();
-    } else statusText=story.Interact(DrivenCharacter(),jessieMounted);
+    } else statusText=story.Interact(driven);
     statusTimer=7;
     if (!statusText.empty()) std::cout<<"INTERACT "<<statusText<<"\n";
 }
 
 void ToyRoomApp::HandleSelection()
 {
-	if (story.CurrentState() == StoryDirector::GameplayState::PUZZLE && story.enabled) {
+	if (story.enabled && !story.SelectionOpen()) {
 		selectedId = pennyId;
-		return; // Other-character selection becomes available again after the puzzle state.
+		return; // the toys become selectable once they are alive
 	}
 	if (!hallwayPuzzle.KeypadActive()) {
         if (input.Pressed(GLFW_KEY_0) && input.CtrlDown()) Select(pennyId);
@@ -633,6 +637,11 @@ void ToyRoomApp::Select(int id)
 {
 	if (id == selectedId)
 		return;
+	if (id >= 0 && story.enabled && !story.Available(selectables[static_cast<size_t>(id)].character)) {
+		statusText = selectables[static_cast<size_t>(id)].name + " is still trapped"; statusTimer = 3;
+		std::cout << statusText << "\n";
+		return;
+	}
 	if (Character* c = DrivenCharacter())
 		c->Stop();
 	selectedId = id;
@@ -842,8 +851,8 @@ void ToyRoomApp::HandleCamera(float dt)
 	case CameraMode::Orbit: {
 		if (panning) cameraPan += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance * zoomSpeed;
 		camera.target = glm::mix(camera.target, focus + cameraPan, std::min(1.0f, dt * 6.0f));
-		camera.target = glm::clamp(camera.target, glm::vec3(-RoomSize::HalfWidth + 0.3f, 0.3f, -RoomSize::HalfDepth + 0.3f),
-			glm::vec3(RoomSize::HallEnd - 0.3f, RoomSize::Height - 0.3f, RoomSize::HalfDepth - 0.3f));
+		camera.target = glm::clamp(camera.target, glm::vec3(-22.0f, RoomSize::Ground + 0.3f, -RoomSize::HalfDepth + 0.3f),
+			glm::vec3(30.0f, RoomSize::Height - 0.3f, 34.0f)); // the whole house and its garden
 		if (rotating) {
 			camera.orbitYaw -= md.x * 0.3f * zoomSpeed;
 			camera.orbitPitch += md.y * 0.3f * zoomSpeed;
@@ -1100,10 +1109,9 @@ void ToyRoomApp::Dismount()
 	const float h = glm::radians(bullseye->Heading());
 	const glm::vec3 left(std::cos(h), 0.0f, -std::sin(h));
 	glm::vec3 target = bullseye->Root()->WorldPosition() + left * 1.1f;
-	target.y = PhysicsWorld::FloorHeight(target);
-    target=story.DismountTarget(target,jessieMounted);
+	target.y = PhysicsWorld::FloorHeight({target.x, bullseye->Root()->WorldPosition().y, target.z});
 	jessie->SetSeated(false);
-	jessie->clampToRoom = true;
+	jessie->clampToRoom = false;
 	jessie->StartTransition(target, bullseye->Heading(), 0.6f);
 	jessieMounted = false;
 	physics.EnableActor(jessie->Root(), true);
@@ -1145,9 +1153,38 @@ void ToyRoomApp::UpdateLights()
 	lights[LaserGlow].position = buzz->LaserTip();
 	lights[LaserGlow].intensity = 1.5f;
 
-	lights[GhostGlow].position = rig.ghost->WorldPosition();
-	lights[GhostGlow].intensity = 0.8f * environment.ghostVisibility;
-	lights[GhostGlow].enabled = environment.ghostVisibility > 0.02f;
+	// The house light belongs to the space the camera is in: the upstairs hall's night light, the
+	// ground-floor corridor lamp, the nightstand lamp in Buzz's room, or the porch lantern outside.
+	Light& area = lights[HallGlow];
+	const glm::vec3 eye = camera.position;
+	area.enabled = true;
+	if (eye.z > RoomSize::HouseFront) {
+		area.name = "Porch lantern"; area.position = {10.5f, RoomSize::Ground + 2.6f, RoomSize::HouseFront + 0.5f};
+		area.color = {1.0f, 0.85f, 0.6f}; area.intensity = 0.9f * environment.Night(); area.linear = 0.08f; area.quadratic = 0.02f;
+	} else if (eye.y < RoomSize::Slab && eye.x < RoomSize::CorridorLeft) {
+		area.name = "Bedroom lamp"; area.position = storyProps.nightLamp;
+		area.color = {1.0f, 0.78f, 0.50f}; area.intensity = 1.35f; area.linear = 0.10f; area.quadratic = 0.04f;
+	} else if (eye.y < RoomSize::Slab) {
+		area.name = "Corridor lamp"; area.position = {12.0f, RoomSize::Slab - 0.5f, std::clamp(eye.z, -7.0f, 7.0f)};
+		area.color = {1.0f, 0.90f, 0.75f}; area.intensity = 0.9f; area.linear = 0.10f; area.quadratic = 0.03f;
+	} else {
+		area.name = "Hall night light"; area.position = {13.5f, 3.7f, 4.0f};
+		area.color = {0.75f, 0.80f, 1.0f}; area.intensity = 0.85f; area.linear = 0.10f; area.quadratic = 0.03f;
+	}
+
+	// The ghost's glow when it haunts; otherwise the story's pulsing light (chest button, wardrobe).
+	glm::vec3 glowPosition, glowColor; float glowIntensity = 0.0f;
+	if (environment.ghostVisibility > 0.02f) {
+		lights[GhostGlow].position = rig.ghost->WorldPosition();
+		lights[GhostGlow].color = {0.5f, 0.7f, 1.0f};
+		lights[GhostGlow].intensity = 0.8f * environment.ghostVisibility;
+		lights[GhostGlow].enabled = true;
+	} else if (story.enabled && story.Glow(glowPosition, glowColor, glowIntensity)) {
+		lights[GhostGlow].position = glowPosition;
+		lights[GhostGlow].color = glowColor;
+		lights[GhostGlow].intensity = glowIntensity;
+		lights[GhostGlow].enabled = true;
+	} else lights[GhostGlow].enabled = false;
 	if (launch.lightOnly >= 0)
 		for (size_t i=0;i<lights.size();++i) lights[i].enabled = static_cast<int>(i)==launch.lightOnly;
 }
@@ -1203,10 +1240,10 @@ void ToyRoomApp::DrawHud()
 		if (editMode) info.controls = std::string("T ") + EditOpName(editOp) + " / J-L X / U-O Y / I-K Z / Shift faster / Backspace reset";
 	}
  const auto gameplayState = story.CurrentState();
- if (story.enabled && gameplayState != StoryDirector::GameplayState::PROLOGUE) {
+ if (story.enabled && !story.Sandbox()) {
   info.selection="STAGE "+std::to_string(static_cast<int>(gameplayState))+" / "; info.description=story.Objective();
   if (const auto* actor=Selected()) info.selection+=actor->name;
-  if (gameplayState!=StoryDirector::GameplayState::PUZZLE) info.controls+=" / Enter interact / 0 release / N manual";
+  if (gameplayState!=StoryDirector::GameplayState::PUZZLE) info.controls+=story.BuzzReady() ? " / L fire Buzz's laser / Enter interact" : " / Enter interact / 0 release / N manual";
   if (gameplayState == StoryDirector::GameplayState::PUZZLE) {
    info.puzzleStage=true;
    info.puzzleCode=hallwayPuzzle.CodeDisplay();
@@ -1220,12 +1257,12 @@ void ToyRoomApp::DrawHud()
    if (statusTimer > 0.0f && !statusText.empty()) info.status += " | " + statusText;
   }
  }
- if (story.enabled && story.Ending()) { info.selection="THE TOYS ARE SAFE"; info.description="YOU ESCAPED / Shift+N replay"; info.controls="Camera: C modes / arrows / right-drag / F inspect"; }
+ if (story.enabled && cinematic) { info.selection="THE TOYS ARE SAFE"; info.description="Morning. Everyone escaped the house."; info.controls="The story continues: free exploration next"; }
  info.story=story.enabled;
  info.puzzleNotice=statusTimer>0.0f && statusText=="Correct";
  if (info.puzzleNotice) info.status=statusTimer>0.0f ? statusText : hallwayPuzzle.Status();
  if (arrival.Active()) {
-  info.story=true; info.arrival=true; info.selection="Penny enters the haunted house"; info.description=arrival.Caption();
+  info.story=true; info.arrival=true; info.selection="Night falls on the abandoned house"; info.description=arrival.Caption();
  }
  hud.Render(width,height,info);
 }
@@ -1240,7 +1277,8 @@ void ToyRoomApp::OnRender()
 	frame.lights = &lights;
 	frame.ambientLight = environment.AmbientLight();
 	frame.clearColor = environment.ClearColor();
-	frame.fogDensity=house.exterior->visible && environment.IsNight() ? 0.010f : story.ChaseActive() ? 0.008f : 0.0f;
+	// Night fog over the garden thins away as the morning comes.
+	frame.fogDensity=house.exterior->visible ? 0.011f * environment.Night() : 0.0f;
 	frame.selectedOwner = selectedId;
 	frame.time = static_cast<float>(time);
 
@@ -1400,6 +1438,8 @@ void ToyRoomApp::ApplyLaunchOptions()
 	if (launch.benchmark > 0) glfwSwapInterval(0); // measure the real frame cost, not the monitor rate
 	const bool scripted = !launch.capture.empty() || !launch.record.empty();
  if (scripted) { glfwSwapInterval(0); glfwSetWindowAttrib(window,GLFW_RESIZABLE,GLFW_FALSE); }
+ // Manual mode and scripted captures without --story use the sandbox: every toy out, every door open.
+ if (launch.manual || (scripted && !launch.story)) story.Restart(false);
  if (launch.noIntro || (scripted && !launch.intro)) {
     arrival.Skip();
     const auto savedStep=launch.storyStep,savedDrive=launch.scriptedDrive,savedTurn=launch.scriptedTurn,savedFly=launch.scriptedFly;
@@ -1510,7 +1550,7 @@ void ToyRoomApp::PrintHelp() const
 {
 	std::cout <<
 		"\n====================== HAUNTED TOY ROOM ======================\n"
-		"MISSION     Ctrl+0 Penny / Enter inspect, switch or final action / code 257 / R ride\n"
+		"MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser\n"
 		"SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost\n"
 		"            0 nothing   |  left-click any object to select it\n"
 		"LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual\n"
@@ -1532,7 +1572,8 @@ void ToyRoomApp::PrintHelp() const
 		"            V list parts of selected object, Shift+V dump vertex/index tables\n"
 		"WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay\n"
 		"            H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit\n"
-		"PROLOGUE    Penny arrives at the house; Y skips arrival, Shift+N replays the prologue\n"
+		"STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> morning\n"
+		"            Y skips the opening shot, Shift+N replays the story from the street\n"
 		"==========================================================\n\n";
 }
 
@@ -1650,23 +1691,33 @@ void ToyRoomApp::RecordFrame()
 
 void ToyRoomApp::DemoMission(float dt)
 {
-    // Deterministic rehearsal uses the same movement, interactions and physics as play.
+    // Deterministic rehearsal of the whole story. It drives only Penny, with the same movement,
+    // Enter interactions, keypad and L action as a player; the story layer moves everyone else.
     // It never sets actor positions or advances states without their real conditions.
+    using namespace RoomSize;
     demoWait+=dt;
     auto select=[&](int id) { selectedId=id; story.SetControlled(DrivenCharacter(),jessieMounted ? jessie : nullptr); physics.SetIndependentActor(DrivenCharacter()->Root()); };
     auto next=[&]() { ++demoPhase;demoLeg=0;demoWait=0;std::cout<<"DEMO phase "<<demoPhase<<" time "<<time<<"\n"; };
     auto move=[&](Character* actor,std::initializer_list<glm::vec3> goals) {
         const auto points=goals;
         if (demoLeg>=static_cast<int>(points.size())) return true;
-        if (actor->FollowWaypoint(*(points.begin()+demoLeg),dt,2.5f)) ++demoLeg;
+        const glm::vec3 goal=*(points.begin()+demoLeg), at=actor->Root()->local.position;
+        if (actor->FollowWaypoint(goal,dt,2.5f) || glm::length(glm::vec2(goal.x-at.x,goal.z-at.z))<0.3f) ++demoLeg;
         return demoLeg>=static_cast<int>(points.size());
     };
+    auto interact=[&]() { statusText=story.Interact(penny.get()); statusTimer=4; if (!statusText.empty()) std::cout<<"INTERACT "<<statusText<<"\n"; };
+    Cat* cat=penny.get();
+    const float porch=Ground+0.45f;
     switch (demoPhase) {
-    case 0: select(pennyId); if (move(penny.get(),{{15.0f,0,4.4f}})) { hallwayPuzzle.Interact(penny->Root()->WorldPosition());next(); } break;
-    case 1: if (move(penny.get(),{{13.3f,0,2.5f}})) { hallwayPuzzle.Interact(penny->Root()->WorldPosition());next(); } break;
-    case 2: if (move(penny.get(),{{11.8f,0,3.1f}})) { hallwayPuzzle.Interact(penny->Root()->WorldPosition());next(); } break;
-    case 3: if (move(penny.get(),{{12.3f,0,5.5f}})) {
-        hallwayPuzzle.Interact(penny->Root()->WorldPosition());
+    // 1. Night outside: along the pavement, through the gate, up the porch and in at the open door.
+    case 0: select(pennyId); if (move(cat,{{11.4f,Ground,23.2f},{12,Ground,20.6f},{12,Ground,14.6f},{12,porch,12.2f},{12,porch,9.9f},{12,Ground,7.4f}})) next(); break;
+    case 1: if (story.CurrentState()==StoryDirector::GameplayState::PUZZLE) next(); break;
+    // 2. Upstairs: the corridor, the landing and the flight of stairs into the hallway; three clues.
+    case 2: if (move(cat,{{12,Ground,-7.6f},{15,Ground,-8.0f},{15,Ground,-7.2f},{15,0,1.6f},{15,0,4.4f}})) { hallwayPuzzle.Interact(cat->Root()->WorldPosition());next(); } break;
+    case 3: if (move(cat,{{13.3f,0,2.5f}})) { hallwayPuzzle.Interact(cat->Root()->WorldPosition());next(); } break;
+    case 4: if (move(cat,{{11.8f,0,3.1f}})) { hallwayPuzzle.Interact(cat->Root()->WorldPosition());next(); } break;
+    case 5: if (move(cat,{{12.3f,0,5.5f}})) {
+        hallwayPuzzle.Interact(cat->Root()->WorldPosition());
         if (!hallwayPuzzle.KeypadActive()) break;
         for(int digit:{0,0,0}) hallwayPuzzle.AddDigit(digit);
         if (hallwayPuzzle.Submit()!=PuzzleCode::Result::Incorrect) throw std::runtime_error("Wrong code unlocked the door");
@@ -1674,17 +1725,24 @@ void ToyRoomApp::DemoMission(float dt)
         if (hallwayPuzzle.Submit()!=PuzzleCode::Result::Correct) throw std::runtime_error("Valid puzzle failed");
         story.Advance(StoryDirector::Transition::PUZZLE_SOLVED);next();
     } break;
-    case 4: if (move(penny.get(),{{11,0,4},{8,0,4},{7.1f,0,2.7f}})) { statusText=story.Interact(penny.get(),false);next(); } break;
-    case 5: if (move(penny.get(),{{7.1f,0,5.8f}})) { statusText=story.Interact(penny.get(),false);next(); } break;
-    case 6: select(1); if (move(jessie,{{0.35f,0,1.3f}})) { ToggleMount();if(jessieMounted)next(); } break;
-    case 7: select(1); if (demoWait>1 && move(bullseye,{{0.75f,0,4.5f}})) { Dismount();next(); } break;
-    case 8: if (demoWait>0.8f) { statusText=story.Interact(jessie,false);if(story.BuzzRescueAvailable())next(); } break;
-    case 9: select(pennyId);if (move(penny.get(),{{8,0,4},{8,0,0},{3,0,0},{3.0f,0,-2.5f}})) { statusText=story.Interact(penny.get(),false);if(story.ChaseActive())next(); } break;
-    case 10: if (move(penny.get(),{{12,0,4},{15,0,2},{15,RoomSize::Ground,-7.6f}}))next();break;
-    case 11: if (move(penny.get(),{{12,RoomSize::Ground,-8},{12,RoomSize::Ground,7.2f}})) { statusText=story.Interact(penny.get(),false);next(); }break;
-    case 12: if(story.DoorBroken())next();break;
-    case 13: if(move(penny.get(),{{14,RoomSize::Ground,12},{12,RoomSize::Ground,15}}))next();break;
-    case 14: if(story.Ending())next();break;
+    // 3. The toy chest: press the red button, then watch the toys come alive.
+    case 6: if (demoWait>0.6f && move(cat,{{11,0,4},{8,0,4},{3.4f,0,4.9f},{1.4f,0,3.6f}})) { interact();next(); } break;
+    case 7: if (story.CurrentState()==StoryDirector::GameplayState::BUZZ_ROOM) next(); break;
+    // 4-5. Leave together, down the stairs, and open the ordinary door on the corridor's left.
+    case 8: if (move(cat,{{3.4f,0,4.9f},{8,0,4},{12,0,4},{15,0,2.6f},{15,0,0.8f},{15,Ground,-7.4f},{15,Ground,-8.1f},{12,Ground,-7.6f},{11.9f,Ground,-5.8f}})) { interact();next(); } break;
+    case 9: if (story.CurrentState()==StoryDirector::GameplayState::WARDROBE && demoWait>1.2f) next(); break;
+    // 6. The wardrobe: too high for Penny. Jessie and Bullseye do the rest.
+    case 10: if (move(cat,{{9.4f,Ground,-6.1f},{6.4f,Ground,-7.4f},{5.6f,Ground,-7.6f}})) { interact();next(); } break;
+    case 11: if (story.CurrentState()==StoryDirector::GameplayState::FINAL_ESCAPE) next(); break;
+    // 7-8. Back to the entrance hall. The main door is locked.
+    case 12: if (demoWait>1.5f && move(cat,{{9.4f,Ground,-6.0f},{12,Ground,-5.6f},{12,Ground,0},{12,Ground,7.6f}})) { interact();next(); } break;
+    case 13: if (move(cat,{{12.9f,Ground,6.0f}})) next(); break;
+    // 9. Buzz flies into position; the player's L fires the laser and the door breaks apart.
+    case 14: if (story.BuzzReady() && demoWait>1.0f) { if (story.RequestLaser()) std::cout<<"DEMO L laser\n"; next(); } break;
+    case 15: if (story.DoorBroken() && demoWait>1.2f) next(); break;
+    // 10. Outside into the morning; the camera pulls back, then free exploration begins.
+    case 16: if (move(cat,{{12,Ground,8.4f},{12,porch,10.4f},{12,porch,12.0f},{12,Ground,14.2f},{12.8f,Ground,16.2f}})) next(); break;
+    case 17: if (story.CurrentState()==StoryDirector::GameplayState::FREE_EXPLORE) next(); break;
     default: break;
     }
 }

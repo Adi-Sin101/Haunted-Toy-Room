@@ -235,6 +235,31 @@ void CheckConnectedHouse()
     Require(cat->local.position.y<RoomSize::Slab,"ground-floor overlap recovery cannot move an actor through the upper slab");
 }
 }
+void CheckBuzzRoom()
+{
+    // Buzz's bedroom: reachable only through its doorway in the corridor's solid divider.
+    using namespace RoomSize;
+    SceneNode house("BuzzRoomHouse");
+    Mesh cube("DividerMesh",PrimitiveType::Cube,Primitives::Cube());
+    auto wall=[&](float z0,float z1){ SceneNode* n=house.AddShape("Divider",&cube,nullptr,{CorridorLeft-0.03f,(Ground+Slab)*0.5f,(z0+z1)*0.5f},{0.08f,Slab-Ground,z1-z0}); n->solid=true; };
+    wall(-9.05f,BuzzDoorLow); wall(BuzzDoorHigh,BuzzFront);
+    SceneNode* walker=house.AddChild("Walker");
+    house.UpdateWorld(glm::mat4(1));
+    PhysicsWorld world; world.Init(house,{}); world.EnableHouse(true); world.EnableHallway(true);
+    world.AddActor(walker,{0.35f,0.5f,0.4f},{0,0.5f,0});
+    const glm::vec3 door{12.0f,Ground+0.02f,(BuzzDoorLow+BuzzDoorHigh)*0.5f};
+    walker->local.position=door;
+    for (int step=0;step<80;++step) { const auto previous=walker->local.position; walker->local.position.x-=0.06f; world.ConstrainActor(walker,previous); }
+    Require(walker->local.position.x<CorridorLeft-0.6f,"an actor walks from the corridor through the open doorway into Buzz's room");
+    walker->local.position={12.0f,Ground+0.02f,-3.0f};
+    for (int step=0;step<80;++step) { const auto previous=walker->local.position; walker->local.position.x-=0.06f; world.ConstrainActor(walker,previous); }
+    Require(walker->local.position.x>CorridorLeft,"the solid divider beside the doorway keeps the corridor closed");
+    walker->local.position={4.0f,Ground+0.02f,-5.0f};
+    for (int step=0;step<80;++step) { const auto previous=walker->local.position; walker->local.position.z+=0.08f; world.ConstrainActor(walker,previous); }
+    Require(walker->local.position.z<BuzzFront,"Buzz's room keeps an actor inside its front wall");
+    Require(std::abs(PhysicsWorld::FloorHeight({12,Ground,11})-(Ground+0.45f))<1e-5f && std::abs(PhysicsWorld::FloorHeight({12,Ground,13.5f})-(Ground+0.15f))<1e-5f,
+        "porch deck and its steps support characters walking in from the garden");
+}
 int main()
 {
 	if (!glfwInit()) return 1;
@@ -246,7 +271,7 @@ int main()
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL()) { glfwDestroyWindow(window); glfwTerminate(); return 1; }
 	int result = 0;
-	try { Run(); CheckConnectedHouse();
+	try { Run(); CheckConnectedHouse(); CheckBuzzRoom();
 std::cout << checks << " physics checks passed.\n"; }
 	catch (const std::exception& e) { std::cerr << "FAIL " << e.what() << '\n'; result = 1; }
 	glfwDestroyWindow(window); glfwTerminate(); return result;

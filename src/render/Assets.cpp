@@ -54,6 +54,11 @@ void Assets::Load()
 	AddTexture("pickets", PT::Pickets(), PicketSlot);
 	AddTexture("window-pane", PT::WindowPane(), WindowSlot);
 	AddTexture("flower-bed", PT::FlowerBed(), FlowerSlot);
+	AddTexture("chest-paint", PT::ChestPaint(), ChestSlot);
+	AddTexture("star-wallpaper", PT::StarWallpaper(), StarWallSlot);
+	AddTexture("star-quilt", PT::StarQuilt(), QuiltSlot);
+	AddTexture("star-decal", PT::StarDecal(), StarDecalSlot);
+	AddTexture("football", PT::Soccer(), SoccerSlot);
 
 	// The poster is a real image file read by our own BMP loader.
 	const std::string posterPath = Paths::resolve("assets/textures/poster.bmp").string();

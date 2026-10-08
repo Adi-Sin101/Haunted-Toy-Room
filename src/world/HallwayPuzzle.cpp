@@ -13,7 +13,7 @@
 namespace {
 constexpr glm::vec3 TrainPosition{15.7f, 0.0f, 5.85f};
 constexpr glm::vec3 BlocksPosition{11.4f, 0.0f, 3.0f};
-constexpr glm::vec3 ClockPosition{13.3f, 1.95f, 1.15f};
+constexpr glm::vec3 ClockPosition{13.3f, 2.75f, 1.12f};
 constexpr glm::vec3 KeypadPosition{12.3f, 1.45f, 6.82f};
 
 Material& Wood(Assets& assets, const char* name, glm::vec3 color)
@@ -132,10 +132,13 @@ void BuildClock(SceneNode& world, Assets& assets)
 	face.ks = 0.1f;
     face.uvScale={1,-1};
 	// The cylinder provides a real circular silhouette and its planar cap maps the provided square image 1:1.
-	clock->AddShape("ClockBlueCircularCase", &assets.Cylinder(), &clockCase, {0, 0, 0}, {1.50f, 0.18f, 1.50f});
-	auto* print=world.AddChild("ClueClockPrint");print->local.position=ClockPosition+glm::vec3(0,0,0.12f);
-    print->AddShape("ClockToyStoryPrintedFace",&assets.Cylinder(),&face,{0,0,0},{1.27f,0.012f,1.27f},{90,0,0});
-    SevenSegment(*print,assets,clockCase,5,0,-0.95f,0.7f,0.02f);
+	clock->AddShape("ClockBlueCircularCase", &assets.Cylinder(), &clockCase, {0, 0, 0}, {0.80f, 0.12f, 0.80f});
+	auto* print=world.AddChild("ClueClockPrint");print->local.position=ClockPosition+glm::vec3(0,0,0.065f);
+    print->AddShape("ClockToyStoryPrintedFace",&assets.Cylinder(),&face,{0,0,0},{0.68f,0.012f,0.68f},{90,0,0});
+    // The clue digit is painted on a small brass plate under the clock.
+    Material& plate=assets.Mat("clock-clue-plate",{0.72f,0.56f,0.24f},0.6f,48.0f);
+    print->AddShape("ClueDigitPlate",&assets.Cube(),&plate,{0,-0.62f,-0.05f},{0.30f,0.34f,0.02f});
+    SevenSegment(*print,assets,clockCase,5,0,-0.62f,0.75f,-0.03f);
 }
 
 void BuildKeypad(SceneNode& world, Assets& assets)

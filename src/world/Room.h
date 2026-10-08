@@ -56,7 +56,11 @@ constexpr float StairLeft = 13.5f, StairRight = 16.5f;
 constexpr float StairBottomZ = -7.0f, StairTopZ = 1.0f;  // the flight rises 4.5 over a run of 8
 constexpr float HouseBack = -9.35f, HouseFront = 9.35f;  // outer faces of the exterior walls
 constexpr float HouseLeft = -10.45f, HouseRight = 17.45f;
-constexpr float FrontDoorLeft = 11.2f, FrontDoorRight = 12.8f, FrontDoorHeight = 3.0f;
+constexpr float FrontDoorLeft = 10.9f, FrontDoorRight = 13.1f, FrontDoorHeight = 3.6f;
+// Buzz's bedroom lies under the Toy Room, beside the corridor: x in [BuzzLeft, CorridorLeft],
+// z in [-9.05, BuzzFront]. Its door is an opening in the corridor's left wall.
+constexpr float BuzzLeft = 1.5f, BuzzFront = -1.5f;
+constexpr float BuzzDoorLow = -6.9f, BuzzDoorHigh = -4.7f, BuzzDoorHeight = 3.6f;
 }
 
 // Builds floor, walls with a window opening, ceiling, window frame, sky backdrop, sun, moon, rug,

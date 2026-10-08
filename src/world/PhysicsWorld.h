@@ -42,7 +42,7 @@ public:
 	const std::vector<Body>& Bodies() const { return bodies; }
 	SceneNode* LastLaserHit() const { return lastLaserHit; }
 private:
-	glm::vec3 Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore) const;
+	glm::vec3 Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore, bool withActors = true) const;
 	std::vector<Bounds> Obstacles(SceneNode* ignore, bool actorContacts=true) const;
 	Bounds ActorBounds(const Actor& actor) const;
 	void RefreshScenery();

@@ -15,6 +15,7 @@ public:
 	void Build(SceneNode& world, Assets& assets, const HouseRig& house);
 	void Begin();
 	void Reset();
+	void Open() { active = true; unlocked = true; } // sandbox: the Toy Room doors simply stand open
 	void Update(float dt);
 
 	// Interact with the nearest clue or keypad using the existing Enter action.

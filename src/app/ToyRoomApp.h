@@ -18,6 +18,7 @@
 #include "scene/SceneNode.h"
 #include "world/Environment.h"
 #include "world/StoryDirector.h"
+#include "world/StoryProps.h"
 #include "world/House.h"
 #include "world/PennyArrival.h"
 #include "world/HallwayPuzzle.h"
@@ -142,12 +143,15 @@ private:
 	Environment environment;
 	StoryDirector story;
 	HouseRig house;
+	StoryRig storyProps;
 	PennyArrival arrival;
 	HallwayPuzzle hallwayPuzzle;
 	std::unique_ptr<Cat> penny; // not in `characters`: the story and the collision solver ignore her
 	int pennyId = -1;
 	int demoPhase=0, demoLeg=0;
-	float demoWait=0, endingTime=0;
+	float demoWait=0;
+	bool gameplayStarted = false, cinematic = false;
+	glm::vec3 cinematicTarget{0.0f};
 	PhysicsWorld physics;
 	Hud hud;
 	std::vector<SceneNode*> contactShadows;

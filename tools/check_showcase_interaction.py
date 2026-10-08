@@ -17,7 +17,9 @@ CALLBACK = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 def run(name, mounted, live=False):
     args = [str(ROOT / "bin/Release/HauntedToyRoom.exe"), "--no-intro", "--no-raytrace", "--hour", "0"]
     if live:
-        args += ["--story","--gameplay-demo","--seek","30","--rehearsal-stop"]
+        args += ["--story","--gameplay-demo","--seek","50","--rehearsal-stop"]
+    else:
+        args += ["--manual"]
     if mounted:
         args += ["--mount"]
     process = subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -60,7 +62,7 @@ def run(name, mounted, live=False):
             output,_=process.communicate(timeout=20)
             (LOG/(name+".log")).write_text(output,encoding="utf-8")
             signals=["Live control: Woody","Live control: Buzz","Live control: released to simulation",
-                     "GAMEPLAY STAGE 4 / FINAL ESCAPE","Manual control / N resumes gameplay","RC Car moving"]
+                     "GAMEPLAY STAGE 5 / THE LOCKED MAIN DOOR","Manual control / N resumes gameplay","RC Car moving"]
             assert process.returncode==0
             for signal in signals:assert signal in output,signal
             return {"scenario":name,"key_message_callbacks":"passed","signals":signals}

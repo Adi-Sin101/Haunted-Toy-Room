@@ -30,6 +30,12 @@ Image BookSpines(int size = 256);     // a row of 12 book spines of varied heigh
 Image Pickets(int size = 256);        // white pickets + two rails with ALPHA = 0 between them (cut-out; was ~50 cubes)
 Image WindowPane(int size = 128);     // glass with a white frame and cross mullions (was 4 cubes per window)
 Image FlowerBed(int size = 256);      // leaves with coloured blossoms (was 7 spheres)
+// Story props:
+Image ChestPaint(int width = 512, int height = 256); // worn red planks with stars, clouds and a rocket
+Image StarWallpaper(int size = 256);  // Buzz's room: blue stripes with gold stars
+Image StarQuilt(int size = 256);      // patchwork of star squares and plaid squares
+Image StarDecal(int size = 128);      // gold star with ALPHA = 0 around it (cut-out)
+Image Soccer(int width = 256, int height = 128); // black pentagons on white
 
 // Hash-based value noise in [0, 1], smoothly interpolated (used for wood grain, flicker, stars).
 float ValueNoise(float x, float y);
