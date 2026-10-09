@@ -26,9 +26,11 @@ position(angle) = skyCentre + ( −cos(angle)·3.2,  sin(angle)·3.1,  0 )
 sun  = position(a)          moon = position(a + π)
 ```
 
-From the garden (during the arrival) the sun is drawn on a much larger arc in front of the sky backdrop,
-`OutdoorSunPosition = (−60 cos a, 4 + 55 sin a, −37)`, so it can be seen above the house's roof.
-The neighbouring houses' silhouettes are recoloured with the daylight
+Outdoors the window's backdrop, its sun and moon spheres and the neighbouring roof silhouettes are hidden:
+the sky dome (`shaders/sky.glsl`) draws a day/night gradient, the sun and its glow, a moon with maria,
+twinkling stars and drifting clouds along the directions `normalize(∓60 cos a, ±55 sin a, 30)`, and the
+directional light comes from that sun or moon ([21](21-outdoor-sky-and-solid-characters.md)). Seen through
+the window, the silhouettes are recoloured with the daylight
 (`mix((0.035, 0.045, 0.085), (0.50, 0.52, 0.60), daylight)`).
 
 The directional light points from the visible body to the room centre. `daylight =
@@ -113,6 +115,6 @@ main door. When Penny steps outside after the door breaks, the MORNING stage dri
     hour = (h0 + (31 - h0) * smoothstep(t / 16)) mod 24        h0 ~ 23.6, t in seconds
 
 so the clock passes midnight and reaches 07:00 after sixteen seconds. Everything that reads the hour
-follows automatically: the sun rises behind the house (`OutdoorSunPosition`), the sky, ambient and
+follows automatically: the sun rises in the east over the garden (`Environment::SunDirection`), the sky, ambient and
 directional colours blend through the sunrise, the stars fade, and the garden fog density
 `0.011 (1 - daylight)` thins to zero. In free exploration the hour keeps easing toward 08:00.

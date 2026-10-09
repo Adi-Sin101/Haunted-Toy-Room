@@ -34,6 +34,23 @@ void Renderer::Init(const Assets& library)
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw std::runtime_error("Lamp shadow framebuffer is incomplete");
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	// Sun / moon shadow map: same depth-only layout as the lamp's, filled with an orthographic view.
+	glGenFramebuffers(1, &sunShadowFbo); glGenTextures(1, &sunShadowDepth);
+	glBindTexture(GL_TEXTURE_2D, sunShadowDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, SunShadowSize, SunShadowSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
+	glBindFramebuffer(GL_FRAMEBUFFER, sunShadowFbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, sunShadowDepth, 0);
+	glDrawBuffer(GL_NONE); glReadBuffer(GL_NONE);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw std::runtime_error("Sun shadow framebuffer is incomplete");
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	skyShader = Shader("shaders/sky.vert", "shaders/sky.frag");
+	glGenVertexArrays(1, &skyVao);
+
 	for (int i = 0; i < MaxLights; ++i) {
 		const std::string p = "uLights[" + std::to_string(i) + "].";
 		lightNames[static_cast<size_t>(i)] = { p + "type", p + "enabled", p + "position", p + "direction", p + "color",
@@ -51,6 +68,9 @@ Renderer::~Renderer()
 {
 	if (shadowDepth) glDeleteTextures(1, &shadowDepth);
 	if (shadowFbo) glDeleteFramebuffers(1, &shadowFbo);
+	if (sunShadowDepth) glDeleteTextures(1, &sunShadowDepth);
+	if (sunShadowFbo) glDeleteFramebuffers(1, &sunShadowFbo);
+	if (skyVao) glDeleteVertexArrays(1, &skyVao);
 }
 
 namespace {
@@ -122,6 +142,76 @@ void Renderer::RenderLampShadow(const FrameInfo& frame)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 }
 
+// Directional light 0 (sun by day, moon by night) seen as parallel rays: an orthographic box,
+// SunShadowHalfExtent wide, centred a little ahead of the camera and looking along the light.
+void Renderer::RenderSunShadow(const FrameInfo& frame)
+{
+	const Light& sun = (*frame.lights)[0];
+	const glm::vec3 dir = glm::normalize(sun.direction);
+	const Camera& camera = *frame.camera;
+	glm::vec3 ahead = camera.Forward(); ahead.y = 0.0f;
+	ahead = glm::length(ahead) > 1e-3f ? glm::normalize(ahead) : glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 centre = camera.position + ahead * (SunShadowHalfExtent * 0.45f);
+	// Snap the centre to whole shadow-map texels across the light's view: otherwise every camera
+	// movement shifts the texel grid and the shadow edges crawl (shimmer).
+	const glm::vec3 up = std::abs(dir.y) > 0.95f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
+	const glm::vec3 right = glm::normalize(glm::cross(dir, up)), lightUp = glm::cross(right, dir);
+	const float texel = SunShadowHalfExtent * 2.0f / static_cast<float>(SunShadowSize);
+	centre += right * (std::floor(glm::dot(centre, right) / texel) * texel - glm::dot(centre, right))
+		+ lightUp * (std::floor(glm::dot(centre, lightUp) / texel) * texel - glm::dot(centre, lightUp));
+	constexpr float back = 90.0f;
+	sunViewProjection = t3d::orthographic(SunShadowHalfExtent, SunShadowHalfExtent, 1.0f, back + 60.0f)
+		* t3d::lookAt(centre - dir * back, centre, up);
+	const Frustum sunFrustum(sunViewProjection);
+
+	GLint viewport[4]; glGetIntegerv(GL_VIEWPORT, viewport);
+	glBindFramebuffer(GL_FRAMEBUFFER, sunShadowFbo); glViewport(0, 0, SunShadowSize, SunShadowSize);
+	glEnable(GL_DEPTH_TEST); glDepthMask(GL_TRUE); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); glClear(GL_DEPTH_BUFFER_BIT);
+	shadowShader.Activate(); shadowShader.SetMat4("uLightVP", sunViewProjection);
+	for (const DrawItem& item : items) {
+		if (item.material->unlit || item.material->opacity < 0.9f || item.material->cutout) continue;
+		// The lawn, street and pavement only RECEIVE shadows: as casters they add acne, not shade.
+		if (item.radius < 0.05f || item.radius > 60.0f || !sunFrustum.Visible(item.center, item.radius)) continue;
+		const Mesh& mesh = item.source->ForScreenSize(item.radius / (SunShadowHalfExtent * 0.5f));
+		glUniformMatrix4fv(shadowModel, 1, GL_FALSE, &item.model[0][0]);
+		mesh.Draw();
+		++stats.shadowDrawCalls; stats.shadowTriangles += static_cast<long long>(mesh.TriangleCount());
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+}
+
+void Renderer::UploadSky(const Shader& shader, const FrameInfo& frame) const
+{
+	const SkyInfo& sky = frame.sky;
+	shader.SetVec3("uSunDir", sky.sunDirection);
+	shader.SetVec3("uMoonDir", sky.moonDirection);
+	shader.SetVec3("uSkyZenith", sky.zenith);
+	shader.SetVec3("uSkyHorizon", sky.horizon);
+	shader.SetVec3("uSunColor", sky.sunColor);
+	shader.SetFloat("uDaylight", sky.daylight);
+	shader.SetFloat("uSunsetGlow", sky.sunsetGlow);
+	shader.SetFloat("uStarAmount", sky.stars);
+	shader.SetFloat("uSkyTime", frame.time);
+}
+
+// The sky fills every pixel the opaque pass left empty (depth still 1.0).
+void Renderer::RenderSky(const FrameInfo& frame)
+{
+	const Camera& camera = *frame.camera;
+	glm::mat4 rotation = camera.View();
+	rotation[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // directions only: drop the translation
+	skyShader.Activate();
+	skyShader.SetMat4("uInvViewProj", glm::inverse(camera.Projection(frame.aspect) * rotation));
+	UploadSky(skyShader, frame);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDepthFunc(GL_LEQUAL); glDepthMask(GL_FALSE); glDisable(GL_CULL_FACE);
+	glBindVertexArray(skyVao);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDepthFunc(GL_LESS); glDepthMask(GL_TRUE); glEnable(GL_CULL_FACE);
+	++stats.drawCalls; stats.triangles += 1;
+}
+
 void Renderer::Collect(const SceneNode& root, const glm::vec3& cameraPos)
 {
 	items.clear();
@@ -169,7 +259,8 @@ void Renderer::UploadLights(const Shader& shader, const FrameInfo& frame, const 
 		shader.SetFloat(n.inner, l.innerCutoff);
 		shader.SetFloat(n.outer, l.outerCutoff);
 	}
-	shader.SetVec3("uFogColor",{0.055f,0.065f,0.095f});
+	shader.SetVec3("uFogColor", frame.fogColor); // the sky's horizon colour: far ground melts into the sky
+	shader.SetInt("uSunShadows", 0);             // raster passes switch it on after their shadow pass
 	shader.SetFloat("uFogDensity",frame.fogDensity);
 	shader.SetVec3("uAmbientLight", frame.ambientLight);
 	shader.SetInt("uLightingEnabled", settings.lighting ? 1 : 0);
@@ -207,6 +298,11 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	// The shadow map only matters while the lamp is shining: skip the whole pass otherwise.
 	const bool lampShadows = settings.lighting && settings.shadingEnabled && lamp.enabled && lamp.intensity > 0.001f;
 	if (lampShadows) RenderLampShadow(frame);
+	// Sun / moon shadows only outdoors, and only while that light actually shines.
+	const Light& sun = (*frame.lights)[0];
+	const bool sunShadows = settings.lighting && settings.shadingEnabled && sun.enabled && sun.intensity > 0.01f
+		&& frame.sunShadowStrength > 0.01f;
+	if (sunShadows) RenderSunShadow(frame);
 	const Camera& camera = *frame.camera;
 	const glm::mat4 view = camera.View();
 	const glm::mat4 proj = camera.Projection(frame.aspect);
@@ -234,6 +330,10 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, shadowDepth);
 	shader.SetInt("uShadowMap", 1); shader.SetInt("uRasterShadows", lampShadows ? 1 : 0);
 	shader.SetMat4("uLightVP", lampViewProjection);
+	glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, sunShadowDepth); glActiveTexture(GL_TEXTURE0);
+	shader.SetInt("uSunShadowMap", 2); shader.SetInt("uSunShadows", sunShadows ? 1 : 0);
+	shader.SetFloat("uSunShadowStrength", frame.sunShadowStrength);
+	shader.SetMat4("uSunVP", sunViewProjection);
 
 	const float pulse = 0.55f + 0.45f * std::sin(frame.time * 5.0f);
 	const Material* currentMaterial = nullptr;
@@ -278,6 +378,14 @@ void Renderer::Render(const FrameInfo& frame, const RenderSettings& settings)
 	});
 	for (const DrawItem* item : opaque)
 		draw(*item);
+
+	// The sky after the opaque pass (only uncovered pixels run its shader) and before the transparent
+	// one (glass and the ghost blend over the sky).
+	RenderSky(frame);
+	shader.Activate();
+	currentMesh = nullptr;
+	glPolygonMode(GL_FRONT_AND_BACK, settings.wireframe ? GL_LINE : GL_FILL);
+	glFrontFace(currentWinding);
 
 	// Pass 2: transparent, far to near, blended over what is already drawn
 	if (!transparent.empty()) {

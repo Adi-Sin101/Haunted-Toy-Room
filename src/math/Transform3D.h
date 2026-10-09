@@ -37,6 +37,8 @@ glm::mat4 rotateAboutAxis(const glm::vec3& pointOnAxis, const glm::vec3& axis, f
 // Viewing and projection
 glm::mat4 lookAt(const glm::vec3& eye, const glm::vec3& target, const glm::vec3& up);
 glm::mat4 perspective(float fovyRadians, float aspect, float zNear, float zFar);
+// Orthographic projection of the box [-halfWidth, halfWidth]^2 x [-zFar, -zNear] (parallel rays: sun shadows).
+glm::mat4 orthographic(float halfWidth, float halfHeight, float zNear, float zFar);
 
 // Normal matrix: transforms normals correctly even under non-uniform scale or shear.
 glm::mat3 normalMatrix(const glm::mat4& model);

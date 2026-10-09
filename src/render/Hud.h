@@ -15,6 +15,9 @@ struct HudInfo {
 	bool puzzleStage = false, puzzleNotice = false;
 	bool settingsOpen = false, lighting = true, shading = true, rayTracing = true, textures = true;
 	bool mouseLook = false;
+	bool pennyButton = true;      // the "take / release Penny" control is offered
+	bool pennyControlled = false; // the player is driving Penny right now
+	bool pennyLocked = false;     // the story keeps Penny selected (before the toys are alive)
 	float fps = 0.0f;
 };
 
@@ -25,6 +28,8 @@ public:
 	void Init();
 	~Hud();
 	void Render(int width, int height, const HudInfo& info);
+	// 0..8 selection buttons, 100 settings, 101..104 render toggles, PennyButton the Penny control.
+	static constexpr int PennyButton = 105;
 	int HitTest(glm::vec2 mouse, int windowWidth, int windowHeight, bool settingsOpen) const;
 	bool Covers(glm::vec2 mouse, int windowWidth, int windowHeight, bool help, bool settingsOpen) const;
 private:

@@ -89,3 +89,4 @@ in the toy room; then Stage 1 gameplay begins. **Y** skips the arrival.
 The final report, presentation, demo, study guide and validation records are linked from [START-HERE](showcase/START-HERE.md). Selection during mission playback now supports live takeover while other actors continue; 0 releases the actor, N retains full manual/story switching.
 
 - [20 - The eight-stage story](20-escape-gameplay.md): garden, 257 puzzle, toy chest, Buzz's bedroom and wardrobe, follower graph, Bullseye's jump, real laser impact and the morning.
+- [21 - Outdoor sky, smooth camera and solid characters](21-outdoor-sky-and-solid-characters.md): the sky dome shared by both renderers, sun/moon light and shadows outdoors, the stair camera, collision spines, crowd priorities, the PENNY control and the wardrobe's reach.

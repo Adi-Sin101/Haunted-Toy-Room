@@ -7,7 +7,13 @@ shared light model).
 Press **F4** (or use the Settings panel) to switch the live, fully interactive scene from rasterisation to
 ray tracing. Everything keeps working — driving, camera, story, Penny's arrival, edit mode — only the image
 is produced differently. **−** / **=** change the ray-tracing resolution (20 %–100 % of the window),
-**9** cycles the number of bounces (0–4).
+**Ctrl+9** cycles the number of bounces (0–4).
+
+**Missed rays see the sky.** A ray that hits no instance returns `skyRadiance(direction)` from
+`shaders/sky.glsl`, the same function the rasteriser's sky pass uses, so the ray-traced and rasterised
+skies are identical and reflections and glass show the real sky. Outdoors light 0 comes from the visible
+sun or moon, so its shadow rays give correct garden shadows. See
+[21 — Outdoor sky and solid characters](21-outdoor-sky-and-solid-characters.md).
 
 ![Ray-traced room](images/raytraced.png)
 
@@ -331,7 +337,7 @@ frame. Measured on the development machine (`--benchmark`, lighting + shading + 
 
 The arrival gains the most: the house's shapes (about 220 before this round, 135 now) used to be in the
 always-tested scenery group, so every ray tested all of them; in the BVH a ray only reaches the few that lie along it. **−** lowers the
-resolution, **9** the bounce count. See [17 — Performance](17-performance.md).
+resolution, **Ctrl+9** the bounce count. See [17 — Performance](17-performance.md).
 
 ## 9. Mouse picking and Buzz's laser use the same maths on the CPU
 

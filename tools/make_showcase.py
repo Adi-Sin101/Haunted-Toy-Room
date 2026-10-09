@@ -77,12 +77,13 @@ SHOTS.update({
     "toys-alive": [*STORY, "--seek", "23", *CHEST],
     "buzz-room": [*STORY, "--seek", "33", "--cam", "9.6,-1.2,-3.0,3.0,-3.0,-5.5"],
     "wardrobe": [*STORY, "--seek", "30", "--cam", "6.6,-2.0,-5.3,2.2,-2.6,-5.3"],
-    "rescue-jump": [*STORY, "--seek", "42.1", *BEDROOM],
-    "buzz-flight": [*STORY, "--seek", "43.6", "--cam", "6.6,-1.6,-7.8,3.0,-3.0,-5.0"],
-    "entrance-lock": [*STORY, "--seek", "55.6", *ENTRANCE],
-    "door-impact": [*STORY, "--seek", "57.8", *ENTRANCE],
-    "door-debris": [*STORY, "--seek", "59.3", "--cam", "13.5,-2.4,15.0,12,-3.8,10.5"],
-    "morning": [*STORY, "--seek", "74.5"],
+    # Times follow the solid-character timeline (jump ~41.8 s, laser 54.8 s, door broken 56 s, free exploration 72.7 s).
+    "rescue-jump": [*STORY, "--seek", "41.8", *BEDROOM],
+    "buzz-flight": [*STORY, "--seek", "44.6", "--cam", "6.6,-1.6,-7.8,3.0,-3.0,-5.0"],
+    "entrance-lock": [*STORY, "--seek", "53.6", *ENTRANCE],
+    "door-impact": [*STORY, "--seek", "55.6", *ENTRANCE],
+    "door-debris": [*STORY, "--seek", "57.3", "--cam", "13.5,-2.4,15.0,12,-3.8,10.5"],
+    "morning": [*STORY, "--seek", "70"],
 })
 for name,args in SHOTS.items():
     if "--story" not in args and "--intro" not in args: args.append("--manual")

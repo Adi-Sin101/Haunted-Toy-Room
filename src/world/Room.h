@@ -29,6 +29,8 @@ struct RoomRig {
 	// Sky seen through the window
 	SceneNode* sun = nullptr;
 	SceneNode* moon = nullptr;
+	SceneNode* skyBackdrop = nullptr; // the starry plane behind the window (hidden outdoors)
+	std::vector<SceneNode*> skyline;  // flat roof silhouettes framed by the window (hidden outdoors)
 	Material* skyMaterial = nullptr;
 	Material* skylineMaterial = nullptr; // distant houses, recoloured with the daylight
 	glm::vec3 skyCenter{ 0.0f };

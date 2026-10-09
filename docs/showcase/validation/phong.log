@@ -1,9 +1,10 @@
-Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
+Loaded E:\4-1\Lab\graphics\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
 GAMEPLAY STAGE 0 / NIGHT OUTSIDE THE HOUSE
 
 ====================== HAUNTED TOY ROOM ======================
 MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
+            9 / PENNY button: take Penny over or hand her back to the simulation (any time)
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
 CHARACTER   W/S move  A/D turn  Shift run  SPACE stop
@@ -18,7 +19,7 @@ CAMERA      C cycle Free/Orbit/Follow   F focus+orbit selected   Home reset
 EDIT MODE   Tab toggle   T op (Translate/Rotate/Scale/Shear)   J/L X  U/O Y  I/K Z
             Ctrl = uniform scale   M mirror (reflect)   Backspace reset   Shift faster
 RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
-            F4 RAY TRACING  (-/= resolution, 9 bounces)
+            F4 RAY TRACING  (-/= resolution, Ctrl+9 bounces)
             F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light
             F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)
             V list parts of selected object, Shift+V dump vertex/index tables
@@ -35,4 +36,4 @@ Jessie at 0.7,0.012,3.7
 Bullseye at 3.4,0.012,3.1
 Buzz at -3.4,0.012,0.4
 RC Car at 5.5,0.012,-1.8
-Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\figures\phong.bmp
+Saved E:\4-1\Lab\graphics\Haunted-Toy-Room\docs\showcase\figures\phong.bmp

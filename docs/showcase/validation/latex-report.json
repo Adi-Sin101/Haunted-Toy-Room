@@ -1,9 +1,9 @@
 {
-  "report_pages": 39,
-  "figures": 33,
-  "tables": 11,
-  "equation_groups": 29,
-  "scene_nodes": 991,
+  "report_pages": 38,
+  "figures": 35,
+  "tables": 12,
+  "equation_groups": 31,
+  "scene_nodes": 993,
   "engine": "pdfLaTeX",
   "page_limit": 39,
   "content_scan": "passed",
@@ -11,10 +11,10 @@
   "chapter_start_pages": [
     5,
     7,
-    17,
-    29
+    16,
+    27
   ],
   "contents_start_page": 3,
   "contents_includes_sections": true,
-  "contents_section_entries": 33
+  "contents_section_entries": 35
 }

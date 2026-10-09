@@ -9,8 +9,9 @@ he jumps, she opens it and Buzz flies out. At the locked main door Buzz flies in
 player fires his laser (**L**): the door breaks into physical wood fragments. Everyone escapes, the night
 turns into morning, and the world stays open for free exploration.
 
-Two layers: you control one character (Penny, or any freed toy: 1-5, click, **Ctrl+0** for Penny) and
-the story layer drives the others. Press **0** to release, **N** for full manual mode.
+Two layers: you control one character (Penny, or any freed toy: 1-5 or a click) and the story layer
+drives the others. **9**, or the **PENNY** button at the bottom of the corner panel, takes Penny over or
+hands her back to the simulation at any time, wherever she is. Press **0** to release, **N** for full manual mode.
 Every toy is built from hand-written primitives (plane, cube, sphere, cylinder, cone). The project also
 implements its own transformations, scene hierarchy, Phong illumination, Flat/Gouraud/Phong/Blinn shading,
 procedural textures, a BMP loader and a real-time GPU ray tracer. The only libraries are GLFW, GLAD and
@@ -53,9 +54,20 @@ the interface. Select Buzz with **4**, toggle his laser with **L**, aim using **
 and knock over the wooden blocks. **B** rebuilds the tower. You can also click a block and push it with
 **W/A/S/D**. See [physics and interface details](docs/15-physics-and-interface.md).
 
+Outdoors there is a real **sky dome**: a day/night gradient, a sun with its glow, a moon with maria,
+twinkling stars and drifting clouds, drawn by one shared GLSL function in both the rasteriser and the
+ray tracer (a ray that leaves the scene returns the sky, so reflections and glass show it too). Outside
+the house the sun or moon light comes from the visible sun or moon, casts raster shadows through a
+sun shadow map and ray-traced shadows through shadow rays, and the fog fades into the horizon colour.
+The follow camera eases over the stair treads instead of jolting, characters are solid to each other
+(long bodies use a chain of collision boxes, crowds resolve by priority and walk around each other), and
+the wardrobe in Buzz's room only answers when Penny stands right in front of its doors. See
+[the outdoor environment](docs/21-outdoor-sky-and-solid-characters.md).
+
 | Keys | What happens |
 |---|---|
 | **1–5** | select Woody, Jessie, Bullseye, Buzz, RC car (6 ball, 7 lamp, 8 ghost, or left-click any object) |
+| **9** / PENNY button | take Penny over (follow camera behind her) or hand her back to the simulation |
 | **W/S/A/D**, Shift, SPACE | drive the selected toy, run, stop |
 | **R** | Jessie mounts or dismounts Bullseye (walk her close to him first) |
 | **Q/E**, **L** | Buzz flies and fires his laser; L also toggles the car's headlights |
@@ -63,7 +75,7 @@ and knock over the wooden blocks. **B** rebuilds the tower. You can also click a
 | **C** | camera mode: Free, Orbit, Follow |
 | **Tab**, **T**, J/L U/O I/K | edit mode: translate, rotate, scale or shear any object |
 | **F1 / F2 / F3** | wireframe, shading model, textures |
-| **F4** | real-time ray tracing (shadows, reflections, transparency) |
+| **F4** | real-time ray tracing (shadows, reflections, transparency); **Ctrl+9** bounce count |
 | **N / Shift+N / P / Enter** | manual/progression, replay, pause, interact |
 | **[ ] / , .** | clock speed / scrub in manual mode |
 | **H / G** | expand corner guide / hide all text |

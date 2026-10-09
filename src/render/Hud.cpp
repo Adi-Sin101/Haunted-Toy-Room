@@ -15,6 +15,9 @@ const glm::vec4 Cream(0.95f, 0.92f, 0.84f, 1.0f);
 const glm::vec4 Muted(0.68f, 0.73f, 0.75f, 1.0f);
 const glm::vec4 Gold(0.89f, 0.70f, 0.38f, 1.0f);
 constexpr float Margin = 24.0f;
+// Panel layout (unscaled pixels from the panel's top-left corner at 16, 16).
+constexpr float PanelHeight = 290.0f, HelpPanelHeight = 535.0f;
+constexpr float PennyRowY = 252.0f, PennyRowHeight = 26.0f, PennyRowWidth = 362.0f;
 const char* Toys[8] = {"Woody", "Jessie", "Bullseye", "Buzz", "RC Car", "Ball", "Lamp", "Ghost"};
 }
 
@@ -127,7 +130,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
 	bodyVertices.clear(); titleVertices.clear();
 	const float scale = Scale(width, height), w = width / scale, h = height / scale;
  const float panelWidth=390, x=16, y=16;
- Rect(x,y,panelWidth,info.help ? 510.0f : 270.0f,Ink);
+ Rect(x,y,panelWidth,info.help ? HelpPanelHeight : PanelHeight,Ink);
  Text("HAUNTED TOY ROOM",x+14,y+10,0.61f,Gold);
  Text(info.clock + " / " + (info.story ? "STORY" : "MANUAL"),x+14,y+32,0.55f,Muted);
  Text(info.selection,x+14,y+54,0.58f,Cream,panelWidth-28,true);
@@ -145,10 +148,18 @@ void Hud::Render(int width, int height, const HudInfo& info)
   Text(i<8 ? std::to_string(i+1) : "B",bx+12,y+163,0.52f,(info.selected==i || (i==8 && info.selected>=8)) ? Gold : Cream);
  }
  Text(info.mouseLook ? "Mouse-look / Esc cursor / H guide / G hide" : "M mouse-look / H guide / G hide / " + info.camera,x+14,y+191,0.53f,Muted);
+ // Penny control: always on screen, so a released Penny can be taken back from anywhere.
+ if (info.pennyButton) {
+  const bool on=info.pennyControlled;
+  Rect(x+14,y+PennyRowY,PennyRowWidth,PennyRowHeight,on ? glm::vec4(0.38f,0.29f,0.16f,0.97f) : glm::vec4(0.12f,0.14f,0.16f,0.8f));
+  Text("9  PENNY",x+24,y+PennyRowY+4,0.54f,on ? Gold : Cream);
+  Text(info.pennyLocked ? "YOU CONTROL HER (story)" : on ? "YOU CONTROL HER / click to release" : "SIMULATION / click to take control",
+   x+118,y+PennyRowY+5,0.50f,on ? Gold : Muted);
+ }
  if (info.help) {
   const char* lines[]={
    "1 Woody / 2 Jessie / 3 Bullseye / 4 Buzz / 5 Car",
-   "6 Ball / 7 Lamp / 8 Ghost / Ctrl+0 Penny",
+   "6 Ball / 7 Lamp / 8 Ghost / 9 Penny (take or release)",
    "Selection: live control / 0 release / N full manual",
    "W/S move / A/D turn / Shift run / Space stop",
    "Jessie + Bullseye: R mount or dismount nearby",
@@ -162,7 +173,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
    "F12 screenshot / H close this guide",
    "` settings / Scroll zoom / Shift+F2 shading on-off"
   };
-  float lineY=y+270;
+  float lineY=y+PanelHeight;
   for (const char* line:lines) { Text(line,x+14,lineY,0.50f,Muted,panelWidth-28); lineY+=17; }
  }
  const float settingsX=w-226;
@@ -206,6 +217,7 @@ int Hud::HitTest(glm::vec2 mouse,int width,int height,bool settingsOpen) const
   const int row=static_cast<int>((mouse.y-84)/29);
   if (mouse.y<=84+row*29+25) return 101+row;
  }
+ if (mouse.x>=30 && mouse.x<=30+PennyRowWidth && mouse.y>=16+PennyRowY && mouse.y<=16+PennyRowY+PennyRowHeight) return PennyButton;
  if (mouse.y<176 || mouse.y>198 || mouse.x<30) return -1;
  const int index=static_cast<int>((mouse.x-30)/40);
  if (index>8 || mouse.x>30+index*40+35) return -1;
@@ -217,5 +229,5 @@ bool Hud::Covers(glm::vec2 mouse,int width,int height,bool help,bool settingsOpe
  mouse/=Scale(width,height);
  if (mouse.x>=w-128 && mouse.x<=w-16 && mouse.y>=16 && mouse.y<=44) return true;
  if (settingsOpen && mouse.x>=w-226 && mouse.x<=w-16 && mouse.y>=50 && mouse.y<=226) return true;
- return mouse.x>=16 && mouse.x<=406 && mouse.y>=16 && mouse.y<=16+(help ? 510 : 270);
+ return mouse.x>=16 && mouse.x<=406 && mouse.y>=16 && mouse.y<=16+(help ? HelpPanelHeight : PanelHeight);
 }

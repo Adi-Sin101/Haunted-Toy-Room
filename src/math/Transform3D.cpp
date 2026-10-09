@@ -136,6 +136,15 @@ glm::mat4 perspective(float fovy, float aspect, float n, float f)
 	                0, 0, -1, 0);
 }
 
+// Orthographic projection: a box is scaled into the clip cube with no divide (w' = 1).
+glm::mat4 orthographic(float halfWidth, float halfHeight, float n, float f)
+{
+	return fromRows(1.0f / halfWidth, 0, 0, 0,
+	                0, 1.0f / halfHeight, 0, 0,
+	                0, 0, -2.0f / (f - n), -(f + n) / (f - n),
+	                0, 0, 0, 1);
+}
+
 glm::mat3 normalMatrix(const glm::mat4& model)
 {
 	return glm::transpose(glm::inverse(glm::mat3(model)));

@@ -177,7 +177,7 @@ void ToyRoomApp::BuildScene()
 	physics.EnableHallway(true);
 	for (const auto& c : characters) {
 		glm::vec3 half(0.40f, 1.08f, 0.60f), offset(0, 1.08f, 0);
-		if (c.get() == bullseye) { half = {0.8f, 1.30f, 0.8f}; offset = {0, 1.30f, 0.12f}; }
+		if (c.get() == bullseye) { half = {0.55f, 1.30f, 0.55f}; offset = {0, 1.30f, 0.0f}; }
 		if (c.get() == car) { half = {0.64f, 0.65f, 0.85f}; offset = {0, 0.65f, 0}; }
 		physics.AddActor(c->Root(), half, offset);
 		Material& shadow = assets.Mat("contact-shadow", {0.012f, 0.018f, 0.03f}, 0.0f);
@@ -188,7 +188,11 @@ void ToyRoomApp::BuildScene()
 	physics.AddActor(rig.ball, glm::vec3(rig.ballRadius), glm::vec3(0));
 	physics.AddActor(rig.ghost, {0.60f, 0.85f, 0.60f}, glm::vec3(0));
 	physics.AddActor(rig.lamp, {0.55f, 0.90f, 0.75f}, {0, 0.90f, 0});
-	physics.AddActor(penny->Root(), {0.34f, 0.48f, 0.42f}, {0, 0.48f, 0});
+	physics.AddActor(penny->Root(), {0.34f, 0.48f, 0.34f}, {0, 0.48f, 0});
+	// Spines (see PhysicsWorld::Actor): Penny reaches from her tail at -0.8 to her nose at +1.0, Bullseye from
+	// his rump at -0.9 to his muzzle at +1.7. Square segments cover that length at any heading.
+	physics.SetActorSpine(penny->Root(), {-0.46f, 0.10f, 0.64f});
+	physics.SetActorSpine(bullseye->Root(), {-0.35f, 0.45f, 1.15f});
 	physics.EnableActor(penny->Root(), false); // Arrival controls her route until Stage 1 begins.
  story.Restart(true);
  environment.hauntingEnabled=false;
@@ -298,7 +302,13 @@ void ToyRoomApp::StepScene(float dt)
  // Followers ignore each other's bodies (they keep formation slots) but still collide with the house.
  physics.SetScriptedActors(story.FollowersActive());
  const bool userPaused=environment.paused;
- if (story.enabled && !story.Sandbox()) { environment.paused=true; if (!arriving) environment.hour=story.Hour(); }
+ const bool outside=CameraOutdoors();
+ environment.outdoors=outside;
+ // Walking through the front door eases the light over ~0.3 s; a camera jump (launch, restart, a new
+ // selection) snaps it, or the house would briefly throw the window light's long shadow over the garden.
+ if (glm::distance(camera.position,outdoorEye)>2.0f) outdoorBlend=outside ? 1.0f : 0.0f;
+ else outdoorBlend+=((outside ? 1.0f : 0.0f)-outdoorBlend)*(1.0f-std::exp(-dt*8.0f));
+ outdoorEye=camera.position; if (story.enabled && !story.Sandbox()) { environment.paused=true; if (!arriving) environment.hour=story.Hour(); }
  environment.Update(dt,static_cast<float>(time),selectedId==lampId,selectedId==ballId,selectedId==ghostId);
  environment.paused=userPaused;
  if (!userPaused && environment.Rig().fanRotor) {
@@ -326,8 +336,9 @@ void ToyRoomApp::StepScene(float dt)
 	penny->Animate(dt, static_cast<float>(time));
 	house.exterior->visible = arrival.ExteriorVisible() || (story.ExteriorVisible() && !story.Sandbox());
 	house.interior->visible = true;
-	house.outdoorSun->local.position = environment.OutdoorSunPosition();
-	house.outdoorSun->visible = environment.SunHeight() > -0.08f;
+	// The sky dome (sky.glsl) now draws the sun, infinitely far along the light's own direction; the old
+	// garden sun sphere sat at a fixed point, so its direction drifted from the light as the camera moved.
+	house.outdoorSun->visible = false;
 	for (const auto& c : characters) // toys still hidden in the chest or wardrobe are not bodies yet
 		physics.EnableActor(c->Root(), !story.Hidden(c.get()) && !(c.get() == jessie && jessieMounted));
 	physics.EnableActor(penny->Root(), !arriving);
@@ -335,9 +346,10 @@ void ToyRoomApp::StepScene(float dt)
 	const bool buzzAirborne = buzz->Root()->local.position.y > PhysicsWorld::FloorHeight(buzz->Root()->local.position)+0.06f;
     physics.SetActorGrounded(buzz->Root(),false);
 	physics.SetActorShape(buzz->Root(), {buzzAirborne ? 0.92f : 0.42f, buzzAirborne ? 0.60f : 1.08f, buzzAirborne ? 1.0f : 0.60f}, {0, buzzAirborne ? 0.60f : 1.08f, 0});
-	// A square footprint: its rotated bounds stay narrow enough for Bullseye to turn in the 3-unit
-	// corridor and pass the bedroom doorway (a 2.9-long box could not turn there at all).
-	physics.SetActorShape(bullseye->Root(), {0.8f, jessieMounted ? 1.75f : 1.30f, 0.8f}, {0, jessieMounted ? 1.75f : 1.30f, 0.12f});
+	// Square spine segments (set up in the constructor): their rotated bounds stay narrow enough for
+	// Bullseye to turn in the 3-unit corridor and pass the bedroom doorway, while the chain still reaches
+	// from rump to muzzle (a single 2.6-long box could not turn there at all).
+	physics.SetActorShape(bullseye->Root(), {0.55f, jessieMounted ? 1.75f : 1.30f, 0.55f}, {0, jessieMounted ? 1.75f : 1.30f, 0.0f});
 	for (size_t i = 0; i < characters.size(); ++i) {
 		Character* c = characters[i].get();
 		if (c == jessie && jessieMounted) continue;
@@ -355,6 +367,27 @@ void ToyRoomApp::StepScene(float dt)
 		if (DrivenCharacter() == penny.get() && glm::distance(wanted, penny->Root()->local.position) > 0.04f) {
 			statusText = "Solid contact / turn or choose another path"; statusTimer = 1.0f;
 		}
+	}
+	// Characters never stand inside each other. Scripted moments (the chest climb, mounting hops, Buzz's
+	// first flight) are left alone; a body flying above another is not in contact (PhysicsWorld checks height).
+	{
+		// Right of way, highest first: the character the player drives, characters on a story task,
+		// Penny (the group's leader), then the followers in a fixed order.
+		Character* anchor = DrivenCharacter();
+		auto eligible = [&](Character* c) {
+			if (c == penny.get()) return !arriving && !penny->InTransition();
+			return !(c->InTransition() || story.Hidden(c) || story.Scripted(c) || (c == jessie && jessieMounted));
+		};
+		const std::vector<Character*> order = {bullseye, buzz, jessie, woody, car};
+		std::vector<SceneNode*> bodies;
+		auto add = [&](Character* c) {
+			if (c && eligible(c) && std::find(bodies.begin(), bodies.end(), c->Root()) == bodies.end()) bodies.push_back(c->Root());
+		};
+		add(anchor);
+		for (Character* c : order) if (story.Busy(c)) add(c);
+		add(penny.get());
+		for (Character* c : order) add(c);
+		physics.SeparateActors(bodies, anchor ? anchor->Root() : nullptr);
 	}
 	physics.ConstrainActor(environment.Rig().ball, previousBall);
 	physics.ConstrainActor(environment.Rig().ghost, previousGhost);
@@ -387,7 +420,17 @@ void ToyRoomApp::StepScene(float dt)
 		if (camera.mode != CameraMode::Free) {
 			const Selectable* selected = Selected();
 			SceneNode* ignored = selected ? selected->node : nullptr;
-			const glm::vec3 sight = physics.CameraSightline(camera.target, camera.position, ignored);
+			glm::vec3 sight = physics.CameraSightline(camera.target, camera.position, ignored);
+			// Pull in at once when a wall cuts the view, but move back out gradually: in the stairwell
+			// the railings and the landing wall block and clear the view on alternate frames, and
+			// taking each answer as-is made the camera jump in and out.
+			const glm::vec3 offset = camera.position - camera.target;
+			const float full = glm::length(offset), allowed = glm::distance(sight, camera.target);
+			if (full > 1e-3f) {
+				if (sightReach < 0.0f || allowed < sightReach || camera.mode != CameraMode::Follow) sightReach = allowed;
+				else sightReach += (allowed - sightReach) * (1.0f - std::exp(-dt * 2.5f));
+				sight = camera.target + offset / full * std::min(sightReach, full);
+			}
 			glm::vec3 moved = physics.MoveCamera(previousCamera, sight);
 			// After a selection change the camera can sit on the far side of a wall from its new
 			// target, and sliding can never carry it through. Once it has no clear view of the
@@ -396,7 +439,7 @@ void ToyRoomApp::StepScene(float dt)
 			camera.position = moved;
 			camera.LookAt(camera.target);
 		}
-		else camera.position = physics.MoveCamera(previousCamera, camera.position);
+		else { camera.position = physics.MoveCamera(previousCamera, camera.position); sightReach = -1.0f; }
 	}
 	// Story shots (the morning pull-back over the house) take over the camera, then hand it back.
 	glm::vec3 shotPosition, shotTarget;
@@ -494,7 +537,7 @@ void ToyRoomApp::HandleGlobalKeys()
 	if (input.Pressed(GLFW_KEY_F4)) {
 		flip(settings.rayTracing, "Ray tracing");
 		if (settings.rayTracing)
-			std::cout << "  (resolution x" << settings.rayScale << ", bounces " << settings.rayBounces << "; -/= resolution, 9 bounces)\n";
+			std::cout << "  (resolution x" << settings.rayScale << ", bounces " << settings.rayBounces << "; -/= resolution, Ctrl+9 bounces)\n";
 	}
 	if (input.Pressed(GLFW_KEY_F5)) flip(settings.ambient, "Ambient");
 	if (input.Pressed(GLFW_KEY_F6)) flip(settings.diffuse, "Diffuse");
@@ -511,7 +554,7 @@ void ToyRoomApp::HandleGlobalKeys()
 
 	if (input.Pressed(GLFW_KEY_MINUS)) settings.rayScale = std::max(0.2f, settings.rayScale - 0.1f);
 	if (input.Pressed(GLFW_KEY_EQUAL)) settings.rayScale = std::min(1.0f, settings.rayScale + 0.1f);
-	if (!hallwayPuzzle.KeypadActive() && input.Pressed(GLFW_KEY_9)) {
+	if (!hallwayPuzzle.KeypadActive() && input.Pressed(GLFW_KEY_9) && input.CtrlDown()) { // plain 9 takes / releases Penny
 		settings.rayBounces = (settings.rayBounces + 1) % 5;
 		std::cout << "Ray bounces: " << settings.rayBounces << "\n";
 	}
@@ -590,6 +633,7 @@ void ToyRoomApp::HandleSelection()
 	}
 	if (!hallwayPuzzle.KeypadActive()) {
         if (input.Pressed(GLFW_KEY_0) && input.CtrlDown()) Select(pennyId);
+        if (input.Pressed(GLFW_KEY_9) && !input.CtrlDown()) TogglePennyControl();
 		if (input.Pressed(GLFW_KEY_0) && !input.CtrlDown())
 			Select(-1);
 		for (int i = 0; i < static_cast<int>(selectables.size()); ++i) {
@@ -613,6 +657,7 @@ void ToyRoomApp::HandleSelection()
 		if (hudVisible && !cursorCaptured) {
 			const int button = hud.HitTest(input.MousePosition(), winW, winH, renderSettingsOpen);
 			if (button>=100) {
+				if (button==Hud::PennyButton) TogglePennyControl();
 				if (button==100) renderSettingsOpen=!renderSettingsOpen;
 				if (button==101) settings.lighting=!settings.lighting;
 				if (button==102) settings.shadingEnabled=!settings.shadingEnabled;
@@ -671,6 +716,24 @@ void ToyRoomApp::Select(int id)
         if (story.enabled) std::cout<<"Live control: released to simulation\n";
 		std::cout << "Selected: nothing (camera only)\n";
 	}
+}
+
+void ToyRoomApp::TogglePennyControl()
+{
+	if (selectedId == pennyId) {
+		Select(-1);
+		statusText = "Penny is back in the simulation / 9 or the PENNY button takes her again"; statusTimer = 4;
+		return;
+	}
+	editMode = false;
+	Select(pennyId);
+	if (selectedId != pennyId) return;
+	// She may be anywhere (another floor, outside the view): put the follow camera behind her at once.
+	camera.mode = CameraMode::Follow;
+	camera.orbitYaw = 0.0f; camera.orbitPitch = 18.0f; camera.orbitDistance = 4.6f;
+	cameraPan = glm::vec3(0.0f);
+	storyCamera = false;
+	statusText = "You control Penny / W/S move / A/D turn / 9 releases her"; statusTimer = 4;
 }
 
 Selectable* ToyRoomApp::Selected()
@@ -788,8 +851,15 @@ void ToyRoomApp::HandleCamera(float dt)
 			};
 			const float northClearance = clearance(-35.0f);
 			const float southClearance = clearance(35.0f);
-			camera.orbitYaw = northClearance >= southClearance ? -35.0f : 35.0f;
-			camera.orbitDistance = std::clamp(std::max(northClearance, southClearance) - 0.25f, 1.8f, 4.8f);
+			// Change sides only when the other side is clearly roomier: with equal clearances the
+			// camera used to flip between -35 and +35 degrees every few frames and shook.
+			const bool north = camera.orbitYaw < 0.0f;
+			if (std::abs(camera.orbitYaw) != 35.0f) camera.orbitYaw = northClearance >= southClearance ? -35.0f : 35.0f;
+			else if (north && southClearance > northClearance + 0.6f) camera.orbitYaw = 35.0f;
+			else if (!north && northClearance > southClearance + 0.6f) camera.orbitYaw = -35.0f;
+			const float roomy = camera.orbitYaw < 0.0f ? northClearance : southClearance;
+			const float wanted = std::clamp(roomy - 0.25f, 1.8f, 4.8f);
+			camera.orbitDistance += (wanted - camera.orbitDistance) * (1.0f - std::exp(-dt * 3.0f));
 		}
 	}
 
@@ -889,13 +959,25 @@ void ToyRoomApp::HandleCamera(float dt)
 		const float angle = glm::radians(camera.orbitYaw), pitch = glm::radians(camera.orbitPitch);
 		if (panning) cameraPan += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance * zoomSpeed;
 		back = glm::vec3(back.x * std::cos(angle) + back.z * std::sin(angle), 0, back.z * std::cos(angle) - back.x * std::sin(angle));
-		const glm::vec3 desired = focus + cameraPan + back * std::cos(pitch) * camera.orbitDistance + glm::vec3(0, std::sin(pitch) * camera.orbitDistance, 0);
-		camera.position = glm::mix(camera.position, desired, std::min(1.0f, dt * 4.0f));
-		camera.target = focus + cameraPan;
+		// Ease the focus after the character. Height eases slowest: stair and porch treads lift the
+		// body 0.17 units at a time, and aiming at the raw position jerked the view on every step.
+		// A large jump (new selection, restart, teleport) snaps instead of sweeping across the house.
+		if (!followFocusValid || glm::distance(followFocus, focus) > 2.5f) followFocus = focus;
+		else {
+			const float across = 1.0f - std::exp(-dt * 14.0f), up = 1.0f - std::exp(-dt * 5.0f);
+			followFocus.x += (focus.x - followFocus.x) * across;
+			followFocus.z += (focus.z - followFocus.z) * across;
+			followFocus.y += (focus.y - followFocus.y) * up;
+		}
+		followFocusValid = true;
+		const glm::vec3 desired = followFocus + cameraPan + back * std::cos(pitch) * camera.orbitDistance + glm::vec3(0, std::sin(pitch) * camera.orbitDistance, 0);
+		camera.position = glm::mix(camera.position, desired, 1.0f - std::exp(-dt * 4.0f));
+		camera.target = followFocus + cameraPan;
 		camera.LookAt(camera.target);
 		break;
 	}
 	}
+	if (camera.mode != CameraMode::Follow) followFocusValid = false;
 }
 
 void ToyRoomApp::HandleObjectControl(float dt)
@@ -1121,12 +1203,23 @@ void ToyRoomApp::Dismount()
 // =============================================================================================
 // Lights follow their scene nodes
 // =============================================================================================
+// Outside = the exterior exists this frame (not the sandbox) and the eye is beyond the house's outer
+// walls or above its roof. The garage and the porch count as outside.
+bool ToyRoomApp::CameraOutdoors() const
+{
+	if (!house.exterior || !house.exterior->visible) return false;
+	using namespace RoomSize;
+	const glm::vec3 eye = camera.position;
+	return eye.x < HouseLeft || eye.x > HouseRight || eye.z < HouseBack || eye.z > HouseFront || eye.y > Height + 5.5f;
+}
+
 void ToyRoomApp::UpdateLights()
 {
 	const RoomRig& rig = environment.Rig();
 
 	Light& sky = lights[SkyLight];
-	sky.direction = environment.skyLightDirection;
+	// Indoors the light keeps the window's direction; outdoors it comes from the visible sun or moon.
+	sky.direction = glm::normalize(glm::mix(environment.skyLightDirection, environment.outdoorLightDirection, outdoorBlend));
 	sky.color = environment.skyLightColor;
 	sky.intensity = environment.skyLightIntensity;
 
@@ -1200,7 +1293,9 @@ void ToyRoomApp::DrawHud()
 	info.lighting=settings.lighting; info.shading=settings.shadingEnabled;
 	info.rayTracing=settings.rayTracing; info.textures=settings.textures;
 	info.clock = environment.ClockText(); info.paused = environment.paused;
-	info.help = helpVisible; info.edit = editMode; info.selected = selectedId;
+	info.help = helpVisible; info.edit = editMode;
+	// Buttons 1-8 are selectables 0-7; "B" stands for the blocks only (Penny and the furniture have higher ids too).
+	info.selected = selectedId < 8 ? selectedId : (Selected() && physics.IsBlock(Selected()->node) ? 8 : -1);
 	info.camera = CameraModeName(camera.mode); info.fps = fps;
 	info.rendering = settings.rayTracing ? "RAY TRACING / SHADOWS + REFLECTIONS" : std::string("RASTER + LAMP SHADOWS / ") + ToString(settings.shading);
 	info.status = statusTimer > 0 ? statusText : (buzz->LaserOn() ? "Buzz's laser is active / B rebuilds the block tower" : "");
@@ -1259,6 +1354,9 @@ void ToyRoomApp::DrawHud()
  }
  if (story.enabled && cinematic) { info.selection="THE TOYS ARE SAFE"; info.description="Morning. Everyone escaped the house."; info.controls="The story continues: free exploration next"; }
  info.story=story.enabled;
+ info.pennyButton=!arrival.Active() && !cinematic;
+ info.pennyControlled=selectedId==pennyId;
+ info.pennyLocked=story.enabled && !story.SelectionOpen();
  info.puzzleNotice=statusTimer>0.0f && statusText=="Correct";
  if (info.puzzleNotice) info.status=statusTimer>0.0f ? statusText : hallwayPuzzle.Status();
  if (arrival.Active()) {
@@ -1277,6 +1375,9 @@ void ToyRoomApp::OnRender()
 	frame.lights = &lights;
 	frame.ambientLight = environment.AmbientLight();
 	frame.clearColor = environment.ClearColor();
+	frame.sky = environment.Sky();
+	frame.fogColor = environment.HorizonColor();
+	frame.sunShadowStrength = outdoorBlend;
 	// Night fog over the garden thins away as the morning comes.
 	frame.fogDensity=house.exterior->visible ? 0.011f * environment.Night() : 0.0f;
 	frame.selectedOwner = selectedId;
@@ -1552,6 +1653,7 @@ void ToyRoomApp::PrintHelp() const
 		"\n====================== HAUNTED TOY ROOM ======================\n"
 		"MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser\n"
 		"SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost\n"
+		"            9 / PENNY button: take Penny over or hand her back to the simulation (any time)\n"
 		"            0 nothing   |  left-click any object to select it\n"
 		"LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual\n"
 		"CHARACTER   W/S move  A/D turn  Shift run  SPACE stop\n"
@@ -1566,7 +1668,7 @@ void ToyRoomApp::PrintHelp() const
 		"EDIT MODE   Tab toggle   T op (Translate/Rotate/Scale/Shear)   J/L X  U/O Y  I/K Z\n"
 		"            Ctrl = uniform scale   M mirror (reflect)   Backspace reset   Shift faster\n"
 		"RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures\n"
-		"            F4 RAY TRACING  (-/= resolution, 9 bounces)\n"
+		"            F4 RAY TRACING  (-/= resolution, Ctrl+9 bounces)\n"
 		"            F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light\n"
 		"            F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)\n"
 		"            V list parts of selected object, Shift+V dump vertex/index tables\n"
@@ -1732,11 +1834,13 @@ void ToyRoomApp::DemoMission(float dt)
     case 8: if (move(cat,{{3.4f,0,4.9f},{8,0,4},{12,0,4},{15,0,2.6f},{15,0,0.8f},{15,Ground,-7.4f},{15,Ground,-8.1f},{12,Ground,-7.6f},{11.9f,Ground,-5.8f}})) { interact();next(); } break;
     case 9: if (story.CurrentState()==StoryDirector::GameplayState::WARDROBE && demoWait>1.2f) next(); break;
     // 6. The wardrobe: too high for Penny. Jessie and Bullseye do the rest.
-    case 10: if (move(cat,{{9.4f,Ground,-6.1f},{6.4f,Ground,-7.4f},{5.6f,Ground,-7.6f}})) { interact();next(); } break;
-    case 11: if (story.CurrentState()==StoryDirector::GameplayState::FINAL_ESCAPE) next(); break;
+    // Penny must stand right in front of the doors to try them, then steps back to make room for Bullseye.
+    case 10: if (move(cat,{{9.4f,Ground,-6.1f},{6.4f,Ground,-6.4f},{4.7f,Ground,-6.0f}})) { interact();next(); } break;
+    case 11: if (story.CurrentState()==StoryDirector::GameplayState::FINAL_ESCAPE) next(); else move(cat,{{6.6f,Ground,-7.6f}}); break;
     // 7-8. Back to the entrance hall. The main door is locked.
     case 12: if (demoWait>1.5f && move(cat,{{9.4f,Ground,-6.0f},{12,Ground,-5.6f},{12,Ground,0},{12,Ground,7.6f}})) { interact();next(); } break;
-    case 13: if (move(cat,{{12.9f,Ground,6.0f}})) next(); break;
+    // Beside the door, clear of the toys' waiting places and below Buzz's line of fire.
+    case 13: if (move(cat,{{11.7f,Ground,7.3f}})) next(); break;
     // 9. Buzz flies into position; the player's L fires the laser and the door breaks apart.
     case 14: if (story.BuzzReady() && demoWait>1.0f) { if (story.RequestLaser()) std::cout<<"DEMO L laser\n"; next(); } break;
     case 15: if (story.DoorBroken() && demoWait>1.2f) next(); break;

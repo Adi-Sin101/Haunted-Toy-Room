@@ -66,6 +66,9 @@ public:
 	bool SelectionOpen() const { return sandbox || toysFreed; }
 	bool Hidden(const Character* actor) const;      // still inside the chest or the wardrobe
 	bool Scripted(const Character* actor) const;    // in a scripted climb or flight: no physics this frame
+	// On a story task right now (Jessie and Bullseye during the wardrobe rescue, Buzz flying to the door):
+	// in a crowd these characters have right of way over the followers (see PhysicsWorld::SeparateActors).
+	bool Busy(const Character* actor) const;
 	bool FollowersActive() const;
 	bool DoorBroken() const { return doorBroken; }
 	bool BuzzReady() const { return buzzReady && !doorBroken; }
@@ -90,7 +93,7 @@ private:
 	void UpdateRescue(float dt);
 	void UpdateEntrance(float dt);
 	void UpdateFollowers(float dt, const std::vector<Character*>& exclude);
-	void Gather(float dt);
+	void Gather(float dt, bool withPenny = false); // everyone to their garden spot (Penny too, unless the player drives her)
 	void PressChest();
 	void OpenWardrobe();
 	void TryDoor();
@@ -104,6 +107,7 @@ private:
 	int NearestNode(const glm::vec3& p, int zone) const;
 	bool Navigate(Character* actor, const glm::vec3& target, float dt, float speed, float arrive = 0.25f);
 	bool MoveTo(Character* actor, const glm::vec3& target, float dt, float speed, float arrive);
+	glm::vec3 Steer(const Character* actor, const glm::vec3& waypoint) const; // walk around bodies in the way
 
 	Cat* penny = nullptr;
 	Humanoid* woody = nullptr;
@@ -124,6 +128,10 @@ private:
 	std::vector<std::vector<int>> nextHop;
 	std::vector<std::vector<float>> pathCost;
 	std::map<const Character*, Nav> nav;
+	// Wait spot (index into WaitSpots) of each character at the locked door, assigned by position when
+	// the door is found locked: whoever is nearest the door gets the spot nearest the door, so nobody has
+	// to squeeze past anyone else in the corridor.
+	std::map<const Character*, int> waitSlot;
 
 	GameplayState state = GameplayState::PROLOGUE;
 	bool sandbox = false;
@@ -134,7 +142,7 @@ private:
 	std::vector<Emergence> emergences;
 	// Buzz's room and the wardrobe
 	bool buzzDoorOpen = false, rescueRequested = false, wardrobeOpening = false, buzzFreed = false;
-	float buzzDoorAngle = 0.0f, wardrobeOpen = 0.0f, rescueTime = 0.0f, pennyInRoom = 0.0f, rattle = 0.0f;
+	float buzzDoorAngle = 0.0f, wardrobeOpen = 0.0f, rescueTime = 0.0f, rattle = 0.0f;
 	Rescue rescue = Rescue::Waiting;
 	size_t buzzLeg = 0;
 	// Entrance

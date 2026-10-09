@@ -52,6 +52,26 @@ uniform int uBlinn;           // 1 = Blinn-Phong half vector, 0 = Phong reflecti
 uniform int uRasterShadows;
 uniform mat4 uLightVP;
 uniform sampler2D uShadowMap;
+// Sun / moon shadow map (light 0, orthographic). uSunShadowStrength fades it in outdoors, where the
+// true sky direction is used; indoors the window light keeps its unshadowed raster look.
+uniform int uSunShadows;
+uniform float uSunShadowStrength;
+uniform mat4 uSunVP;
+uniform sampler2D uSunShadowMap;
+
+float sunVisibility(vec3 P, vec3 N)
+{
+	if (uSunShadows == 0 || uSunShadowStrength <= 0.0) return 1.0;
+	vec3 coord = (uSunVP * vec4(P, 1.0)).xyz * 0.5 + 0.5;
+	if (coord.z > 1.0 || any(lessThan(coord.xy, vec2(0.0))) || any(greaterThan(coord.xy, vec2(1.0)))) return 1.0;
+	// Slope-scaled bias: surfaces at grazing angles to the light need more to avoid shadow acne.
+	float bias = mix(0.0016, 0.0003, max(dot(N, normalize(-uLights[0].direction)), 0.0));
+	vec2 texel = 1.0 / vec2(textureSize(uSunShadowMap, 0));
+	float visibility = 0.0;
+	for (int x = -1; x <= 1; ++x) for (int y = -1; y <= 1; ++y)
+		visibility += coord.z - bias <= texture(uSunShadowMap, coord.xy + vec2(x, y) * texel * 1.5).r ? 1.0 : 0.0;
+	return mix(1.0, visibility / 9.0, uSunShadowStrength);
+}
 
 float lampVisibility(vec3 P, vec3 N)
 {
@@ -153,7 +173,7 @@ void computeLighting(vec3 P, vec3 N, vec3 V, out vec3 diffuse, out vec3 specular
 		vec3 L; float att; float dist;
 		lightVector(i, P, L, att, dist);
 		if (att * uLights[i].intensity < 1e-4 || dot(N, L) <= 0.0) continue;
-		float visibility = i == 2 ? lampVisibility(P, N) : 1.0;
+		float visibility = i == 2 ? lampVisibility(P, N) : i == 0 ? sunVisibility(P, N) : 1.0;
 		if (visibility > 0.0)
 			addLight(i, P, N, V, visibility, uMaterial.kd, uMaterial.ks, uMaterial.shininess, diffuse, specular);
 	}

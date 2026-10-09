@@ -260,6 +260,68 @@ void CheckBuzzRoom()
     Require(std::abs(PhysicsWorld::FloorHeight({12,Ground,11})-(Ground+0.45f))<1e-5f && std::abs(PhysicsWorld::FloorHeight({12,Ground,13.5f})-(Ground+0.15f))<1e-5f,
         "porch deck and its steps support characters walking in from the garden");
 }
+void CheckSpinesAndCrowds()
+{
+    using namespace RoomSize;
+    Mesh cube("SpineMesh",PrimitiveType::Cube,Primitives::Cube());
+    // A long body (Penny's spine: tail at -0.8, nose at +0.98) walking head first into a wall.
+    SceneNode room("SpineRoom");
+    SceneNode* wall=room.AddShape("Wall",&cube,nullptr,{4,1,0},{0.2f,2,6}); wall->solid=true;
+    SceneNode* cat=room.AddChild("Cat"); cat->local.position={0,0,0}; cat->local.rotation.y=90.0f; // facing +X
+    room.UpdateWorld(glm::mat4(1));
+    PhysicsWorld world; world.Init(room,{});
+    world.AddActor(cat,{0.34f,0.48f,0.34f},{0,0.48f,0});
+    world.SetActorSpine(cat,{-0.46f,0.10f,0.64f});
+    for (int step=0;step<80;++step) { const auto previous=cat->local.position; cat->local.position.x+=0.06f; world.ConstrainActor(cat,previous); }
+    Require(cat->local.position.x+0.98f<=3.9f+1e-3f && cat->local.position.x>2.7f,"a long body stops with its nose, not its centre, at a wall");
+    // Turning in place beside the wall swings the nose into it: the body is pushed back instead.
+    cat->local.position={3.2f,0,0}; cat->local.rotation.y=0.0f;
+    world.ConstrainActor(cat,cat->local.position);
+    cat->local.rotation.y=90.0f; world.ConstrainActor(cat,cat->local.position);
+    Require(cat->local.position.x+0.98f<=3.9f+0.02f,"turning toward a wall pushes the whole spine out of it");
+
+    // The corridor/stair wall is a real solid: a cat on the stairs cannot put its head into the corridor.
+    SceneNode house("StairHouse");
+    house.AddShape("StairDivider",&cube,nullptr,{CorridorRight,(Ground+Slab)*0.5f,(StairBottomZ+9.05f)*0.5f},{0.08f,Slab-Ground,9.05f-StairBottomZ})->solid=true;
+    house.AddShape("StairDividerUpper",&cube,nullptr,{CorridorRight,(Slab+DoorHeight)*0.5f,(StairBottomZ+StairTopZ)*0.5f},{0.08f,DoorHeight-Slab,StairTopZ-StairBottomZ})->solid=true;
+    SceneNode* penny=house.AddChild("Penny"); penny->local.position={14.4f,PhysicsWorld::FloorHeight({14.4f,0,-4}),-4}; penny->local.rotation.y=0.0f;
+    house.UpdateWorld(glm::mat4(1));
+    PhysicsWorld housePhysics; housePhysics.Init(house,{}); housePhysics.EnableHouse(true); housePhysics.EnableHallway(true);
+    housePhysics.AddActor(penny,{0.34f,0.48f,0.34f},{0,0.48f,0});
+    housePhysics.SetActorSpine(penny,{-0.46f,0.10f,0.64f});
+    penny->local.rotation.y=-90.0f; // turn to face the corridor (-X)
+    for (int step=0;step<30;++step) { const auto previous=penny->local.position; penny->local.position.x-=0.05f; housePhysics.ConstrainActor(penny,previous); }
+    Require(penny->local.position.x-0.98f>=CorridorRight+0.04f-0.02f,"the solid stair divider keeps a long body's head out of the corridor");
+
+    // Crowds: the lower-priority body yields, the anchor (player) never moves.
+    SceneNode open("Crowd");
+    SceneNode* first=open.AddChild("First"); first->local.position={0,0,0};
+    SceneNode* second=open.AddChild("Second"); second->local.position={0.3f,0,0};
+    open.UpdateWorld(glm::mat4(1));
+    PhysicsWorld crowd; crowd.Init(open,{});
+    crowd.AddActor(first,{0.4f,1,0.4f},{0,1,0}); crowd.AddActor(second,{0.4f,1,0.4f},{0,1,0});
+    crowd.SeparateActors({first,second},first);
+    Require(first->local.position==glm::vec3(0) && second->local.position.x>=0.8f-1e-3f,"the player's character holds its place and the other body yields");
+    second->local.position={0.3f,0,0.1f};
+    crowd.SeparateActors({second,first},nullptr);
+    Require(glm::abs(second->local.position.x-0.3f)<1e-5f && first->local.position.x<=0.3f-0.8f+1e-3f,"the higher-priority body keeps its place against a follower");
+    // Pinned against a wall on the short axis, the yielding body steps aside along the other axis.
+    SceneNode door("Doorway");
+    door.AddShape("Jamb",&cube,nullptr,{1.0f,1,0},{0.2f,2,3})->solid=true;
+    SceneNode* big=door.AddChild("Big"); big->local.position={0,0,0};
+    SceneNode* small=door.AddChild("Small"); small->local.position={0.55f,0,0.2f};
+    door.UpdateWorld(glm::mat4(1));
+    PhysicsWorld doorway; doorway.Init(door,{});
+    doorway.AddActor(big,{0.4f,1,0.4f},{0,1,0}); doorway.AddActor(small,{0.3f,1,0.3f},{0,1,0});
+    doorway.SeparateActors({big,small},nullptr);
+    Require(glm::length(big->local.position)<1e-3f && small->local.position.z>0.6f,"a body pinned beside a doorway steps back so the higher one can pass");
+
+    // Orthographic projection (sun shadows): the box corners land on the clip cube.
+    const glm::mat4 ortho=t3d::orthographic(30,30,1,150);
+    const glm::vec4 nearCorner=ortho*glm::vec4(30,-30,-1,1), farCorner=ortho*glm::vec4(-30,30,-150,1);
+    Require(std::abs(nearCorner.x-1)<1e-5f && std::abs(nearCorner.y+1)<1e-5f && std::abs(nearCorner.z+1)<1e-5f && nearCorner.w==1.0f
+        && std::abs(farCorner.x+1)<1e-5f && std::abs(farCorner.z-1)<1e-4f,"orthographic projection maps its box onto the clip cube");
+}
 int main()
 {
 	if (!glfwInit()) return 1;
@@ -271,7 +333,7 @@ int main()
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL()) { glfwDestroyWindow(window); glfwTerminate(); return 1; }
 	int result = 0;
-	try { Run(); CheckConnectedHouse(); CheckBuzzRoom();
+	try { Run(); CheckConnectedHouse(); CheckBuzzRoom(); CheckSpinesAndCrowds();
 std::cout << checks << " physics checks passed.\n"; }
 	catch (const std::exception& e) { std::cerr << "FAIL " << e.what() << '\n'; result = 1; }
 	glfwDestroyWindow(window); glfwTerminate(); return result;

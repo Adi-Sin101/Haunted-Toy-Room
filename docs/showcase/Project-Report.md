@@ -6,7 +6,7 @@ CSE-4102 — Computer Graphics and Image Processing Laboratory
 
 # Abstract
 
-Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project told as an eight-stage story. At night Penny, a white cat with ginger patches, explores the garden of an abandoned house and walks in; the main door locks behind her. Upstairs she reads three clues and enters 257 to open the Toy Room, where a glowing red button on an old painted toy chest brings Woody, Jessie and Bullseye to life. Together they go down to an ordinary bedroom: the wardrobe knob is too high, so Jessie rides Bullseye, he jumps, she opens it and Buzz flies out. Buzz's laser breaks the locked main door, everyone escapes, the night turns into morning and the world stays open for free exploration. The player controls any one character; the story layer drives the others.
+Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project told as an eight-stage story. At night Penny, a white cat with ginger patches, explores the garden of an abandoned house and walks in; the main door locks behind her. Upstairs she reads three clues and enters 257 to open the Toy Room, where a glowing red button on an old painted toy chest brings Woody, Jessie and Bullseye to life. Together they go down to an ordinary bedroom: the wardrobe knob is too high, so Jessie rides Bullseye, he jumps, she opens it and Buzz flies out. Buzz's laser breaks the locked main door, everyone escapes, the night turns into morning and the world stays open for free exploration. The player controls any one character; the story layer drives the others. Outdoors a procedural sky dome, shared by the rasteriser and the ray tracer, supplies the sun, moon, stars and clouds that light and shadow the garden, and every character is a solid body.
 
 The implementation uses C++ and an OpenGL 3.3 core pipeline. Five indexed primitive families form the complete environment and articulated models. Hand-authored homogeneous transformations support a scene hierarchy, multiple camera modes and an object inspector. A shared illumination model supplies ambient, diffuse and specular terms for directional, point and spot lights. Flat, Gouraud, Phong and Blinn-Phong shading can be compared in the raster path. Procedural surface maps and a custom BMP loader provide texture detail. The optional GPU ray tracer intersects transformed analytic primitives through a median-split bounding volume hierarchy, then evaluates shadow rays, mirror reflection and straight-through transparency. The project combines cinematic playback, live character takeover and full manual control so each graphics concept can be demonstrated independently.
 
@@ -133,7 +133,7 @@ P00 = 1/(aspect tan(fov/2)); P11 = 1/tan(fov/2)
 P22 = -(far+near)/(far-near); P23 = -2 far near/(far-near); P32 = -1
 ```
 
-For picking, a screen point is converted to normalised device coordinates and a camera ray. Each candidate's inverse model matrix maps that ray to object space. The nearest positive primitive intersection chooses the object's owner. Collision-aware camera movement and orbit sightline tests prevent the view from passing through furniture; the open doorway permits inspection in the connected hallway. GLFW supplies the event callbacks and input states [2].
+For picking, a screen point is converted to normalised device coordinates and a camera ray. Each candidate's inverse model matrix maps that ray to object space, and the nearest positive primitive intersection chooses the object's owner. Camera movement is collision-aware: a sightline test pulls the orbit and follow camera in front of walls at once and releases it gradually. The follow camera eases its focus with frame-rate independent exponential smoothing, slowest in height, so the 0.25 stair treads no longer jolt the view (Section 4.8). GLFW supplies the event callbacks and input states [2].
 
 ```text
 d = normalize(f + xNDC tan(fov/2) aspect r + yNDC tan(fov/2) u)
@@ -359,7 +359,7 @@ The play room is 20 units wide, 18 deep and 7.5 high. Inward-facing wall planes 
 
 ![Figure 17: Window frame, curtain folds and the textured cratered moon visible through the wall opening.](figures/window.png)
 
-Environment::UpdateSky maps the 24-hour clock onto opposite sun and moon arcs. A smooth daylight factor blends ambient light, sky emission and directional-light colour. The emissive sun and moon are visible representations; a separate directional light represents illumination. The large sky plane is unlit and its star brightness fades during daytime.
+Environment::UpdateSky maps the 24-hour clock angle a = (h-6)pi/12 onto two skies. Indoors, small emissive sun and moon spheres orbit behind the bedroom window in front of an unlit starry backdrop, and the directional light points from them into the room. Outdoors the backdrop, those spheres and the flat roof silhouettes are hidden and a procedural sky dome takes over (Section 4.5). A smooth daylight factor blends ambient light, sky colours and directional-light colour for both.
 
 ```text
 a = (hour-6) pi/12; sunHeight = sin(a)
@@ -520,7 +520,21 @@ The scene and camera remain the same in the following comparisons. Raster mode a
 
 The shader uses quality thresholds to bound shadow work. Very weak light contributions are skipped; lights tagged for tracing cast an occlusion ray only when attenuation × intensity × max(N·L,0) exceeds 0.02. Transparent and unlit instances are excluded from general shadow occlusion. These choices improve interactive cost but mean visibility is deliberately approximate for weak lights and translucent objects. The tracer does not provide physical refraction or indirect diffuse illumination.
 
-## 4.5 Coordinated animation and interaction
+## 4.5 Outdoor sky dome, sun and moon
+
+The sky is a function of direction only, skyRadiance(d) in sky.glsl, shared by both renderers. A horizon-to-zenith gradient (exponent 0.45 on elevation) carries an orange sunset band toward the sun's azimuth. Stars come from a 3D grid of cells over the unit sphere: a cell whose hash exceeds 0.9965 holds one twinkling star that fades near the horizon and at dawn. The moon is a 1.7 degree disc with fractal-noise maria, limb darkening and a halo; clouds are four octaves of value noise projected on a plane above the camera and lit by the sun or, faintly, the moon; the sun is a sharp disc with two power-law glows. In raster mode a full-screen triangle on the far plane (z = w) is drawn after the opaque pass with a less-or-equal depth test, so only uncovered pixels run the sky shader. In the ray tracer every missed primary, reflected or transmitted ray returns the same function, so mirrors and glass show the real sky. The fog colour equals the horizon colour, so distant ground fades into the sky.
+
+```text
+sunDir = normalize(-60 cos a, 55 sin a, 30); moonDir = normalize(60 cos a, -55 sin a, 30)
+L0 = normalize(mix(windowDir, -skyDir, w)); w += (outside - w)(1 - exp(-8 dt))
+P_sun = orthographic(30, 30, 1, 150) lookAt(c - 90 L, c); v = PCF3x3(depth test) faded by w
+```
+
+The sun crosses the southern sky in front of the house and the moon the opposite half of the arc, so the facade faces the sun by day and the moon at night. Outdoors the directional light comes from that visible body; indoors it keeps the window direction, so the rooms look as before. The blend w eases over 0.3 s through the front door and snaps on a camera jump. Ray-traced sun and moon shadows use the existing shadow rays; the raster path adds a 2048-squared orthographic depth map over 60 x 60 units ahead of the camera, snapped to whole texels so edges do not crawl, with slope-scaled bias and 3 x 3 PCF.
+
+![Figure 33: Before (top left): the flat backdrop plane north of the house, its edge visible. After: the sky dome by day in raster and ray-traced mode (sunlit front, tree shadows), at night in both modes (moonlit clouds, stars, moon shadows) and the moon with its maria.](diagrams/outdoor-sky.png)
+
+## 4.6 Coordinated animation and interaction
 
 Table 7: Story states and visible graphics operations
 
@@ -535,11 +549,11 @@ Table 7: Story states and visible graphics operations
 | 6 Morning escape | Everyone leaves; night turns into morning; the camera pulls back | Clock-driven sky, sun, fog density and a cinematic camera |
 | 7 Free exploration | The rescued toys stay outside; every control remains available | Independent ownership, flight, mounting in daylight |
 
-Every stage advances only on its real condition. Penny must actually walk through the open front door before it locks. The keypad requires all three inspected clues and 257; a wrong code shows Incorrect Code and clears only the digits. The chest opens when Enter is pressed within 3.2 units of it. Buzz's door opens with Enter beside it on the ground floor. The wardrobe opens only when a mounted Bullseye is within 1.4 units of the spot beside it and his jump lift exceeds 0.45: Penny's Enter there asks Jessie and Bullseye for help, or the player can mount (R), ride and jump (L) themselves. The main door must be tried (Enter, or standing at it for one second). It breaks only after Buzz's nearest laser hit has been the real door leaf for more than 0.65 seconds. Morning starts when Penny steps outside; free exploration follows once the sixteen-second sunrise has finished and the camera has pulled back over the house.
+Every stage advances only on its real condition. Penny must actually walk through the open front door before it locks. The keypad requires all three inspected clues and 257; a wrong code clears only the digits. The chest opens when Enter is pressed within 3.2 units of it, Buzz's door with Enter beside it. The wardrobe rescue starts only with Enter within 1.6 units of the point in front of its doors; elsewhere in the bedroom nothing happens. The doors open when a mounted Bullseye is within 1.4 units of that point and his jump lift exceeds 0.45, whether the story or the player (R, ride, L) performs it. The main door must be tried; it breaks only after Buzz's nearest laser hit has been the real door leaf for more than 0.65 seconds. Morning starts when Penny steps outside; free exploration follows the sixteen-second sunrise and the camera's pull-back over the house.
 
-Two layers run the game. The player controls one character (Penny or any freed toy); the story layer moves the rest. Freed toys accompany Penny in fixed formation slots, so taking one over never moves another; between floors they route through thirteen doorway nodes using Floyd-Warshall first steps. Followers do not block each other, but walls, doors, furniture and blocks still stop everyone. Selecting a mounted rider or horse detaches the pair. 0 releases control, N selects full manual mode, Enter interacts, L fires Buzz's laser once he is in position, Y skips the opening shot and Shift+N replays the story.
+Two layers run the game. The player controls one character (Penny or any freed toy); the story layer moves the rest. The PENNY row of the corner panel (or key 9) takes Penny over, with the follow camera behind her wherever she is, or hands her back to the simulation. Freed toys accompany Penny in fixed formation slots and route between floors through doorway nodes using Floyd-Warshall first steps. Characters are solid to each other: overlaps are resolved by priority and story walkers steer around bodies ahead (Section 4.8). Selecting a mounted rider or horse detaches the pair. 0 releases control, N selects full manual mode, Enter interacts, L fires Buzz's laser once he is in position, Y skips the opening shot and Shift+N replays the story.
 
-![Figure 33: Live character takeover, daytime lighting in the room, the morning pull-back over the house and free exploration outside.](diagrams/interaction-ending.png)
+![Figure 34: Live character takeover, daytime lighting in the room, the morning pull-back over the house and free exploration outside.](diagrams/interaction-ending.png)
 
 ```text
 slot i target = Penny + back (1.7 + 1.3 floor(i/2)) ± 0.9 side
@@ -547,7 +561,7 @@ next node = firstStep[current][goal] (Floyd-Warshall)
 jump lift = 0.75 sin(pi t/0.9); hour = h0 + (31 - h0) smoothstep(t/16) mod 24
 ```
 
-## 4.6 Collision and frame-time control
+## 4.7 Collision and frame-time control
 
 Moving actors and the camera use swept bounding boxes. Expanding an obstacle by the mover's half-size converts box movement into a segment/slab test. At contact the remaining motion loses its component into the contact normal, allowing sliding along furniture. Dynamic blocks use a fixed 1/120-second step with at most six steps per displayed frame. Gravity updates vertical speed, contact separation resolves overlaps and an impact transfers linear/angular velocity. This is a compact box approximation, not a full rigid-body constraint solver.
 
@@ -558,7 +572,33 @@ slideDelta = delta - n min(0,delta·n)
 Maximum physics work = 6 substeps × 1/120 s per frame
 ```
 
-## 4.7 Optimisation decisions
+## 4.8 Solid characters and the follow camera
+
+Penny reaches from her tail at -0.8 to her nose at +1.0 and Bullseye from -0.9 to +1.7, but their boxes covered only about half of that, so heads passed through walls. One long box would swell by up to 41 percent at 45 degrees and could not turn in the 3-unit corridor. Both now use a spine of square boxes along the body; every segment is swept with the same rotation and the most restrictive result is kept, so the body stops with its nose at a wall and turning toward a wall pushes it back. A thin solid divider turns the zero-thickness wall between corridor and stair flight into a real wall.
+
+```text
+focus.xz += (t.xz - focus.xz)(1 - exp(-14 dt)); focus.y += (t.y - focus.y)(1 - exp(-5 dt))
+reach = allowed if allowed < reach else reach + (allowed - reach)(1 - exp(-2.5 dt))
+overlap (ox, oz): lower body moves by the shorter push, the other axis if pinned; higher body takes the rest
+```
+
+A separation pass resolves every overlap between characters by strict priority: the driven character, characters on a story task, Penny, then the followers. The lower body yields the whole push, sliding against the house (stepping aside along the other axis when pinned); the higher one takes the rest. Equal shares cancel in a doorway and jam; strict priorities always have a winner. Story walkers also steer around bodies ahead. The toys now wait behind Buzz's firing position, the porch is left only by its steps and in the morning everyone walks to their own place on the lawn; the scripted story reaches free exploration at 70 s (74.6 s before).
+
+![Figure 35: Top: Penny's front half inside the corridor wall before; the same moment after (spine collision, solid divider). Bottom: Buzz flying through Bullseye and Jessie before; after, Buzz holds his firing spot and the others wait behind him.](diagrams/contact-fixes.png)
+
+The follow camera used to aim at the raw character position, so each 0.25 stair tread became a jolt, and the stairwell sightline moved it in and out on alternate frames. It now eases focus and position with frame-rate independent rates (slowest in height) and releases a wall pull gradually.
+
+Table 8: Follow camera on stairs and porch steps (same scripted run; per-frame second differences)
+
+| Measure | Before | After |
+| --- | --- | --- |
+| Pitch acceleration, RMS | 2.42 deg/frame2 | 0.14 deg/frame2 |
+| Pitch jolts above 0.5 deg/frame2 | 82 | 1 |
+| Camera height acceleration, RMS | 0.047 units/frame2 | 0.022 units/frame2 |
+
+The PENNY row of the corner panel shows who drives her (YOU CONTROL HER or SIMULATION) and toggles on a click or key 9, so a released Penny can be taken back from anywhere; ray-tracing bounces moved to Ctrl+9. The wardrobe no longer starts the rescue 2.5 s after Penny enters the bedroom: only Enter right in front of its doors does.
+
+## 4.9 Optimisation decisions
 
 Geometry buffers and materials are shared. Sphere detail levels contain 1656, 396 or 100 triangles; cylinder and cone levels use 32, 16 or 8 sectors. Projected-size estimates choose detail levels. Raster frustum planes cull only shapes whose conservative bounds are outside the view. Opaque draws are grouped within depth slices by material and mesh; transparent shapes are sorted far-to-near and disable depth writes. Uniform locations are cached. The shadow pass skips inactive lamps and tiny/out-of-cone shapes. The ray tracer reuses CPU vectors and avoids per-item general 4 × 4 inversion by deriving inverse rows from the normal matrix. A single texture array prevents per-map sampler growth.
 
@@ -570,7 +610,7 @@ Inverse affine row i = (normalMatrix column i, -dot(column i,translation))
 
 Cinematic visibility removes the exterior during indoor play and restores it when the entrance breaks. The area light follows the camera: the upstairs hall light, the corridor lamp, the nightstand lamp in Buzz's room or the porch lantern. Surface patterns replace book-spine, fence and star geometry where a colour/coverage map is sufficient. Fixed physics work prevents stalls from scheduling unbounded catch-up work. Deterministic media capture uses a fixed simulation step and raw RGB frame recording; the media generator validates frame count before encoding. Benchmark timings are execution observations, not a guarantee for every environment.
 
-Table 8: Observed rendering timings
+Table 9: Observed rendering timings
 
 | Mode | Frames | ms/frame | FPS | Draws/frame | Geometry |
 | --- | --- | --- | --- | --- | --- |
@@ -579,15 +619,17 @@ Table 8: Observed rendering timings
 
 These observations use the final Release executable at 1600 × 900 with 60 warm-up frames followed by 200 timed frames, v-sync disabled, and a fixed manual room view. The two rendering paths use their normal settings. Ray statistics refer to full-screen passes, not the raster triangle counters. Timing is influenced by scene progression and concurrent system work; it is not an isolated before/after experiment.
 
-## 4.8 Verification and achieved objectives
+## 4.10 Verification and achieved objectives
 
 The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding, hallway access, the connected stairs, the porch and the Buzz bedroom doorway. A fixed-step rehearsal plays the whole story with real movement, mounting, jumps, interactions and contacts; it logs the real door hit and reaches free exploration only with all five characters outside, in all four raster shading modes, the ray tracer and the Debug build. Live-control runs confirm that driving one toy leaves the others unchanged. Captures exercise all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
 
-Table 9: Verification evidence
+Table 10: Verification evidence
 
 | Area | Method | Result |
 | --- | --- | --- |
-| Geometry / transforms / contacts | tests/PhysicsChecks.cpp | 63 checks passed |
+| Geometry / transforms / contacts | tests/PhysicsChecks.cpp, incl. spines, divider, crowd priorities, orthographic projection | 74 checks passed |
+| Solid crowd + stair camera | Scripted story with solid characters; per-frame camera log on stairs | Free exploration at 70 s; pitch jolts 82 -> 1 |
+| Outdoor sky | Matched raster / ray-traced captures by day and night | Same sky, sun/moon light and shadows in both |
 | Manual + mounted + live input | Actual Windows key messages into GLFW callbacks | All three scenarios passed |
 | Story completion | Fixed-step connected escape rehearsal | WIN; real door hit; all five actors outside |
 | Rendering | 55 deterministic PNG captures; capture checks GL errors | All paths completed |
@@ -626,9 +668,9 @@ The project uses the graphics concepts and public library interfaces cited above
 
 # Appendix A - Object construction index
 
-The scene export contains 991 nodes, including 872 mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.
+The scene export contains 993 nodes, including 874 mesh-bearing shapes. The construction groups below include hidden cinematic scenery, joints and contact proxies. Each leaf has local position, rotation, scale, material and UV repeats; its world matrix follows its parent chain. The companion objects.csv records every node and its actual transform, collision flags and geometry counts. Comprehensive-Implementation-Notes.md reproduces the complete construction tables and detailed model explanations.
 
-Table 10: Complete scene coverage by construction group
+Table 11: Complete scene coverage by construction group
 
 | Group | Nodes / shapes | Primitive families |
 | --- | --- | --- |
@@ -642,7 +684,7 @@ Table 10: Complete scene coverage by construction group
 | Bullseye[6] | 55 / 44 | Cone, Cube, Cylinder, Sphere |
 | Buzz[7] | 87 / 77 | Cube, Cylinder, Sphere |
 | RCCar[8] | 44 / 32 | Cube, Cylinder, Sphere |
-| HouseInterior[9] | 38 / 37 | Cube, Cylinder, Plane, Sphere |
+| HouseInterior[9] | 40 / 39 | Cube, Cylinder, Plane, Sphere |
 | RoomDoorLeft[10] | 5 / 4 | Cube, Sphere |
 | RoomDoorRight[11] | 5 / 4 | Cube, Sphere |
 | StairDoor[12] | 5 / 4 | Cube, Sphere |
@@ -659,7 +701,7 @@ Table 10: Complete scene coverage by construction group
 
 Every material is recorded in materials.csv: colour, ambient/diffuse/specular coefficients, shininess, emission, opacity, mirror reflectivity, texture layer and UV scale. Representative coefficients below make the visual comparisons reproducible. Ghost opacity is a time-dependent value: 0.55 times visibility, or 0.55 while selected; the export records its initial hidden value of zero. The comprehensive notes retain the full material inventory. The Demonstration and Viva Guide supplies a timed two-minute narration, live-control rehearsal, theory questions and parameter-change practice. The numbered source documentation explains vertex/index construction, every object hierarchy, illumination, shading, textures and analytic ray tracing in greater depth.
 
-Table 11: Representative actual material coefficients
+Table 12: Representative actual material coefficients
 
 | Material | ka/kd/ks | n | alpha / rho | UV |
 | --- | --- | --- | --- | --- |

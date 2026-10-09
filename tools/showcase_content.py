@@ -303,3 +303,5 @@ TEXTURES = {
 
 from escape_content import revise
 revise(BLOCKS, PROPOSAL, TEXTURES)
+from outdoor_physics_content import update
+update(BLOCKS)

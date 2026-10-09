@@ -22,6 +22,7 @@
 
 #include "lighting.glsl"
 #include "fog.glsl"
+#include "sky.glsl"
 
 in vec2 vNdc;
 out vec4 FragColor;
@@ -37,7 +38,6 @@ uniform vec3 uCamRight;
 uniform vec3 uCamUp;
 uniform float uTanHalfFov;
 uniform float uAspect;
-uniform vec3 uBackground;
 uniform int uMaxBounces;
 uniform int uUseTexture;
 
@@ -313,7 +313,8 @@ void main()
 		float t; vec3 op, on;
 		int hit = traceClosest(ro, rd, t, op, on);
 		if (bounce==0 && hit>=0) fogDistance=t;
-		if (hit < 0) { color += throughput * uBackground; break; }
+		// A ray that leaves the scene sees the sky dome - also in reflections and through glass.
+		if (hit < 0) { color += throughput * skyRadiance(rd); break; }
 
 		// 2. Surface data
 		vec4 r0 = fetch(hit, 0), r1 = fetch(hit, 1), r2 = fetch(hit, 2);

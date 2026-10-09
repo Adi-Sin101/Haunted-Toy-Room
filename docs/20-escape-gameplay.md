@@ -102,6 +102,12 @@ Bullseye's jump moves his **body joint**, not his root: `lift = 0.75 sin(pi t / 
 and rise with it; the root stays on the floor for physical contact. The wardrobe opens when a mounted
 Bullseye is within 1.4 units of the spot and the lift exceeds 0.45.
 
+The rescue starts only when someone tries the doors: **Enter within 1.6 units of the point 1.05 in front
+of them**. (It used to start by itself 2.5 s after Penny entered the room, from anywhere in it.) Elsewhere
+in the room Enter answers *Walk right up to the wardrobe doors*. Bullseye rides up head first; his solid
+muzzle touches the doors before his centre reaches the spot, so arriving within 1.0 is enough. While he
+comes, the story moves an uncontrolled Penny out of his way; a player-driven Penny is asked to step back.
+
 Buzz then lifts off inside the wardrobe and flies out on four waypoints (up, out over the rug, down) with
 wings open, before landing and cheering. Flying is now measured against the floor beneath him
 (`FloorHeight`), so his flight pose also works downstairs and on the stairs.
@@ -113,16 +119,27 @@ Freed toys accompany Penny. Each toy owns a fixed formation slot behind her
 When a toy is in another zone it navigates a graph of thirteen doorway nodes: Toy Room door, upper hall,
 stair opening, stair top and foot, landing, corridor end, Buzz's door (both sides), the bedroom, the
 entrance, the porch and the garden path. Floyd-Warshall precomputes the first step of the shortest route
-between every pair of nodes. While followers are active, characters do not block each other; every wall,
-door, piece of furniture and block still does, so the group never jams in a doorway.
+between every pair of nodes. The porch is a zone of its own, left only by its steps, so nobody heads for
+the garden straight through a railing.
 
-Bullseye's collision footprint is a 1.6 x 1.6 square: its rotated bounds stay narrow enough to turn in
-the 3-unit corridor and pass the bedroom doorway.
+Characters are solid to each other. While followers walk, hard actor contacts are off (so a doorway never
+jams), and a separation pass resolves overlaps by **priority**: the character the player drives, then
+characters on a story task (`StoryDirector::Busy`), then Penny, then the followers. The lower body yields;
+pinned beside a doorway, it steps back instead of sideways. Story walkers also steer around bodies ahead
+of them (`StoryDirector::Steer`).
+
+Bullseye and Penny use collision **spines**, chains of square boxes from rump to muzzle (Bullseye 0.55 at
+-0.35, 0.45, 1.15; Penny 0.34 at -0.46, 0.10, 0.64): compact at any heading, so the horse still turns in
+the 3-unit corridor, but his head no longer passes through walls. See
+[21](21-outdoor-sky-and-solid-characters.md).
 
 ## 7. The locked main door and Buzz's laser
 
 Leading everyone to the entrance and pressing Enter (or standing at the door for one second) tries it: it
-shakes but is locked. The toys wait beside the corridor walls, clear of the line of fire. Buzz (when not
+shakes but is locked. The toys wait beside the corridor walls **behind** Buzz's firing position (z ≤ 1.0):
+in flight he fills most of the corridor's width, and anyone in front would block the beam. Wait spots are
+assigned by position when the door is found locked (front-most character to front-most spot), so nobody
+has to squeeze past anyone. Buzz (when not
 controlled) flies to `(12, Ground+1.2, 4.4)` and aims at `(12, Ground+2.0, 9.2)`, high enough to pass over
 Penny. The objective then asks the player to press **L**.
 
@@ -145,9 +162,10 @@ seconds:
 h(t)=\big(h_0+(31-h_0)\,\mathrm{smoothstep}(t/16)\big)\bmod 24 .
 \]
 
-The same hour moves the sun up behind the house, blends the sky, ambient and directional light colours
-and scales the fog away. Buzz flies alongside the others. Once everyone is outside the camera pulls back
-to show the house and the street. Then FREE_EXPLORE gives the camera back: the toys gather on the lawn
+The same hour raises the sun in the east of the sky dome, blends the sky, ambient and directional light
+colours and scales the fog away. Everyone walks out through the broken door to their own place on the
+lawn (a formation behind Penny would point back at the house and park the toys on the porch steps). Once
+everyone is outside the camera pulls back to show the house and the street. Then FREE_EXPLORE gives the camera back: the toys gather on the lawn
 and stay outside, Buzz can fly (Q/E), Jessie can ride Bullseye (R) and every selection and rendering
 control still works.
 

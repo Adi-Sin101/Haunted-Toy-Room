@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 
 #include "Room.h"
+#include "render/SkyInfo.h"
 
 // The world's own motion, independent of the user:
 //   * clock + day/night cycle: sun and moon travel across the window, sky/ambient colours blend
@@ -36,9 +37,23 @@ public:
 	glm::vec3 ClearColor() const;
 
 	// Direction the sky light travels, its colour and intensity (sun by day, moon by night).
+	// skyLightDirection comes from the small sun / moon framed by the bedroom window; outdoors the
+	// light comes from the true sky instead: outdoorLightDirection, from SunDirection() / MoonDirection().
 	glm::vec3 skyLightDirection{ 0.0f, -1.0f, 0.0f };
+	glm::vec3 outdoorLightDirection{ 0.0f, -1.0f, 0.0f };
 	glm::vec3 skyLightColor{ 1.0f };
 	float skyLightIntensity = 1.0f;
+
+	// ---- outdoor sky dome ----
+	// The sun crosses the southern sky (in front of the house) from east (-X) at 06:00 to west (+X)
+	// at 18:00; the moon follows the opposite half of the same arc. Unit vectors TOWARD them.
+	glm::vec3 SunDirection() const;
+	glm::vec3 MoonDirection() const;
+	glm::vec3 HorizonColor() const; // also the fog colour, so distant ground fades into the sky
+	SkyInfo Sky() const;
+	// True while the camera is outside: the bedroom window's backdrop, sun and moon are hidden and
+	// the sky dome (sky.glsl) is the whole sky.
+	bool outdoors = false;
 
 	// ---- lamp ----
 	bool lampPower = true;

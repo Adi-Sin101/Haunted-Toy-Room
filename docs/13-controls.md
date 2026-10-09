@@ -16,7 +16,7 @@ the selected object, edit mode, camera mode, render mode and FPS. The console re
 | 6 | Beach ball |
 | 7 | Desk lamp |
 | 8 | Ghost |
-| Ctrl+0 | Penny |
+| 9, or the PENNY button | take Penny over (the follow camera goes behind her, wherever she is) or hand her back to the simulation; Ctrl+0 also selects her |
 | 0 | release live ownership; the mission continues |
 | Left click | the object under the mouse (ray picking) |
 
@@ -99,7 +99,7 @@ pausing the mission. **G** hides the interface and center aiming marker.
 | F3 | textures on/off |
 | F4 | **ray tracing** on/off |
 | - / = | ray tracing resolution down / up |
-| 9 | ray tracing bounces 0–4 |
+| Ctrl+9 | ray tracing bounces 0–4 (plain 9 is Penny) |
 | F5 / F6 / F7 | ambient / diffuse / specular term on/off |
 | F8 | sun/moon light on/off |
 | F9 | normals of the selected object |
@@ -215,7 +215,7 @@ Recording writes bottom-up RGB24 frames at the requested fixed simulation rate. 
 |---|---|---|
 | Toy Room | ENTER near the chest | press the red wind-up button: the toys come alive |
 | Ground-floor corridor | ENTER at the left door | open Buzz's bedroom |
-| Buzz's bedroom | ENTER at the wardrobe | the knob is too high: Jessie and Bullseye help |
+| Buzz's bedroom | ENTER right in front of the wardrobe doors (within 1.6) | the knob is too high: Jessie and Bullseye help; further away nothing happens |
 | (as Jessie) | 2, R, W/S/A/D, L | mount Bullseye, ride beside the wardrobe, jump to open it |
 | Entrance | ENTER at the main door | try the door: it is locked |
 | Entrance | L | fire Buzz's laser once he is in position |
@@ -223,8 +223,10 @@ Recording writes bottom-up RGB24 frames at the requested fixed simulation rate. 
 
 Two layers: you control one character, and the story layer drives the others. Freed toys follow
 Penny (through the house's doorway nodes) and keep their own formation slots, so taking one over never
-moves the others. Toys still inside the chest or wardrobe cannot be selected. Press 0 to release the
-current character; N switches to full manual mode (story paused); Shift+N replays the story.
+moves the others. Characters are solid to each other: the one you drive keeps its place and the others
+step aside or walk around it. Toys still inside the chest or wardrobe cannot be selected. Press 0 to
+release the current character, and 9 (or the PENNY button) to take Penny back at any time; N switches to
+full manual mode (story paused); Shift+N replays the story.
 Selecting a mounted rider or horse detaches Jessie; remounting deliberately controls the pair.
 Buzz's manually aimed laser follows the same real-door-hit rule as the story's.
 See [the illustrated story explanation](20-escape-gameplay.md).

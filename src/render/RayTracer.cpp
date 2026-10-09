@@ -178,11 +178,11 @@ void RayTracer::Render(const std::vector<DrawItem>& items, const FrameInfo& fram
 	shader.SetVec3("uCamUp", cam.Up());
 	shader.SetFloat("uTanHalfFov", std::tan(glm::radians(cam.fov) * 0.5f));
 	shader.SetFloat("uAspect", frame.aspect);
-	shader.SetVec3("uBackground", frame.clearColor);
 	shader.SetInt("uMaxBounces", settings.rayBounces);
 	shader.SetInt("uUseTexture", settings.textures ? 1 : 0);
 	shader.SetInt("uNodeOffset", nodeOffset);
 	renderer.UploadLights(shader, frame, settings);
+	renderer.UploadSky(shader, frame);
 	for (size_t i = 0; i < frame.lights->size() && i < static_cast<size_t>(MaxLights); ++i)
 		shader.SetInt("uLightShadow[" + std::to_string(i) + "]", (*frame.lights)[i].castsShadows ? 1 : 0);
 

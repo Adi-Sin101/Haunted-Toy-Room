@@ -113,6 +113,9 @@ private:
 	void HandleEditMode(float dt);
 
 	void Select(int id);
+	// Takes Penny over (follow camera behind her) or hands her back to the simulation. The HUD's Penny
+	// button and the 9 key both call it, so she can always be taken back wherever she is.
+	void TogglePennyControl();
 	Selectable* Selected();
 	Character* DrivenCharacter(); // character WASD controls (Jessie mounted -> Bullseye)
 	int Pick(const glm::vec2& mouse) const;
@@ -156,6 +159,16 @@ private:
 	Hud hud;
 	std::vector<SceneNode*> contactShadows;
 	glm::vec3 cameraPan{0.0f};
+	// Follow-camera smoothing: the focus eases after the driven character (stair treads lift her in
+	// steps), and the wall clamp pulls in at once but lets the camera back out gradually.
+	glm::vec3 followFocus{0.0f};
+	bool followFocusValid = false;
+	float sightReach = -1.0f;
+	// 0 indoors .. 1 outdoors, eased over about a second: blends the sun / moon light from the
+	// window's direction to the true sky direction and fades the raster sun shadows in.
+	float outdoorBlend = 0.0f;
+	glm::vec3 outdoorEye{1e6f}; // camera position when outdoorBlend was last updated
+	bool CameraOutdoors() const;
 	bool helpVisible = false, hudVisible = true, storyCamera = true;
 	bool missionRestarted = false;
 	bool renderSettingsOpen = false;

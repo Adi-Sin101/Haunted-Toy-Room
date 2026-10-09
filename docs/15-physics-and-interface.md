@@ -63,9 +63,30 @@ leaf decide where characters actually pass. Outdoors (story prologue, and after 
 the bounds cover the garden, pavement and street; the front walls, fence, gate posts, porch columns,
 railings, shrubs and tree trunks are solid. `FloorHeight` adds the porch deck and its three steps.
 
-While the story's followers are active, characters ignore one another's bodies so the group cannot jam
-in a doorway; walls, doors, furniture and blocks still stop everyone. The camera never collides with
-characters (they cannot hide the view), only with the house. Broken door boards come to rest on the
-porch and are pushed aside by characters rather than blocking them. Bullseye's footprint is a
-1.6 x 1.6 square so his rotated bounds fit the 3-unit corridor.
+The corridor and the stair flight are both places to stand and used to be separated only by two
+zero-thickness planes; a thin solid `StairDivider` between them makes the wall physical.
+
+**Characters are solid.** While the story's followers walk, hard actor contacts are off so the group
+cannot jam in a doorway; walls, doors, furniture and blocks still stop everyone. After all moves,
+`PhysicsWorld::SeparateActors` resolves every overlap between characters by **priority** (the driven
+character, then story tasks, then Penny, then the followers): the lower body yields the whole push,
+sliding against the house; pinned beside a doorway it steps aside along the other axis; whatever it still
+cannot give, the higher body gives back. The driven character never moves. Story walkers also steer
+around bodies ahead of them.
+
+**Spines.** Penny (tail -0.8 to nose +1.0) and Bullseye (rump -0.9 to muzzle +1.7) use chains of small
+square boxes along the body instead of one box. A single long box would swell by up to 41 % at 45° and
+could not turn in the 3-unit corridor; square segments stay compact at any heading. `SlideActor` sweeps
+all segments with the same rotation and keeps the most restrictive result, so the body stops when its nose
+touches a wall. Before, both animals' heads passed through walls.
+
+The camera never collides with characters (they cannot hide the view), only with the house. Broken door
+boards come to rest on the porch and are pushed aside by characters rather than blocking them. Details,
+figures and the new physics checks: [21](21-outdoor-sky-and-solid-characters.md).
+
+## Penny control in the corner panel
+
+Under the selection buttons, the **PENNY** row shows whether you drive her (*YOU CONTROL HER*) or the
+simulation does (*SIMULATION*); a click or **9** toggles it. Taking her over puts the follow camera behind
+her, wherever she is. (Ray-tracing bounces moved from 9 to **Ctrl+9**.)
 

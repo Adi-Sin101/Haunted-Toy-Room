@@ -1,9 +1,10 @@
-Loaded F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
+Loaded E:\4-1\Lab\graphics\Haunted-Toy-Room\bin\Release\assets/textures/poster.bmp (256x384)
 GAMEPLAY STAGE 0 / NIGHT OUTSIDE THE HOUSE
 
 ====================== HAUNTED TOY ROOM ======================
 MISSION     Enter interact (clues, keypad 257, chest button, doors, wardrobe) / L Buzz laser
 SELECT      1 Woody  2 Jessie  3 Bullseye  4 Buzz  5 RC Car  6 Ball  7 Lamp  8 Ghost
+            9 / PENNY button: take Penny over or hand her back to the simulation (any time)
             0 nothing   |  left-click any object to select it
 LIVE        Selecting a toy keeps the other toys running; 0 releases it; N enters full manual
 CHARACTER   W/S move  A/D turn  Shift run  SPACE stop
@@ -18,7 +19,7 @@ CAMERA      C cycle Free/Orbit/Follow   F focus+orbit selected   Home reset
 EDIT MODE   Tab toggle   T op (Translate/Rotate/Scale/Shear)   J/L X  U/O Y  I/K Z
             Ctrl = uniform scale   M mirror (reflect)   Backspace reset   Shift faster
 RENDER      F1 wireframe  F2 shading (Flat/Gouraud/Phong/Blinn)  F3 textures
-            F4 RAY TRACING  (-/= resolution, 9 bounces)
+            F4 RAY TRACING  (-/= resolution, Ctrl+9 bounces)
             F5 ambient  F6 diffuse  F7 specular  F8 sun/moon light
             F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)
             V list parts of selected object, Shift+V dump vertex/index tables
@@ -31,39 +32,40 @@ STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> m
 Penny moving
 GAMEPLAY STAGE 1 / UPSTAIRS HALLWAY - 257 PUZZLE
 STORY the main door closed and locked behind Penny
-DEMO phase 1 time 4.9
-DEMO phase 2 time 4.95
-DEMO phase 3 time 11.7
-DEMO phase 4 time 12.7
-DEMO phase 5 time 13.25
+DEMO phase 1 time 5.15
+DEMO phase 2 time 5.2
+DEMO phase 3 time 11.95
+DEMO phase 4 time 12.95
+DEMO phase 5 time 13.5
 GAMEPLAY STAGE 2 / THE TOY CHEST
-DEMO phase 6 time 13.95
+DEMO phase 6 time 14.2
 Penny stopped
 Penny moving
 STORY chest button pressed
 INTERACT Penny presses the big red wind-up button. The chest springs open!
-DEMO phase 7 time 17.95
+DEMO phase 7 time 18.2
 Penny stopped
 STORY the toys are alive
 GAMEPLAY STAGE 3 / DOWNSTAIRS TO BUZZ'S ROOM
-DEMO phase 8 time 25.1
+DEMO phase 8 time 25.35
 Penny moving
 GAMEPLAY STAGE 4 / CUPBOARD RESCUE
 INTERACT Penny opens the door: an ordinary bedroom, with a big wooden wardrobe at the back.
-DEMO phase 9 time 32.25
+DEMO phase 9 time 32.4
 Penny stopped
-DEMO phase 10 time 33.5
+DEMO phase 10 time 33.65
 Penny moving
-DEMO phase 11 time 35.3
-Penny stopped
+INTERACT The knob is too high for Penny. Jessie and Bullseye will help!
+DEMO phase 11 time 35.7
 STORY Jessie and Bullseye start the wardrobe rescue
 Jessie mounted Bullseye.
+Penny stopped
 STORY wardrobe opened
-Penny at 5.39557,-4.48,-7.64906 / demo 11 leg 0
+Penny at 6.88764,-4.48,-7.81378 / demo 11 leg 1
 Mission capture: STAGE 4 / CUPBOARD RESCUE / 23:14 Night
-Woody at 7.07498,-4.48,-6.34587
-Jessie at 5.08115,-3.67677,-3.87194
-Bullseye at 5.12059,-4.48,-3.84121
-Buzz at 2.225,-3.43917,-5.3
+Woody at 5.0567,-4.48,-7.90778
+Jessie at 4.70878,-3.66298,-5.47551
+Bullseye at 4.66138,-4.48,-5.4596
+Buzz at 2.86314,-3.12899,-5.68289
 RC Car at 5.5,0.012,-1.8
-Saved F:\CODE\Graphics-Project\Haunted-Toy-Room\docs\showcase\figures\buzz-flight.bmp
+Saved E:\4-1\Lab\graphics\Haunted-Toy-Room\docs\showcase\figures\buzz-flight.bmp

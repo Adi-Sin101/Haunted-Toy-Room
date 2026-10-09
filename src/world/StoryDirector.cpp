@@ -26,7 +26,7 @@ float DistanceXZ(const glm::vec3& a, const glm::vec3& b) { return glm::length(gl
 float Smooth(float t) { t = std::clamp(t, 0.0f, 1.0f); return t * t * (3.0f - 2.0f * t); }
 float Ease(float value, float target, float rate, float dt) { return value + (target - value) * (1.0f - std::exp(-rate * dt)); }
 
-enum Zones { ToyRoomZone, UpperHallZone, StairsZone, GroundZone, BuzzRoomZone, OutsideZone };
+enum Zones { ToyRoomZone, UpperHallZone, StairsZone, GroundZone, BuzzRoomZone, PorchZone, OutsideZone };
 
 const glm::vec3 PennyStreet{6.0f, Ground, 23.3f};
 const glm::vec3 PennyHallway{13.3f, 0.0f, 4.5f};
@@ -34,8 +34,15 @@ const glm::vec3 InsideEntrance{12.0f, Ground, 8.3f};
 const glm::vec3 BuzzDoorCorridor{11.7f, Ground, -5.8f};
 const glm::vec3 DoorAim{12.0f, Ground + 2.0f, 9.2f};
 const glm::vec3 LaserSpot{12.0f, Ground + 1.2f, 4.4f};
-// Places beside the corridor walls where the toys wait, clear of Buzz's line of fire.
-const glm::vec3 WaitSpots[4] = {{10.95f, Ground, 3.4f}, {10.95f, Ground, 5.4f}, {13.0f, Ground, 3.2f}, {13.0f, Ground, 5.6f}};
+// How close to the point in front of the wardrobe doors someone must stand to try them (Enter).
+constexpr float WardrobeReach = 1.6f;
+// Closer than this to that point, Penny stands where Bullseye has to stop for his jump.
+constexpr float PennyClearance = 1.5f;
+// Places beside the corridor walls where the toys wait BEHIND Buzz. Characters are solid: in flight Buzz
+// spans x 11.1..12.9 and z 3.4..5.4 at LaserSpot, which leaves no room beside him, and anyone in front
+// of him would stand in his line of fire. Bullseye faces the door with his muzzle 1.7 ahead of his
+// centre, so the front spots stop at z = 1.0.
+const glm::vec3 WaitSpots[4] = {{10.95f, Ground, 1.0f}, {13.0f, Ground, 0.8f}, {10.95f, Ground, -1.0f}, {13.0f, Ground, -1.2f}};
 // Where the rescued toys stay in the garden once morning has come.
 const glm::vec3 GardenSpots[5] = {{9.2f, Ground, 16.4f}, {10.4f, Ground, 18.2f}, {14.8f, Ground, 17.2f}, {12.4f, Ground, 19.0f}, {13.2f, Ground, 15.6f}};
 }
@@ -65,7 +72,7 @@ void StoryDirector::Init(Cat* cat, Humanoid* sheriff, Humanoid* cowgirl, Bullsey
 		{12.0f, Ground, 15.5f},        // 12 garden path
 	};
 	nodeZone = {ToyRoomZone, UpperHallZone, UpperHallZone, StairsZone, StairsZone, GroundZone, GroundZone, GroundZone,
-		BuzzRoomZone, BuzzRoomZone, GroundZone, OutsideZone, OutsideZone};
+		BuzzRoomZone, BuzzRoomZone, GroundZone, PorchZone, OutsideZone};
 	const std::pair<int, int> links[] = {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}, {8, 9}, {7, 10}, {10, 11}, {11, 12}};
 	const size_t n = nodes.size();
 	const float infinity = std::numeric_limits<float>::max() * 0.25f;
@@ -120,11 +127,11 @@ void StoryDirector::Restart(bool story)
 	if (physics) physics->ResetBlocks();
 	if (car) car->SetHeadlights(false);
 	if (buzz->LaserOn()) buzz->Special();
-	elapsed = chestTime = buttonPress = rescueTime = pennyInRoom = firing = tryTimer = doorShake = morningTime = pullback = 0.0f;
+	elapsed = chestTime = buttonPress = rescueTime = firing = tryTimer = doorShake = morningTime = pullback = 0.0f;
 	chestPressed = toysFreed = buzzDoorOpen = rescueRequested = wardrobeOpening = buzzFreed = false;
 	doorTried = buzzReady = doorBroken = false;
 	rescue = Rescue::Waiting; buzzLeg = 0;
-	emergences.clear(); nav.clear(); controlled = attached = nullptr;
+	emergences.clear(); nav.clear(); waitSlot.clear(); controlled = attached = nullptr;
 	doorLeaf->visible = doorLeaf->solid = true;
 	house.frontDoor->visible = true;
 	for (SceneNode* board : debris) board->visible = false;
@@ -227,7 +234,9 @@ std::string StoryDirector::Objective() const
 	case GameplayState::WARDROBE:
 		if (wardrobeOpening) return "Buzz is free!";
 		if (Controls(jessie) || Controls(horse)) return "Jessie: R mount Bullseye, ride beside the wardrobe, L jump to reach the knob";
-		return rescue == Rescue::Waiting ? "The wardrobe knob is too high for Penny: Enter at the wardrobe" : "Jessie rides Bullseye to the wardrobe...";
+		if (rescue != Rescue::Waiting && Controls(penny) && DistanceXZ(penny->Root()->local.position, props.wardrobeFront) < PennyClearance)
+			return "Step back from the wardrobe so Bullseye can reach the doors";
+		return rescue == Rescue::Waiting ? "Walk Penny right up to the glowing wardrobe and press Enter" : "Jessie rides Bullseye to the wardrobe...";
 	case GameplayState::FINAL_ESCAPE:
 		if (doorBroken) return "The way is open: take everyone outside";
 		if (!doorTried) return "Lead everyone to the main entrance and try the door (Enter)";
@@ -272,6 +281,16 @@ bool StoryDirector::Scripted(const Character* actor) const
 	if (!actor) return false;
 	for (const Emergence& e : emergences) if (e.actor == actor && (e.phase == 1 || e.phase == 2)) return true;
 	return actor == buzz && wardrobeOpening && !buzzFreed; // standing in the wardrobe, then his first flight
+}
+
+bool StoryDirector::Busy(const Character* actor) const
+{
+	if (!actor || !enabled || sandbox) return false;
+	if (state == GameplayState::WARDROBE && (actor == jessie || actor == horse))
+		return rescue != Rescue::Waiting && rescue != Rescue::BuzzFlight && rescue != Rescue::Done;
+	// Buzz keeps right of way while he flies to his firing position and while he holds it.
+	if (state == GameplayState::FINAL_ESCAPE && actor == buzz) return doorTried && !doorBroken;
+	return false;
 }
 
 bool StoryDirector::FollowersActive() const
@@ -349,12 +368,16 @@ std::string StoryDirector::Interact(Character* actor)
 		}
 		return "Go downstairs. The door is on the left of the corridor.";
 	case GameplayState::WARDROBE:
-		if (wardrobeOpening || !downstairs || DistanceXZ(p, props.wardrobeFront) > 2.8f) return {};
+		if (wardrobeOpening) return {};
+		// Only right in front of the doors (wardrobeFront is 1.05 in front of them), never across the room.
+		if (!downstairs || DistanceXZ(p, props.wardrobeFront) > WardrobeReach)
+			return Zone(p) == BuzzRoomZone ? "Walk right up to the wardrobe doors, then press Enter." : std::string();
 		if (actor == horse && Mounted()) {
 			horse->Jump(); jessie->SetReach(true); rescueTime = 0.0f;
 			return "Bullseye jumps and Jessie reaches for the knob!";
 		}
 		if (actor == jessie) return "Too high, even for Jessie. Mount Bullseye (R) and jump (L) beside the wardrobe.";
+		if (rescueRequested) return "Jessie and Bullseye are on their way to the wardrobe.";
 		rescueRequested = true;
 		return "The knob is too high for Penny. Jessie and Bullseye will help!";
 	case GameplayState::FINAL_ESCAPE:
@@ -392,6 +415,14 @@ void StoryDirector::OpenWardrobe()
 void StoryDirector::TryDoor()
 {
 	doorTried = true; doorShake = 0.8f;
+	// Front-most character -> front-most spot (largest z), and so on back down the corridor.
+	std::vector<Character*> group = {woody, horse, jessie, penny};
+	std::sort(group.begin(), group.end(), [](const Character* a, const Character* b) {
+		return a->Root()->WorldPosition().z > b->Root()->WorldPosition().z; });
+	std::vector<int> spots = {0, 1, 2, 3};
+	std::sort(spots.begin(), spots.end(), [](int a, int b) { return WaitSpots[a].z > WaitSpots[b].z; });
+	waitSlot.clear();
+	for (size_t i = 0; i < group.size(); ++i) waitSlot[group[i]] = spots[i];
 	std::cout << "STORY main door is locked\n";
 }
 
@@ -485,7 +516,9 @@ void StoryDirector::Update(float dt)
 		morningTime += dt;
 		// 23:36 -> 07:00 over sixteen seconds (the clock wraps through midnight).
 		hour = std::fmod(morningStart + (31.0f - morningStart) * Smooth(morningTime / 16.0f), 24.0f);
-		UpdateFollowers(dt, {});
+		// Out through the broken door, each to their own place on the lawn. (A formation behind Penny
+		// would point back at the house and park the toys on the porch steps, in everyone else's way.)
+		Gather(dt, true);
 		bool everyone = true;
 		for (const Character* actor : std::vector<const Character*>{penny, woody, jessie, horse, buzz}) {
 			const glm::vec3 p = actor->Root()->WorldPosition();
@@ -533,8 +566,9 @@ void StoryDirector::UpdateChest(float dt)
 void StoryDirector::UpdateRescue(float dt)
 {
 	const bool teamAuto = !Controls(jessie) && !Controls(horse);
-	if (Zone(penny->Root()->local.position) == BuzzRoomZone) pennyInRoom += dt;
-	if (rescue == Rescue::Waiting && teamAuto && (rescueRequested || pennyInRoom > 2.5f)) {
+	// The rescue starts only when someone has walked up to the wardrobe and tried its doors (Enter, see
+	// Interact); merely entering the bedroom does nothing.
+	if (rescue == Rescue::Waiting && teamAuto && rescueRequested) {
 		rescue = Rescue::Mounting;
 		std::cout << "STORY Jessie and Bullseye start the wardrobe rescue\n";
 	}
@@ -554,6 +588,11 @@ void StoryDirector::UpdateRescue(float dt)
 	UpdateFollowers(dt, busy);
 
 	const glm::vec3 spot = props.wardrobeFront;
+	// Characters are solid to each other, so Penny must leave the spot in front of the doors for Bullseye.
+	// The story moves her only while the player is not driving her (the objective asks the player otherwise).
+	if ((rescue == Rescue::Mounting || rescue == Rescue::Riding || rescue == Rescue::Aligning) && !Controls(penny)
+		&& DistanceXZ(penny->Root()->local.position, spot) < PennyClearance)
+		Navigate(penny, spot + glm::vec3(2.2f, 0.0f, -1.8f), dt, 2.0f, 0.3f);
 	switch (rescue) {
 	case Rescue::Mounting: {
 		if (!teamAuto) break;
@@ -565,7 +604,9 @@ void StoryDirector::UpdateRescue(float dt)
 		break;
 	}
 	case Rescue::Riding:
-		if (teamAuto && Navigate(horse, spot, dt, 2.4f, 0.3f)) rescue = Rescue::Aligning;
+		// He walks up head first, and his muzzle (1.7 ahead of his centre) now touches the doors before
+		// his centre reaches the spot: arriving within 1.0 is close enough (the knob is in reach under 1.4).
+		if (teamAuto && Navigate(horse, spot, dt, 2.4f, 1.0f)) rescue = Rescue::Aligning;
 		break;
 	case Rescue::Aligning:
 		if (teamAuto && horse->TurnTowardsHeading(0.0f, dt)) {
@@ -627,10 +668,10 @@ void StoryDirector::UpdateEntrance(float dt)
 		return;
 	}
 	// The door is locked: everyone waits beside the walls while Buzz flies into position and aims.
-	int slot = 0;
 	for (Character* actor : std::vector<Character*>{woody, horse, jessie, penny}) {
 		if (Controls(actor) || (actor == jessie && Mounted())) continue;
-		if (Navigate(actor, WaitSpots[slot++ % 4], dt, 2.4f, 0.25f)) actor->TurnTowardsHeading(0.0f, dt);
+		const auto slot = waitSlot.find(actor);
+		if (Navigate(actor, WaitSpots[slot != waitSlot.end() ? slot->second : 0], dt, 2.4f, 0.4f)) actor->TurnTowardsHeading(0.0f, dt);
 	}
 	if (!Controls(buzz)) {
 		if (!buzzReady && Navigate(buzz, LaserSpot, dt, 2.2f, 0.15f)) {
@@ -641,13 +682,13 @@ void StoryDirector::UpdateEntrance(float dt)
 	}
 }
 
-void StoryDirector::Gather(float dt)
+void StoryDirector::Gather(float dt, bool withPenny)
 {
 	int slot = 0;
 	for (Character* actor : std::vector<Character*>{woody, jessie, horse, buzz, penny}) {
 		const int index = slot++;
-		if (Controls(actor) || (actor == jessie && Mounted()) || actor == penny) continue;
-		Navigate(actor, GardenSpots[index], dt, 2.0f, 0.3f);
+		if (Controls(actor) || (actor == jessie && Mounted()) || (actor == penny && !withPenny)) continue;
+		Navigate(actor, GardenSpots[index], dt, actor == penny ? 2.0f : 2.4f, 0.3f);
 	}
 }
 
@@ -693,7 +734,9 @@ void StoryDirector::UpdateFollowers(float dt, const std::vector<Character*>& exc
 // =============================================================================================
 int StoryDirector::Zone(const glm::vec3& p)
 {
-	if (p.z > HouseFront) return OutsideZone;
+	// The porch is its own zone: it is fenced by railings and left only down its steps (node 12), so
+	// nobody heads for a spot in the garden straight across a railing.
+	if (p.z > HouseFront) return p.x >= 7.6f && p.x <= 16.4f && p.z < 13.0f ? PorchZone : OutsideZone;
 	if (p.x >= StairLeft - 0.05f && p.x <= StairRight + 0.05f && p.z >= StairBottomZ && p.z < StairTopZ) return StairsZone;
 	if (p.y < Slab) return p.x < CorridorLeft ? BuzzRoomZone : GroundZone;
 	return p.x < HalfWidth ? ToyRoomZone : UpperHallZone;
@@ -710,12 +753,44 @@ int StoryDirector::NearestNode(const glm::vec3& p, int zone) const
 	return best;
 }
 
+// Local avoidance: characters are solid to each other, so a walker heads past anyone standing in its
+// path instead of pressing into them. Each body within 2.6 ahead whose centre is closer to the walking
+// line than the two bodies' radii adds a sideways pull away from it; the pull fades with distance.
+glm::vec3 StoryDirector::Steer(const Character* actor, const glm::vec3& waypoint) const
+{
+	auto radius = [&](const Character* c) { return c == horse ? 0.9f : c == penny ? 0.6f : c == buzz && buzz->Root()->local.position.y > PhysicsWorld::FloorHeight(buzz->Root()->local.position) + 0.06f ? 0.95f : 0.5f; };
+	const glm::vec3 p = actor->Root()->local.position;
+	glm::vec2 dir(waypoint.x - p.x, waypoint.z - p.z);
+	const float distance = glm::length(dir);
+	if (distance < 0.3f) return waypoint;
+	dir /= distance;
+	glm::vec2 steer(0.0f);
+	for (const Character* other : std::vector<const Character*>{penny, woody, jessie, horse, buzz}) {
+		if (other == actor || Hidden(other) || (other == jessie && Mounted()) || (actor == jessie && Mounted() && other == horse)) continue;
+		const glm::vec3 q = other->Root()->local.position;
+		if (std::abs(q.y - p.y) > 1.6f) continue; // one flies above the other
+		const glm::vec2 rel(q.x - p.x, q.z - p.z);
+		const float along = glm::dot(rel, dir);
+		if (along <= 0.0f || along > std::min(2.6f, distance + 0.5f)) continue;
+		const glm::vec2 side = rel - dir * along;
+		const float lateral = glm::length(side);
+		const float clearance = radius(actor) + radius(other) + 0.15f;
+		if (lateral >= clearance) continue;
+		// Away from the other body; when it stands dead ahead, pass it on the left.
+		const glm::vec2 away = lateral > 1e-3f ? -side / lateral : glm::vec2(-dir.y, dir.x);
+		steer += away * (clearance - lateral) * (1.0f - along / 2.6f);
+	}
+	if (glm::dot(steer, steer) < 1e-6f) return waypoint;
+	const glm::vec2 ahead = glm::vec2(p.x, p.z) + dir * std::min(distance, 1.2f) + steer * 1.8f;
+	return {ahead.x, waypoint.y, ahead.y};
+}
+
 bool StoryDirector::MoveTo(Character* actor, const glm::vec3& target, float dt, float speed, float arrive)
 {
 	const glm::vec3 p = actor->Root()->local.position;
 	const float d = actor->CanFly() ? glm::distance(p, target) : DistanceXZ(p, target);
 	if (d <= arrive) { actor->Stop(); return true; }
-	actor->FollowWaypoint(target, dt, speed);
+	actor->FollowWaypoint(Steer(actor, target), dt, speed);
 	return false;
 }
 
@@ -738,10 +813,13 @@ bool StoryDirector::Navigate(Character* actor, const glm::vec3& target, float dt
 		}
 		if (n.node < 0) return MoveTo(actor, target, dt, speed, arrive);
 	}
-	if (DistanceXZ(p, nodes[static_cast<size_t>(n.node)]) < 0.4f) {
+	// A doorway node counts as passed within reach of the body's centre. Bullseye's centre sits 1.7 behind
+	// his solid muzzle, so a wall or an open door leaf can stop it short of a tight 0.4.
+	const float reach = actor == horse ? 0.9f : 0.4f;
+	if (DistanceXZ(p, nodes[static_cast<size_t>(n.node)]) < reach) {
 		if (n.node == goal) { n.node = -1; return MoveTo(actor, target, dt, speed, arrive); }
 		n.node = nextHop[static_cast<size_t>(n.node)][static_cast<size_t>(goal)];
 	}
-	actor->FollowWaypoint(nodes[static_cast<size_t>(n.node)], dt, speed);
+	actor->FollowWaypoint(Steer(actor, nodes[static_cast<size_t>(n.node)]), dt, speed);
 	return false;
 }

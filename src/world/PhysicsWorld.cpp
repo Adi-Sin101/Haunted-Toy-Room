@@ -115,11 +115,42 @@ void PhysicsWorld::SetActorShape(SceneNode* node, glm::vec3 half, glm::vec3 offs
 {
 	for (auto& a : actors) if (a.node == node) { a.half = half; a.offset = offset; }
 }
-PhysicsWorld::Bounds PhysicsWorld::ActorBounds(const Actor& a) const
+void PhysicsWorld::SetActorSpine(SceneNode* node, std::vector<float> spine)
+{
+	for (auto& a : actors) if (a.node == node) a.spine = std::move(spine);
+}
+void PhysicsWorld::AppendActorBounds(const Actor& a, std::vector<Bounds>& out) const
 {
 	const glm::mat4 m = a.node->local.Matrix();
-	const glm::vec3 c = glm::vec3(m * glm::vec4(a.offset, 1.0f)), h = Extent(m, a.half);
-	return {c - h, c + h, a.node};
+	const glm::vec3 h = Extent(m, a.half);
+	if (a.spine.empty()) {
+		const glm::vec3 c = glm::vec3(m * glm::vec4(a.offset, 1.0f));
+		out.push_back({c - h, c + h, a.node});
+		return;
+	}
+	for (float z : a.spine) {
+		const glm::vec3 c = glm::vec3(m * glm::vec4(a.offset + glm::vec3(0.0f, 0.0f, z), 1.0f));
+		out.push_back({c - h, c + h, a.node});
+	}
+}
+// Moves the whole proxy from `from` to `to` (root positions): every spine segment is swept with the
+// same rotation, and the most restrictive result wins. Two passes settle a segment that a later one's
+// slide pushed back into contact.
+glm::vec3 PhysicsWorld::SlideActor(const Actor& a, const glm::vec3& from, const glm::vec3& to, bool withActors) const
+{
+	const glm::mat4 m = a.node->local.Matrix();
+	const glm::vec3 half = Extent(m, a.half);
+	glm::vec3 target = to;
+	if (a.spine.empty()) {
+		const glm::vec3 offset = glm::vec3(m * glm::vec4(a.offset, 0.0f));
+		return Move(from + offset, target + offset, half, a.node, withActors) - offset;
+	}
+	for (int pass = 0; pass < 2; ++pass)
+		for (float z : a.spine) {
+			const glm::vec3 offset = glm::vec3(m * glm::vec4(a.offset + glm::vec3(0.0f, 0.0f, z), 0.0f));
+			target = Move(from + offset, target + offset, half, a.node, withActors) - offset;
+		}
+	return target;
 }
 bool PhysicsWorld::IsBlock(SceneNode* node) const
 {
@@ -141,7 +172,7 @@ std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore,bool
 		list.push_back({b.node->local.position - half, b.node->local.position + half, b.node});
 	}
 	for (const Actor& a : actors) if (actorContacts && a.enabled && a.node != ignore &&
-		!(ignore && ignore!=independentActor && a.node==independentActor)) list.push_back(ActorBounds(a));
+		!(ignore && ignore!=independentActor && a.node==independentActor)) AppendActorBounds(a, list);
 	return list;
 }
 
@@ -251,17 +282,76 @@ void PhysicsWorld::ConstrainActor(SceneNode* node, const glm::vec3& previous)
 		const glm::vec3 current = Extent(node->local.Matrix(), a.half);
 		const float fit = std::min({1.0f, available.x / std::max(current.x, 0.001f), available.y / std::max(current.y, 0.001f), available.z / std::max(current.z, 0.001f)});
 		node->local.scale *= fit;
-		const glm::mat4 m = node->local.Matrix();
-		const glm::vec3 half = Extent(m, a.half), offset = glm::vec3(m * glm::vec4(a.offset, 0.0f));
         if (houseSpace) {
             const float floor=FloorHeight({node->local.position.x,previous.y,node->local.position.z});
             const bool stairs=node->local.position.x>=RoomSize::StairLeft && node->local.position.z<RoomSize::StairTopZ;
             if ((a.grounded && (stairs || previous.y<RoomSize::Slab)) || node->local.position.y<floor) node->local.position.y=floor;
         }
-        node->local.position = Move(previous + offset, node->local.position + offset, half, node) - offset;
+        node->local.position = SlideActor(a, previous, node->local.position, true);
 		return;
 	}
 }
+void PhysicsWorld::SeparateActors(const std::vector<SceneNode*>& byPriority, SceneNode* anchor)
+{
+	std::vector<const Actor*> members; // same order as byPriority: members[i] has right of way over members[j > i]
+	for (SceneNode* node : byPriority)
+		for (const Actor& a : actors) if (a.node == node && a.enabled) members.push_back(&a);
+	// A few relaxation sweeps: separating one pair can press a body into a third one.
+	for (int sweep = 0; sweep < 3; ++sweep) {
+		bool moved = false;
+		for (size_t i = 0; i < members.size(); ++i)
+			for (size_t j = i + 1; j < members.size(); ++j) {
+				const Actor& a = *members[i];
+				const Actor& b = *members[j];
+				if (a.node == b.node) continue;
+				std::vector<Bounds> ba, bb;
+				AppendActorBounds(a, ba); AppendActorBounds(b, bb);
+				// Deepest overlap among the segment pairs, measured on the ground plane (characters stand
+				// side by side; pushing one up or down would lift it off the floor).
+				// Two ways apart: along x or along z, each by that axis' overlap (for the deepest segment pair).
+				glm::vec3 pushX(0.0f), pushZ(0.0f); float deepest = 0.0f;
+				for (const Bounds& p : ba) for (const Bounds& q : bb) {
+					if (p.high.y <= q.low.y || q.high.y <= p.low.y) continue; // one passes above the other
+					const float ox = std::min(p.high.x, q.high.x) - std::max(p.low.x, q.low.x);
+					const float oz = std::min(p.high.z, q.high.z) - std::max(p.low.z, q.low.z);
+					if (ox <= 0.0f || oz <= 0.0f) continue;
+					const float depth = std::min(ox, oz);
+					if (depth <= deepest) continue;
+					deepest = depth;
+					const glm::vec3 d = (q.low + q.high - p.low - p.high) * 0.5f; // centre of p -> centre of q
+					pushX = {(d.x >= 0.0f ? 1.0f : -1.0f) * (ox + Skin), 0.0f, 0.0f};
+					pushZ = {0.0f, 0.0f, (d.z >= 0.0f ? 1.0f : -1.0f) * (oz + Skin)};
+				}
+				if (deepest <= 0.0f) continue;
+				// The lower-priority body (b) yields first; its push slides against the house and furniture
+				// exactly like a step of walking. The shorter push is tried first; if a wall pins b on that axis
+				// (a toy standing beside a doorway), it steps aside along the other axis instead, so the higher
+				// body can pass. Whatever b still cannot give, the higher one (a) gives back.
+				glm::vec3& pb = b.node->local.position;
+				const glm::vec3 before = pb;
+				glm::vec3 push = glm::length(pushX) < glm::length(pushZ) ? pushX : pushZ;
+				if (b.node != anchor) {
+					pb = SlideActor(b, before, before + push, false);
+					if (glm::dot(pb - before, glm::normalize(push)) < 0.5f * glm::length(push)) {
+						const glm::vec3 other = push == pushX ? pushZ : pushX;
+						const glm::vec3 alternative = SlideActor(b, before, before + other, false);
+						if (glm::dot(alternative - before, glm::normalize(other)) > glm::dot(pb - before, glm::normalize(push))) {
+							pb = alternative; push = other;
+						}
+					}
+				}
+				const glm::vec3 axis = glm::normalize(push);
+				const float remaining = glm::length(push) - glm::dot(pb - before, axis);
+				if (remaining > 1e-4f && a.node != anchor) {
+					glm::vec3& pa = a.node->local.position;
+					pa = SlideActor(a, pa, pa - axis * remaining, false);
+				}
+				moved = true;
+			}
+		if (!moved) break;
+	}
+}
+
 glm::vec3 PhysicsWorld::MoveCamera(const glm::vec3& previous, const glm::vec3& desired) const
 {
 	// The camera passes through characters (they never hide the view); only the house stops it.
@@ -300,7 +390,7 @@ void PhysicsWorld::Update(float dt)
 	// once per frame instead of once per block, per contact iteration and per step.
 	RefreshScenery();
 	std::vector<Bounds> actorBounds;
-	for (const Actor& actor : actors) if (actor.enabled) actorBounds.push_back(ActorBounds(actor));
+	for (const Actor& actor : actors) if (actor.enabled) AppendActorBounds(actor, actorBounds);
 	// A block's rotation is fixed during the contact pass; only its position is corrected.
 	std::vector<glm::vec3> halves(bodies.size());
 	auto bounds = [&](size_t i) {

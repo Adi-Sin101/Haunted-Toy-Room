@@ -37,9 +37,10 @@ The video has visual captions and no recorded voice. Explain the following point
 5. Lead everyone to the main entrance and press Enter: it is locked. Buzz flies into position; press L to fire. Walk outside: the night turns into morning and the camera pulls back. Free exploration follows.
 6. 5 selects the car. W/S and A/D drive, L toggles moving spotlights. F focuses it; hallway camera access is supported.
 7. 7 selects the lamp. R toggles power, W/S tilts, A/D swivels, comma/period alters intensity. Both light position and direction follow the rig.
-8. F2 cycles Flat/Gouraud/Phong/Blinn and selects the raster path. F5/F6/F7 isolate terms. F3 toggles colour textures. F4 selects analytic ray tracing; 9 changes bounces and minus/equal changes resolution.
+8. F2 cycles Flat/Gouraud/Phong/Blinn and selects the raster path. F5/F6/F7 isolate terms. F3 toggles colour textures. F4 selects analytic ray tracing; Ctrl+9 changes bounces and minus/equal changes resolution. Walk outside to compare the sky dome, sun/moon light and shadows in both paths.
 9. Click a toy or furniture. Tab enters edit mode; T chooses Translate/Rotate/Scale/Shear. J/L, U/O and I/K change axes. M mirrors, Backspace restores. V lists actual parts; Shift+V prints vertices/indices.
 10. O enables haunted ambience. Show the ghost's opacity, ball rolling and lamp motion. N toggles full manual mode; Shift+N restarts the story.
+11. Select a toy, then press 9 (or click the PENNY row): Penny is yours again wherever she is, with the follow camera behind her. Walk her up the stairs to show the smoothed camera, and into the toys to show solid contact.
 
 Reproducible rider setup:
 
@@ -55,7 +56,7 @@ Reproducible matched shading view:
 
 ## Live control design
 
-The player layer owns one character; the story layer drives the rest. Freed toys accompany Penny in fixed formation slots and route between floors through thirteen doorway nodes (Floyd-Warshall next steps). Taking one toy over removes it from the group without moving the others. Jessie and Bullseye perform the wardrobe rescue on their own unless you control one of them; then you do it with R, riding and L. Buzz flies into position at the locked door and waits for your L. The door always requires a real laser hit, including when Buzz is manually controlled. Toys still inside the chest or wardrobe cannot be selected. A mounted pair is detached when selected for independent control; remounting drives the connected pair. 0 releases ownership; N switches to full manual mode; Shift+N replays the story.
+The player layer owns one character; the story layer drives the rest. Freed toys accompany Penny in fixed formation slots and route between floors through thirteen doorway nodes (Floyd-Warshall next steps). Taking one toy over removes it from the group without moving the others. Characters are solid: overlaps resolve by priority (driven character, story task, Penny, followers) and story walkers steer around bodies ahead. 9 or the PENNY row takes Penny back at any time. Jessie and Bullseye perform the wardrobe rescue on their own unless you control one of them; then you do it with R, riding and L. Buzz flies into position at the locked door and waits for your L. The door always requires a real laser hit, including when Buzz is manually controlled. Toys still inside the chest or wardrobe cannot be selected. A mounted pair is detached when selected for independent control; remounting drives the connected pair. 0 releases ownership; N switches to full manual mode; Shift+N replays the story.
 
 ## Questions you should answer
 
@@ -155,9 +156,21 @@ Angle equals distance/radius. A ball uses an axis perpendicular to up and displa
 
 Shared buffers preserve identical geometry; LOD retains more triangles when large on screen; conservative bounds prevent false culling; texture detail replaces subpixel objects; bounded simulation prevents unbounded catch-up work.
 
+### Why does the ray tracer show the same sky as the rasteriser?
+
+Both include sky.glsl. The raster pass shades every pixel still at the far plane with skyRadiance(view direction); the tracer returns skyRadiance(ray direction) whenever a ray hits nothing, including reflected and transmitted rays.
+
+### Why do Penny and Bullseye use several collision boxes?
+
+An axis-aligned box around a long body swells by up to 41 percent at 45 degrees and could not turn in the corridor. A spine of square boxes stays compact at any heading yet covers nose to tail, so the head stops at walls.
+
+### How do the characters avoid jamming in doorways?
+
+Overlaps are resolved by strict priority: the lower body yields the whole push, or steps aside along the other axis when a wall pins it, and story walkers steer around bodies ahead. Equal shares would cancel and jam.
+
 ### What are the deliberate limitations?
 
-Lamp-only general raster shadow map; selected/thresholded ray shadows; finite continuations; straight transparency; box-approximate contacts. No global diffuse transport or physical refraction.
+Raster shadow maps only for the lamp and, outdoors, the sun/moon; selected/thresholded ray shadows; finite continuations; straight transparency; box-approximate contacts. No global diffuse transport or physical refraction.
 
 ## Parameter-change practice
 
@@ -167,7 +180,7 @@ Lamp-only general raster shadow map; selected/thresholded ray shadows; finite co
 | `linear`, `quadratic` | `ToyRoomApp::BuildScene` light setup | Faster dimming with distance |
 | 22° / 34° lamp cone | `ToyRoomApp::BuildScene` cutoff values | Inner lit region / larger smooth cone |
 | `reflectivity` | `Room.cpp` floor/ball materials | Stronger mirror contribution in tracer |
-| `rayBounces`, `rayScale` | `RenderSettings.h`; keys 9 and minus/equal | Deeper continuation / more pixels and cost |
+| `rayBounces`, `rayScale` | `RenderSettings.h`; keys Ctrl+9 and minus/equal | Deeper continuation / more pixels and cost |
 | `maxSpeed`, `turnRate` | `Character.h` | Faster motion / faster turning |
 | Sphere stacks/sectors | `Assets::Load` | Smoother silhouette but more triangles |
 | `uvScale` | Material creation in room/house builders | More/fewer pattern repeats |

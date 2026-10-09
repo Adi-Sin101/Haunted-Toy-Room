@@ -8,6 +8,7 @@
 
 #include "DebugLines.h"
 #include "RenderSettings.h"
+#include "SkyInfo.h"
 #include "gl/Shader.h"
 #include "scene/Light.h"
 
@@ -38,7 +39,10 @@ struct FrameInfo {
 	const std::vector<Light>* lights = nullptr;
 	glm::vec3 ambientLight{ 0.1f };
 	glm::vec3 clearColor{ 0.0f };
+	SkyInfo sky;
+	glm::vec3 fogColor{ 0.055f, 0.065f, 0.095f };
 	float fogDensity=0.0f;
+	float sunShadowStrength = 0.0f; // 0 indoors .. 1 outdoors: raster shadows of light 0 (sun / moon)
 	int selectedOwner = -1;
 	float time = 0.0f;
 };
@@ -73,10 +77,17 @@ public:
 
 	// Uploads lights + illumination toggles to any shader that #includes lighting.glsl.
 	void UploadLights(const Shader& shader, const FrameInfo& frame, const RenderSettings& settings) const;
+	// Uploads the sky uniforms to any shader that #includes sky.glsl (sky pass, ray tracer).
+	void UploadSky(const Shader& shader, const FrameInfo& frame) const;
+
+	static constexpr int SunShadowSize = 2048;
+	static constexpr float SunShadowHalfExtent = 30.0f; // the shadow map covers 60 x 60 units around the view
 
 private:
 	void CollectNode(const SceneNode& node, const glm::vec3& cameraPos);
 	void RenderLampShadow(const FrameInfo& frame);
+	void RenderSunShadow(const FrameInfo& frame);
+	void RenderSky(const FrameInfo& frame);
 
 	// Uniform locations used for every draw call, looked up once instead of by name per draw.
 	struct DrawUniforms {
@@ -93,8 +104,12 @@ private:
 	Shader gouraudShader;
 	Shader debugShader;
 	Shader shadowShader;
+	Shader skyShader;
 	GLuint shadowFbo = 0, shadowDepth = 0;
+	GLuint sunShadowFbo = 0, sunShadowDepth = 0;
+	GLuint skyVao = 0; // the sky's full-screen triangle is generated from gl_VertexID
 	glm::mat4 lampViewProjection{1.0f};
+	glm::mat4 sunViewProjection{1.0f};
 	DebugLines lines;
 
 	RenderStats stats;

@@ -35,13 +35,13 @@ PREAMBLE=r"""\documentclass[12pt,a4paper]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{mathptmx,amsmath,amssymb,graphicx}
-\usepackage[a4paper,left=27mm,right=23mm,top=23mm,bottom=23mm]{geometry}
+\usepackage[a4paper,left=25mm,right=20mm,top=20mm,bottom=22mm]{geometry}
 \usepackage{booktabs,longtable,array,caption,xcolor,fancyhdr,hyperref,float}
 \definecolor{navy}{RGB}{15,25,47}
 \hypersetup{colorlinks=true,linkcolor=navy,urlcolor=navy,pdftitle={Haunted Toy Room: The Midnight Mission},pdfauthor={Adiba Tahsin}}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{5pt plus 1pt minus 1pt}
-\linespread{1.10}
+\setlength{\parskip}{4pt plus 1pt minus 1pt}
+\linespread{1.05}
 \setlength{\emergencystretch}{2em}
 \setlength{\headheight}{14pt}
 \pagestyle{fancy}
@@ -93,7 +93,8 @@ def table(caption, headers, rows, number):
     elif n==4:fractions=[.19,.28,.20,.33]
     elif n==5:fractions=[.26,.23,.10,.20,.21]
     else:fractions=[1/n]*n
-    spec=''.join(r'>{\raggedright\arraybackslash}p{\dimexpr'+f'{f:.4f}'+r'\linewidth-2\tabcolsep\relax}' for f in fractions)
+    # Fractions are rounded down: six columns of 0.1667 (1/6 rounded up) overflow the line by 0.1 pt.
+    spec=''.join(r'>{\raggedright\arraybackslash}p{\dimexpr'+f'{int(f*10000)/10000:.4f}'+r'\linewidth-2\tabcolsep\relax}' for f in fractions)
     heading=' & '.join(r'\textbf{'+escape(c)+'}' for c in headers)+r' \\\midrule'
     size=r'\footnotesize' if caption.startswith(('Surface-map','Complete scene','Representative actual')) else r'\small'
     lines=['{'+size+r'\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}',
@@ -108,7 +109,7 @@ def build():
     source.diagrams()
     objects,materials,textures=source.data_rows()
     blocks=compact_blocks(source.expanded_blocks(),objects,materials,textures,TEXTURES,OUT,source.path_for)
-    tex=[PREAMBLE];equation=figures=tables=0;contents=False
+    tex=[PREAMBLE];equation=displays=figures=tables=0;contents=False
     for b in blocks:
         kind=b[0]
         if kind=='heading':
@@ -124,13 +125,20 @@ def build():
                 tex.append(r'\addcontentsline{toc}{subsection}{'+escape(title)+'}')
         elif kind=='paragraph':tex.extend([escape(b[1]),''])
         elif kind=='equation':
-            assert equation<len(EQUATIONS)
-            tex.extend([r'{\small\begin{equation}\begin{gathered}',EQUATIONS[equation],r'\end{gathered}\label{eq:'+str(equation+1)+r'}\end{equation}}'])
-            equation+=1
+            # A block may carry its own LaTeX (third element); otherwise the next numbered display is used.
+            if len(b)>2:
+                display=b[2]
+            else:
+                assert equation<len(EQUATIONS)
+                display=EQUATIONS[equation];equation+=1
+            displays+=1
+            tex.extend([r'{\small\begin{equation}\begin{gathered}',display,r'\end{gathered}\label{eq:'+str(displays)+r'}\end{equation}}'])
         elif kind=='figure':
             _,name,caption=b;path=source.path_for(name).relative_to(OUT).as_posix();figures+=1
-            limit='0.39' if name in ['room-furniture','animated-props','light-comparison','texture-atlas'] else ('0.22' if name in ['woody','jessie','buzz','car','penny','lamp','laser','window','blocks','house','scene-overview'] else '0.30')
-            tex.extend([r'\begin{figure}[H]',r'\centering',r'\includegraphics[width=\linewidth,height='+limit+r'\textheight,keepaspectratio]{'+path+'}',
+            limit='0.35' if name in ['room-furniture','animated-props','light-comparison','texture-atlas'] else ('0.22' if name in ['woody','jessie','buzz','car','penny','lamp','laser','window','blocks','house','scene-overview'] else '0.27')
+            # Floats (not [H]): text fills the space a figure would otherwise leave at a page end;
+            # \clearpage at each chapter keeps every figure inside its chapter.
+            tex.extend([r'\begin{figure}[!htbp]',r'\centering',r'\includegraphics[width=\linewidth,height='+limit+r'\textheight,keepaspectratio]{'+path+'}',
                         r'\caption{'+escape(caption)+r'}\label{fig:'+name+'}',r'\end{figure}'])
         elif kind=='table':tables+=1;tex.append(table(b[1],b[2],b[3],tables))
     assert equation==len(EQUATIONS),(equation,len(EQUATIONS))
@@ -167,7 +175,7 @@ def build():
     assert 'Overfull' not in log, 'Content extends beyond the layout'
     assert 'Missing character:' not in log, 'Missing font glyph'
     assert 'undefined references' not in log, 'Unresolved references'
-    summary={'report_pages':len(doc),'figures':figures,'tables':tables,'equation_groups':equation,'scene_nodes':len(objects),'engine':'pdfLaTeX','page_limit':39,'content_scan':'passed','overfull_boxes':len(re.findall('Overfull',log)),'chapter_start_pages':chapter_starts,'contents_start_page':contents_pages[0],'contents_includes_sections':True,'contents_section_entries':len(sections)}
+    summary={'report_pages':len(doc),'figures':figures,'tables':tables,'equation_groups':displays,'scene_nodes':len(objects),'engine':'pdfLaTeX','page_limit':39,'content_scan':'passed','overfull_boxes':len(re.findall('Overfull',log)),'chapter_start_pages':chapter_starts,'contents_start_page':contents_pages[0],'contents_includes_sections':True,'contents_section_entries':len(sections)}
     (OUT/'validation/latex-report.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
     for number,page in enumerate(doc,1):page.get_pixmap(matrix=pymupdf.Matrix(.9,.9)).save(str(OUT/f'validation/latex-page-{number:02d}.png'))
     print(json.dumps(summary,indent=2))

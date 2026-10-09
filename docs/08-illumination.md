@@ -153,10 +153,19 @@ sky colour   = mix((0.02, 0.03, 0.10), (0.45, 0.65, 0.95), daylight) + (0.55, 0.
 The last term adds orange near the horizon at dawn and dusk. The sky plane is `unlit`, its emission is
 the sky colour and its texture (the stars) is multiplied by `1 − daylight`, so stars fade out by day.
 
-**The garden sun.** During Penny's arrival ([18](18-house-and-penny.md)) the sun is also shown from the
-garden: `Environment::OutdoorSunPosition() = (−60 cos a, 4 + 55 sin a, −37)`, the same angle on a much
-larger arc just in front of the sky backdrop. Walking from 16:18 to dusk, it visibly sinks towards the
-horizon behind the house.
+**Outdoors: the true sky.** The direction above is aimed from the small sun/moon framed by the bedroom
+window. Outdoors the light instead comes from the sky dome's sun or moon, on the same clock angle:
+
+```text
+sunDir  = normalize(−60 cos a,  55 sin a, 30)       moonDir = normalize(60 cos a, −55 sin a, 30)
+light 0 direction = normalize( mix(windowDirection, −(sun or moon)Dir, outdoor) )
+```
+
+`outdoor` eases from 0 to 1 over about 0.3 s when the camera walks out of the house and snaps when the
+camera jumps; indoors it is 0, so the rooms are lit exactly as before. The arc crosses the southern sky in
+front of the house, so the facade faces the sun by day and the moon at night. The sky itself (gradient,
+sun disc and glow, moon, stars, clouds) is `shaders/sky.glsl`, and the fog colour equals its horizon
+colour. Details: [21](21-outdoor-sky-and-solid-characters.md).
 
 **Haunted lamp.** At night the lamp switches on and flickers:
 `flicker = 0.8 + 0.2·noise(9t)`, dropping to 15 % whenever a slower noise exceeds 0.78.
@@ -166,6 +175,14 @@ horizon behind the house.
 ### 6.1 Ray-traced mode
 Each light with `castsShadows` sends a shadow ray from `P + 0.002·N` towards the light; if any opaque, lit
 object is hit before the light, `vis = 0` ([12](12-ray-tracing.md)).
+
+### Sun and moon shadows in raster mode
+
+Outdoors light 0 also has a shadow map: `Renderer::RenderSunShadow` renders depth from the light with an
+**orthographic** projection (parallel rays; `t3d::orthographic`), 2048², covering 60 × 60 units centred
+a little ahead of the camera and snapped to whole texels so edges do not crawl. `sunVisibility` in
+`lighting.glsl` compares with a slope-scaled bias and 3 × 3 PCF, faded in by the outdoor factor, so
+indoor raster lighting is unchanged.
 
 ### 6.2 Raster mode: the lamp's shadow map (`Renderer::RenderLampShadow`)
 Rasterisation has no visibility information, so the lamp spot uses a **shadow map**, built in a first pass

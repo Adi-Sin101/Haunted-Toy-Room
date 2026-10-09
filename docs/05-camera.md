@@ -80,8 +80,20 @@ The orbit target glides toward the selected object each frame (`mix` with a rate
 following a walking character smoothly.
 
 ### Follow maths
-`desired = focus − forward·distance + up·(0.45·distance)`, and the camera position moves toward it with
-exponential smoothing `position = mix(position, desired, min(1, 4·dt))`.
+`desired = focus − forward·distance + up·(0.45·distance)`. Everything is eased with frame-rate independent
+exponential smoothing, `x += (target − x)(1 − e^(−k·dt))`:
+
+| Quantity | Rate k | Why |
+|---|---|---|
+| focus x, z | 14 | follows the character closely across the floor |
+| focus y | 5 | stair and porch treads lift the character 0.25 at a time; aiming at the raw height jolted the view on every step |
+| camera position | 4 | the chase lag |
+| wall reach (out) | 2.5 | a wall pulls the camera in **at once** but releases it gradually, so railings that block and clear the view on alternate frames no longer pump it |
+
+A focus jump of more than 2.5 units (new selection, restart) snaps. In the upstairs hallway the camera
+changes sides only when the other side is at least 0.6 units roomier. On the scripted story the pitch
+acceleration on stairs dropped from 2.42 to 0.14 °/frame² RMS, with 1 jolt above 0.5 instead of 82
+([21](21-outdoor-sky-and-solid-characters.md)).
 
 ## 5. Mouse picking — the inverse of projection
 

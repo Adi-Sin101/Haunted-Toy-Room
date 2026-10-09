@@ -157,6 +157,11 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	wall("StairwellLeft", {StairLeft, Ground + well * 0.5f, (StairBottomZ + StairTopZ) * 0.5f}, 90, StairTopZ - StairBottomZ, well);
 	wall("StairwellLeftUpper", {StairLeft, (Slab + DoorHeight) * 0.5f, cz}, 90, StairBottomZ + 9.05f, DoorHeight - Slab);
 	wall("StairwellRight", {StairRight, Ground + well * 0.5f, (StairTopZ - 9.05f) * 0.5f}, -90, StairTopZ + 9.05f, well);
+	// The corridor (x < 13.5) and the stair flight (x > 13.5) are both places to stand, and the wall between
+	// them is drawn as two one-sided planes with no thickness. A thin solid box between the planes makes it a
+	// physical wall: without it a long body on the stairs put its head through into the corridor.
+	Box(*inside, "StairDivider", cube, hallWall, {CorridorRight - 0.04f, Ground, StairBottomZ}, {CorridorRight + 0.04f, Slab, 9.05f})->solid = true;
+	Box(*inside, "StairDividerUpper", cube, hallWall, {CorridorRight - 0.04f, Slab, StairBottomZ}, {CorridorRight + 0.04f, DoorHeight, StairTopZ})->solid = true;
 	inside->AddShape("StairwellCeiling", &plane, &ceiling, {(StairLeft + StairRight) * 0.5f, DoorHeight, (StairTopZ - 9.05f) * 0.5f},
 		{StairRight - StairLeft, 1, StairTopZ + 9.05f}, {180, 0, 0});
 

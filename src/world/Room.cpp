@@ -117,7 +117,7 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	sky.uvScale = { 6.4f, 2.25f }; // same star size as before on a backdrop large enough for the garden view
 	rig.skyMaterial = &sky;
 	rig.skyCenter = { cx * 1.5f, 2.5f, -20.0f };
-	room->AddShape("Sky", &plane, &sky, { cx, 38.5f, -40.0f }, { 300.0f, 1.0f, 90.0f }, { 90, 0, 0 });
+	rig.skyBackdrop = room->AddShape("Sky", &plane, &sky, { cx, 38.5f, -40.0f }, { 300.0f, 1.0f, 90.0f }, { 90, 0, 0 });
 
 	Material& sunMat = a.Mat("sun", glm::vec3(0.0f), 0.0f);
 	sunMat.unlit = true;
@@ -239,7 +239,7 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	rig.skylineMaterial = &silhouette;
 	for (int i = 0; i < 9; ++i) {
 		const float h = 7.5f + static_cast<float>(i % 3) * 1.5f; // stand on the garden level, tops show through the window
-		room->AddShape("DistantHouse", &cube, &silhouette, {-22.0f + i * 6.0f, Ground + h * 0.5f, -29.0f}, {5.0f, h, 2.0f});
+		rig.skyline.push_back(room->AddShape("DistantHouse", &cube, &silhouette, {-22.0f + i * 6.0f, Ground + h * 0.5f, -29.0f}, {5.0f, h, 2.0f}));
 	}
 
 	// Ceiling fan: the shaft is stationary, and one rotor joint owns all four blades.

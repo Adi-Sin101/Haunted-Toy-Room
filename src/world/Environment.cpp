@@ -60,6 +60,46 @@ glm::vec3 Environment::ClearColor() const
 	return glm::mix(glm::vec3(0.02f, 0.02f, 0.05f), glm::vec3(0.35f, 0.45f, 0.6f), daylight);
 }
 
+// Same orbit angle as the window's sun, so the clock, the window and the garden always agree. The
+// +Z component tilts the arc over the garden: the front of the house faces the sun and the moon.
+glm::vec3 Environment::SunDirection() const
+{
+	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	return glm::normalize(glm::vec3(-std::cos(a) * 60.0f, std::sin(a) * 55.0f, 30.0f));
+}
+
+glm::vec3 Environment::MoonDirection() const
+{
+	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	return glm::normalize(glm::vec3(std::cos(a) * 60.0f, -std::sin(a) * 55.0f, 30.0f));
+}
+
+glm::vec3 Environment::HorizonColor() const
+{
+	// The night horizon is the colour the garden fog always had; the day horizon is a pale haze.
+	const float sunHeight = SunHeight();
+	const float glow = std::exp(-std::abs(sunHeight) * 6.0f) * Smooth(-0.35f, -0.05f, sunHeight);
+	glm::vec3 horizon = glm::mix(glm::vec3(0.055f, 0.065f, 0.095f), glm::vec3(0.68f, 0.79f, 0.93f), daylight);
+	return horizon + glm::vec3(0.50f, 0.22f, 0.06f) * glow;
+}
+
+SkyInfo Environment::Sky() const
+{
+	const float sunHeight = SunHeight();
+	SkyInfo sky;
+	sky.sunDirection = SunDirection();
+	sky.moonDirection = MoonDirection();
+	sky.daylight = daylight;
+	sky.sunsetGlow = std::exp(-std::abs(sunHeight) * 6.0f) * Smooth(-0.35f, -0.05f, sunHeight);
+	sky.stars = 1.0f - Smooth(-0.2f, 0.08f, sunHeight);
+	sky.horizon = HorizonColor();
+	// Zenith: deep navy at night, violet in twilight, saturated blue by day.
+	sky.zenith = glm::mix(glm::vec3(0.008f, 0.014f, 0.042f), glm::vec3(0.16f, 0.36f, 0.80f), daylight)
+		+ glm::vec3(0.10f, 0.04f, 0.12f) * sky.sunsetGlow;
+	sky.sunColor = glm::mix(glm::vec3(1.0f, 0.93f, 0.80f), glm::vec3(1.0f, 0.50f, 0.22f), 1.0f - Smooth(0.0f, 0.35f, sunHeight));
+	return sky;
+}
+
 void Environment::Update(float dt, float time, bool lampSelected, bool ballSelected, bool ghostSelected)
 {
 	if (!paused)
@@ -85,11 +125,15 @@ void Environment::UpdateSky()
 	const glm::vec3 moonPos = orbit(a + glm::pi<float>());
 	rig.sun->local.position = sunPos;
 	rig.moon->local.position = moonPos;
-	rig.sun->visible = sunHeight > -0.2f;
-	rig.moon->visible = sunHeight < 0.2f;
+	// Outdoors the sky dome draws the real sun and moon; the window's small ones would float in the garden.
+	rig.sun->visible = sunHeight > -0.2f && !outdoors;
+	rig.moon->visible = sunHeight < 0.2f && !outdoors;
+	if (rig.skyBackdrop) rig.skyBackdrop->visible = !outdoors;
+	for (SceneNode* roof : rig.skyline) roof->visible = !outdoors; // unlit window dressing: flat boxes in the garden
 
 	daylight = Smooth(-0.1f, 0.25f, sunHeight);
 	const glm::vec3 roomCenter(0.0f, 1.0f, 0.0f);
+	outdoorLightDirection = -(sunHeight >= 0.0f ? SunDirection() : MoonDirection());
 	if (sunHeight >= 0.0f) {
 		skyLightDirection = glm::normalize(roomCenter - sunPos);
 		const float sunset = 1.0f - Smooth(0.0f, 0.4f, sunHeight);

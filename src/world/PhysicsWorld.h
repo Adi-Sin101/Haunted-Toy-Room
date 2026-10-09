@@ -11,7 +11,11 @@ class SceneNode;
 class PhysicsWorld {
 public:
 	struct Bounds { glm::vec3 low, high; SceneNode* node = nullptr; };
-	struct Actor { SceneNode* node; glm::vec3 half, offset; bool enabled = true, grounded=true; };
+	// A character's collision proxy. Long bodies (Penny, Bullseye) use a SPINE: several square boxes
+	// at local z offsets along the body. One long box would cover them too, but its axis-aligned bounds
+	// swell by up to 41% at 45 degrees, so the animal could no longer turn in a corridor; small square
+	// boxes stay compact at any heading and still cover nose to tail.
+	struct Actor { SceneNode* node; glm::vec3 half, offset; bool enabled = true, grounded=true; std::vector<float> spine; };
 	struct Body {
 		SceneNode* node;
 		Transform initial;
@@ -22,6 +26,7 @@ public:
 	void EnableActor(SceneNode* node, bool enabled);
 	void SetActorGrounded(SceneNode* node,bool grounded);
 	void SetActorShape(SceneNode* node, glm::vec3 half, glm::vec3 offset);
+	void SetActorSpine(SceneNode* node, std::vector<float> spine);
 	void EnableHouse(bool on) { houseSpace=on; }
 	void SetExteriorAccess(bool on) { exteriorAccess=on; }
 	static float FloorHeight(const glm::vec3& feet);
@@ -35,6 +40,13 @@ public:
 	void StopBlock(SceneNode* node);
 	bool IsBlock(SceneNode* node) const;
 	void ConstrainActor(SceneNode* node, const glm::vec3& previous);
+	// Contact between characters. `byPriority` lists the bodies from highest to lowest right of way.
+	// Of two overlapping bodies the lower one yields the whole push (sliding against the house); only
+	// if a wall pins it does the higher one give way for the rest. The `anchor` (the character the
+	// player drives) never moves. Strict priorities mean one body always wins, so a narrow doorway can
+	// never jam the way equal pushes would. Story followers walk with hard actor contacts off for the
+	// same reason; this pass keeps them from walking through each other or through Penny anyway.
+	void SeparateActors(const std::vector<SceneNode*>& byPriority, SceneNode* anchor);
 	glm::vec3 MoveCamera(const glm::vec3& previous, const glm::vec3& desired) const;
 	glm::vec3 CameraSightline(const glm::vec3& target, const glm::vec3& desired, SceneNode* ignored) const;
 	float FireLaser(const glm::vec3& origin, const glm::vec3& direction, float dt, SceneNode* shooter);
@@ -44,7 +56,8 @@ public:
 private:
 	glm::vec3 Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore, bool withActors = true) const;
 	std::vector<Bounds> Obstacles(SceneNode* ignore, bool actorContacts=true) const;
-	Bounds ActorBounds(const Actor& actor) const;
+	void AppendActorBounds(const Actor& actor, std::vector<Bounds>& out) const; // one box per spine segment
+	glm::vec3 SlideActor(const Actor& actor, const glm::vec3& from, const glm::vec3& to, bool withActors) const;
 	void RefreshScenery();
 	std::vector<SceneNode*> scenery;
 	std::vector<Bounds> sceneryBounds; // world boxes of `scenery`, recomputed once per Update
