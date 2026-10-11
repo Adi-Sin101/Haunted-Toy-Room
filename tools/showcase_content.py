@@ -305,3 +305,5 @@ from escape_content import revise
 revise(BLOCKS, PROPOSAL, TEXTURES)
 from outdoor_physics_content import update
 update(BLOCKS)
+from companion_daynight_content import update as update_companions_daynight
+update_companions_daynight(BLOCKS)

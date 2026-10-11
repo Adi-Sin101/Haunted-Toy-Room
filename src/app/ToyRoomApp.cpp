@@ -229,6 +229,8 @@ void ToyRoomApp::StepScene(float dt)
 	glm::vec3 previousLamp = environment.Rig().lamp->local.position;
 	statusTimer = std::max(0.0f, statusTimer - dt);
 	HandleGlobalKeys();
+	for (float at : launch.skyToggles) if (scriptClock < at && scriptClock + dt >= at) ToggleDayNight();
+	scriptClock += dt;
  if (missionRestarted) {
   previousCamera=camera.position;
   previousPenny=penny->Root()->WorldPosition();
@@ -559,6 +561,16 @@ void ToyRoomApp::HandleGlobalKeys()
 		std::cout << "Ray bounces: " << settings.rayBounces << "\n";
 	}
 
+	// Day / night override: '/' or a click on the HUD button (press and release on it). Handled here, not
+	// in HandleSelection, so it also works during the arrival and before the toys are alive.
+	if (input.Pressed(GLFW_KEY_SLASH)) ToggleDayNight();
+	if (hudVisible && !cursorCaptured) {
+		int winW, winH; glfwGetWindowSize(window, &winW, &winH);
+		const bool over = hud.HitTest(input.MousePosition(), winW, winH, renderSettingsOpen) == Hud::DayNightButton;
+		if (input.MousePressed(GLFW_MOUSE_BUTTON_LEFT)) dayNightArmed = over;
+		if (input.MouseReleased(GLFW_MOUSE_BUTTON_LEFT)) { if (dayNightArmed && over) ToggleDayNight(); dayNightArmed = false; }
+	} else dayNightArmed = false;
+
 	// World clock and story
 	if (input.Pressed(GLFW_KEY_P)) {
   flip(environment.paused,"Story / clock paused"); if (environment.paused && story.enabled) story.Pause();
@@ -604,6 +616,18 @@ void ToyRoomApp::HandleGlobalKeys()
 		if (editMode) std::cout << " (" << EditOpName(editOp) << ") - T operation, J/L X, U/O Y, I/K Z, M mirror, Backspace reset";
 		std::cout << "\n";
 	}
+}
+
+void ToyRoomApp::ToggleDayNight()
+{
+	using Sky = Environment::SkyOverride;
+	const bool toNight = !environment.IsNight();
+	if (toNight == environment.ClockIsNight()) environment.SetSkyOverride(Sky::None);
+	else environment.SetSkyOverride(toNight ? Sky::Night : Sky::Day);
+	const bool manual = environment.CurrentSkyOverride() != Sky::None;
+	statusText = std::string(toNight ? "Night" : "Day") + (manual ? " (manual override; the story clock runs on)" : " (back to the story clock)");
+	statusTimer = 3.0f;
+	std::cout << "Day/night: " << statusText << " / clock " << environment.ClockText() << "\n";
 }
 
 void ToyRoomApp::HandlePuzzleInteraction()
@@ -1357,6 +1381,8 @@ void ToyRoomApp::DrawHud()
  info.pennyButton=!arrival.Active() && !cinematic;
  info.pennyControlled=selectedId==pennyId;
  info.pennyLocked=story.enabled && !story.SelectionOpen();
+ info.skyNight=environment.IsNight();
+ info.skyOverride=environment.CurrentSkyOverride()!=Environment::SkyOverride::None;
  info.puzzleNotice=statusTimer>0.0f && statusText=="Correct";
  if (info.puzzleNotice) info.status=statusTimer>0.0f ? statusText : hallwayPuzzle.Status();
  if (arrival.Active()) {
@@ -1449,6 +1475,7 @@ void ToyRoomApp::OnRender()
 		std::cout << "Penny at "<<penny->Root()->local.position.x<<","<<penny->Root()->local.position.y<<","<<penny->Root()->local.position.z<<" / demo "<<demoPhase<<" leg "<<demoLeg<<"\n";
         std::cout << "Mission capture: " << story.Title() << " / " << environment.ClockText() << "\n";
   for (const auto& c:characters) { const auto p=c->Root()->WorldPosition(); std::cout << c->Name() << " at " << p.x << "," << p.y << "," << p.z << "\n"; }
+  std::cout << "Sky hour " << environment.SkyHour() << " clock hour " << environment.hour << " daylight " << environment.Daylight() << " override " << static_cast<int>(environment.CurrentSkyOverride()) << "\n";
   SaveScreenshot(launch.capture);
 		Close();
 	}
@@ -1517,6 +1544,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 		else if (a == "--intro") o.intro = true;
 		else if (a == "--no-intro") o.noIntro = true;
 		else if (a == "--benchmark" && hasValue) o.benchmark = std::max(1, std::stoi(argv[++i]));
+		else if (a == "--sky-toggle" && hasValue) o.skyToggles = floats(argv[++i]);
 		else if (a == "--story-step" && hasValue) o.storyStep=std::clamp(std::stof(argv[++i]),0.001f,0.05f);
 		else if (a == "--cam" && hasValue) {
 			const auto v = floats(argv[++i]);
@@ -1673,6 +1701,7 @@ void ToyRoomApp::PrintHelp() const
 		"            F9 normals  F10 vertices  F11 axes gizmo  F12 screenshot (BMP)\n"
 		"            V list parts of selected object, Shift+V dump vertex/index tables\n"
 		"WORLD       P pause clock  [ ] time speed  , . scrub time  N manual/progression  Shift+N replay\n"
+		"            / day-night switch (visual override; the story clock keeps running)\n"
 		"            H on-screen guide  G interface  B rebuild blocks  Ctrl+B select block  Esc quit\n"
 		"STORY       Outside -> 257 -> toy chest -> Buzz's room -> wardrobe -> laser -> morning\n"
 		"            Y skips the opening shot, Shift+N replays the story from the street\n"

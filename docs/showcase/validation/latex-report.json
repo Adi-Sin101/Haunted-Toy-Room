@@ -1,8 +1,8 @@
 {
-  "report_pages": 38,
+  "report_pages": 39,
   "figures": 35,
   "tables": 12,
-  "equation_groups": 31,
+  "equation_groups": 33,
   "scene_nodes": 993,
   "engine": "pdfLaTeX",
   "page_limit": 39,
@@ -16,5 +16,5 @@
   ],
   "contents_start_page": 3,
   "contents_includes_sections": true,
-  "contents_section_entries": 35
+  "contents_section_entries": 37
 }

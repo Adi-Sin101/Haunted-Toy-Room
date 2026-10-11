@@ -81,6 +81,7 @@ struct LaunchOptions {
 	float scriptedDrive = 0.0f, scriptedTurn = 0.0f, scriptedFly = 0.0f;
 	int frames = 90;
 	float storyStep = 0.0f;
+	std::vector<float> skyToggles; // --sky-toggle 30,40: press the day / night switch at these simulated seconds
 	int storySteps = 1;
 	int benchmark = 0;
 	bool intro = false, noIntro = false; // force / skip Penny's arrival (captures skip it unless --intro)     // run this many frames without v-sync, print timings, then quit
@@ -116,6 +117,9 @@ private:
 	// Takes Penny over (follow camera behind her) or hands her back to the simulation. The HUD's Penny
 	// button and the 9 key both call it, so she can always be taken back wherever she is.
 	void TogglePennyControl();
+	// '/' and the HUD's day / night button: show the opposite of what is on screen. Asking for what the
+	// story clock shows anyway clears the override instead, so the sky eases back to the clock.
+	void ToggleDayNight();
 	Selectable* Selected();
 	Character* DrivenCharacter(); // character WASD controls (Jessie mounted -> Bullseye)
 	int Pick(const glm::vec2& mouse) const;
@@ -173,6 +177,7 @@ private:
 	bool missionRestarted = false;
 	bool renderSettingsOpen = false;
 	bool mouseLook = false, cursorCaptured = false, releaseMouseUntilButtonUp = false;
+	bool dayNightArmed = false; // the left button went down on the day / night button
 	std::string statusText;
 	float statusTimer = 0.0f;
 
@@ -201,6 +206,7 @@ private:
 	FILE* recording = nullptr;
 	std::vector<unsigned char> recordingPixels;
 	double simulationTime = 0.0;
+	float scriptClock = 0.0f; // simulated seconds since launch, for --sky-toggle
 	std::vector<glm::vec3> previousPositions;
 	double benchmarkStart = 0.0, benchmarkCpu = 0.0;
 	long long benchmarkTriangles = 0, benchmarkDraws = 0;

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
+#include "CompanionFollow.h"
 #include "House.h"
 #include "StoryProps.h"
 
@@ -31,8 +32,9 @@ class PhysicsWorld;
 //   FREE_EXPLORE  the story stays open: explore the neighbourhood with any character
 //
 // The player controls one character at a time (the player layer). Every character the player is NOT
-// controlling performs its story behaviour here: the freed toys follow the leader through a small
-// graph of doorway nodes, Jessie and Bullseye perform the wardrobe rescue, Buzz positions and aims.
+// controlling performs its story behaviour here: the freed toys follow Penny (distance-based, see
+// CompanionFollow.h) through a small graph of doorway nodes, Jessie and Bullseye perform the wardrobe
+// rescue, Buzz positions and aims.
 class StoryDirector {
 public:
 	enum class GameplayState { PROLOGUE, PUZZLE, TOY_CHEST, BUZZ_ROOM, WARDROBE, FINAL_ESCAPE, MORNING, FREE_EXPLORE };
@@ -81,9 +83,10 @@ public:
 	bool Glow(glm::vec3& position, glm::vec3& color, float& intensity) const;
 	const std::vector<SceneNode*>& Debris() const { return debris; }
 	bool enabled = true;
+	FollowSettings followSettings; // companion-following distances and speeds (tunable)
 
 private:
-	struct Nav { int node = -1, goal = -1; bool moving = false; };
+	struct Nav { int node = -1, goal = -1; };
 	struct Emergence { Character* actor; float delay; glm::vec3 rise, land; float heading; int phase = 0; };
 	enum class Rescue { Waiting, Mounting, Riding, Aligning, Jumping, StepAside, BuzzFlight, Done };
 
@@ -132,6 +135,12 @@ private:
 	// the door is found locked: whoever is nearest the door gets the spot nearest the door, so nobody has
 	// to squeeze past anyone else in the corridor.
 	std::map<const Character*, int> waitSlot;
+	// Companion following. `serial` counts UpdateFollowers calls: a companion (or the whole formation)
+	// that missed the previous call was driven by the player or by a story task in between.
+	struct Companion { CompanionFollower follower; int serial = -1; bool facing = true; };
+	std::map<const Character*, Companion> companions;
+	FormationAnchor formation;
+	int followSerial = 0, formationSerial = -1;
 
 	GameplayState state = GameplayState::PROLOGUE;
 	bool sandbox = false;

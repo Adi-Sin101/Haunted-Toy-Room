@@ -6,7 +6,7 @@ CSE-4102 — Computer Graphics and Image Processing Laboratory
 
 # Abstract
 
-Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project told as an eight-stage story. At night Penny, a white cat with ginger patches, explores the garden of an abandoned house and walks in; the main door locks behind her. Upstairs she reads three clues and enters 257 to open the Toy Room, where a glowing red button on an old painted toy chest brings Woody, Jessie and Bullseye to life. Together they go down to an ordinary bedroom: the wardrobe knob is too high, so Jessie rides Bullseye, he jumps, she opens it and Buzz flies out. Buzz's laser breaks the locked main door, everyone escapes, the night turns into morning and the world stays open for free exploration. The player controls any one character; the story layer drives the others. Outdoors a procedural sky dome, shared by the rasteriser and the ray tracer, supplies the sun, moon, stars and clouds that light and shadow the garden, and every character is a solid body.
+Haunted Toy Room: The Midnight Mission is an interactive three-dimensional graphics project told as an eight-stage story. At night Penny, a white cat with ginger patches, explores the garden of an abandoned house and walks in; the main door locks behind her. Upstairs she reads three clues and enters 257 to open the Toy Room, where a glowing red button on an old painted toy chest brings Woody, Jessie and Bullseye to life. Together they go down to an ordinary bedroom: the wardrobe knob is too high, so Jessie rides Bullseye, he jumps, she opens it and Buzz flies out. Buzz's laser breaks the locked main door, everyone escapes, the night turns into morning and the world stays open for free exploration. The player controls any one character; the story layer drives the others. Outdoors a procedural sky dome, shared by the rasteriser and the ray tracer, supplies the sun, moon, stars and clouds that light and shadow the garden, and every character is a solid body. The freed toys follow Penny by distance and settle when she stops, and a day/night switch changes the sky and lighting without touching the story clock.
 
 The implementation uses C++ and an OpenGL 3.3 core pipeline. Five indexed primitive families form the complete environment and articulated models. Hand-authored homogeneous transformations support a scene hierarchy, multiple camera modes and an object inspector. A shared illumination model supplies ambient, diffuse and specular terms for directional, point and spot lights. Flat, Gouraud, Phong and Blinn-Phong shading can be compared in the raster path. Procedural surface maps and a custom BMP loader provide texture detail. The optional GPU ray tracer intersects transformed analytic primitives through a median-split bounding volume hierarchy, then evaluates shadow rays, mirror reflection and straight-through transparency. The project combines cinematic playback, live character takeover and full manual control so each graphics concept can be demonstrated independently.
 
@@ -551,12 +551,12 @@ Table 7: Story states and visible graphics operations
 
 Every stage advances only on its real condition. Penny must actually walk through the open front door before it locks. The keypad requires all three inspected clues and 257; a wrong code clears only the digits. The chest opens when Enter is pressed within 3.2 units of it, Buzz's door with Enter beside it. The wardrobe rescue starts only with Enter within 1.6 units of the point in front of its doors; elsewhere in the bedroom nothing happens. The doors open when a mounted Bullseye is within 1.4 units of that point and his jump lift exceeds 0.45, whether the story or the player (R, ride, L) performs it. The main door must be tried; it breaks only after Buzz's nearest laser hit has been the real door leaf for more than 0.65 seconds. Morning starts when Penny steps outside; free exploration follows the sixteen-second sunrise and the camera's pull-back over the house.
 
-Two layers run the game. The player controls one character (Penny or any freed toy); the story layer moves the rest. The PENNY row of the corner panel (or key 9) takes Penny over, with the follow camera behind her wherever she is, or hands her back to the simulation. Freed toys accompany Penny in fixed formation slots and route between floors through doorway nodes using Floyd-Warshall first steps. Characters are solid to each other: overlaps are resolved by priority and story walkers steer around bodies ahead (Section 4.8). Selecting a mounted rider or horse detaches the pair. 0 releases control, N selects full manual mode, Enter interacts, L fires Buzz's laser once he is in position, Y skips the opening shot and Shift+N replays the story.
+Two layers run the game. The player controls one character (Penny or any freed toy); the story layer moves the rest. The PENNY row of the corner panel (or key 9) takes Penny over, with the follow camera behind her wherever she is, or hands her back to the simulation. Freed toys follow Penny by distance along her path (Section 4.9) and route between floors through doorway nodes using Floyd-Warshall first steps. Characters are solid to each other: overlaps are resolved by priority and story walkers steer around bodies ahead (Section 4.8). Selecting a mounted rider or horse detaches the pair. 0 releases control, N selects full manual mode, Enter interacts, L fires Buzz's laser once he is in position, / switches day and night (Section 4.10), Y skips the opening shot and Shift+N replays the story.
 
 ![Figure 34: Live character takeover, daytime lighting in the room, the morning pull-back over the house and free exploration outside.](diagrams/interaction-ending.png)
 
 ```text
-slot i target = Penny + back (1.7 + 1.3 floor(i/2)) ± 0.9 side
+slot i = trail point b_i back along Penny's path + s_i right of it (Section 4.9)
 next node = firstStep[current][goal] (Floyd-Warshall)
 jump lift = 0.75 sin(pi t/0.9); hour = h0 + (31 - h0) smoothstep(t/16) mod 24
 ```
@@ -598,7 +598,28 @@ Table 8: Follow camera on stairs and porch steps (same scripted run; per-frame s
 
 The PENNY row of the corner panel shows who drives her (YOU CONTROL HER or SIMULATION) and toggles on a click or key 9, so a released Penny can be taken back from anywhere; ray-tracing bounces moved to Ctrl+9. The wardrobe no longer starts the rescue 2.5 s after Penny enters the bedroom: only Enter right in front of its doors does.
 
-## 4.9 Optimisation decisions
+## 4.9 Distance-based companion following
+
+CompanionFollow replaces per-frame slots from Penny's facing with one group anchor and a small state per toy. The anchor stays frozen while Penny stands, turns or moves less than 2.0; beyond that it tracks her, dropping a breadcrumb every 0.3, until she has stood still for 0.35 s. Each slot lies a fixed distance back along that trail and to the right of it: Woody and Jessie 0.95 either side 1.7 behind, Bullseye 4.2 behind, Buzz 1.5 aside and 3.3 back, clear for flight. The trail is her own route, so slots on stairs, in the corridor and in doorways are walkable.
+
+```text
+slot q_i = T(b_i) + s_i r(b_i); the anchor follows once |Penny - anchor| > 2.0 and freezes after 0.35 s standing
+v_cap = 2.1 + 1.9 min(1, d/4.5); v* = clamp(sqrt(2*3*max(0, d - 0.3)), 0.35, v_cap); v += clamp(v* - v, -4 dt, 4 dt)
+Settled -> Approaching: following and d > 1.2; Approaching -> Settled: standing and (d <= 0.3 or |Penny - c| < 1.0 or 1 s without progress)
+```
+
+A settled toy issues no movement; separate start and stop distances stop it twitching. It also stops within 1.0 of a standing Penny, or after a second blocked near its slot. Values live in StoryDirector::followSettings and movement uses the existing autopilot and collision pass. The driven toy and a mounted Jessie are left out, so input and following never mix; a released toy rejoins only if more than 2.0 from its slot. Each toy changes mode at most once per stage; free exploration is reached at 73.4 s (70.2 s before).
+
+## 4.10 Manual day/night override
+
+The story owns the clock, so a player switch must not change it. Environment keeps two hours: hour, the clock the story sets and the clock hands show, and skyHour, read by every sky and lighting function (sun, moon, daylight, ambient, sky and fog colours, stars, sky light, neighbouring houses and the lamp automation). Without an override skyHour equals hour, so sunset and sunrise are unchanged; an override eases it to 12:00 or 00:00 over 1.5 s the shorter way round. Both renderers read the same functions. The / key or the DAY / NIGHT button beside the settings button switches; the button shows the look, a MANUAL tag and the action, and fires only on a press and release inside it. Asking for what the clock shows clears the override. The rehearsal gives identical stages, timings and positions with and without the switch.
+
+```text
+target = 12 (Day), 0 (Night) or hour (no override); span = ((target - h0 + 36) mod 24) - 12
+skyHour = (h0 + span smoothstep(min(1, t/1.5))) mod 24; daylight = smoothstep(-0.1, 0.25, sin((skyHour - 6) pi/12))
+```
+
+## 4.11 Optimisation decisions
 
 Geometry buffers and materials are shared. Sphere detail levels contain 1656, 396 or 100 triangles; cylinder and cone levels use 32, 16 or 8 sectors. Projected-size estimates choose detail levels. Raster frustum planes cull only shapes whose conservative bounds are outside the view. Opaque draws are grouped within depth slices by material and mesh; transparent shapes are sorted far-to-near and disable depth writes. Uniform locations are cached. The shadow pass skips inactive lamps and tiny/out-of-cone shapes. The ray tracer reuses CPU vectors and avoids per-item general 4 × 4 inversion by deriving inverse rows from the normal matrix. A single texture array prevents per-map sampler growth.
 
@@ -619,7 +640,7 @@ Table 9: Observed rendering timings
 
 These observations use the final Release executable at 1600 × 900 with 60 warm-up frames followed by 200 timed frames, v-sync disabled, and a fixed manual room view. The two rendering paths use their normal settings. Ray statistics refer to full-screen passes, not the raster triangle counters. Timing is influenced by scene progression and concurrent system work; it is not an isolated before/after experiment.
 
-## 4.10 Verification and achieved objectives
+## 4.12 Verification and achieved objectives
 
 The final project is compiled in both Release and Debug configurations. The automated checks cover analytic intersections, normal perpendicularity, transform equivalence, shear-safe bounds, contact stability, laser impulse/occlusion, camera sliding, hallway access, the connected stairs, the porch and the Buzz bedroom doorway. A fixed-step rehearsal plays the whole story with real movement, mounting, jumps, interactions and contacts; it logs the real door hit and reaches free exploration only with all five characters outside, in all four raster shading modes, the ray tracer and the Debug build. Live-control runs confirm that driving one toy leaves the others unchanged. Captures exercise all three light types, term isolation, colour-texture toggling, analytic tracing, geometry debug views and object close-ups. The two-minute video is decoded after encoding to check media integrity.
 
@@ -627,7 +648,9 @@ Table 10: Verification evidence
 
 | Area | Method | Result |
 | --- | --- | --- |
-| Geometry / transforms / contacts | tests/PhysicsChecks.cpp, incl. spines, divider, crowd priorities, orthographic projection | 74 checks passed |
+| Geometry / transforms / contacts | tests/PhysicsChecks.cpp, incl. spines, divider, crowd priorities, orthographic projection, companion following | 92 checks passed |
+| Companion following | Fixed-step story rehearsal with a per-companion mode and distance trace | At most one mode switch per stage; free exploration at 73.4 s |
+| Day/night override | Same rehearsal with and without --sky-toggle; raster and ray-traced captures | Identical story output; cleared override lands on the clock |
 | Solid crowd + stair camera | Scripted story with solid characters; per-frame camera log on stairs | Free exploration at 70 s; pitch jolts 82 -> 1 |
 | Outdoor sky | Matched raster / ray-traced captures by day and night | Same sky, sun/moon light and shadows in both |
 | Manual + mounted + live input | Actual Windows key messages into GLFW callbacks | All three scenarios passed |

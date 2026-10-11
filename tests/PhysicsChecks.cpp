@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include "geometry/Primitives.h"
 #include "scene/SceneNode.h"
+#include "world/CompanionFollow.h"
 #include "world/PhysicsWorld.h"
 #include "world/Room.h"
 #include "world/PuzzleCode.h"
@@ -322,6 +323,130 @@ void CheckSpinesAndCrowds()
     Require(std::abs(nearCorner.x-1)<1e-5f && std::abs(nearCorner.y+1)<1e-5f && std::abs(nearCorner.z+1)<1e-5f && nearCorner.w==1.0f
         && std::abs(farCorner.x+1)<1e-5f && std::abs(farCorner.z-1)<1e-4f,"orthographic projection maps its box onto the clip cube");
 }
+// Companion following (world/CompanionFollow): a leader and one companion on an open floor. The companion
+// moves exactly as StoryDirector moves it: toward its slot at the commanded speed, never past it.
+struct FollowRig {
+	FollowSettings settings;
+	FormationAnchor anchor;
+	CompanionFollower follower;
+	glm::vec3 leader{0.0f}, companion{0.0f};
+	float leaderHeading = 0.0f;
+	glm::vec2 offset{-0.95f, 1.7f};
+	bool blocked = false;     // a wall holds the companion where it is
+	bool direct = true;       // the slot is in the companion's own zone
+	int commands = 0;         // frames with a movement command
+	int starts = 0;           // Settled -> Approaching switches
+	float largestStep = 0.0f; // biggest companion displacement in one frame
+	void Start()
+	{
+		anchor.Reset(leader, leaderHeading);
+		companion = anchor.Slot(offset.x, offset.y);
+	}
+	glm::vec3 Target() const { return anchor.Slot(offset.x, offset.y); }
+	void Step(float dt, const glm::vec3& leaderVelocity = glm::vec3(0.0f))
+	{
+		leader += leaderVelocity * dt;
+		if (glm::length(leaderVelocity) > 0.0f) leaderHeading = glm::degrees(std::atan2(leaderVelocity.x, leaderVelocity.z));
+		anchor.Update(leader, dt, settings);
+		const glm::vec3 target = Target();
+		const auto before = follower.CurrentMode();
+		const auto command = follower.Update(glm::distance(companion, target), glm::distance(companion, leader), anchor.Following(), direct, dt, settings);
+		if (before == CompanionFollower::Mode::Settled && follower.CurrentMode() == CompanionFollower::Mode::Approaching) ++starts;
+		if (!command.move) return;
+		++commands;
+		if (blocked) return;
+		const glm::vec3 delta = target - companion;
+		const float distance = glm::length(delta), step = std::min(distance, command.speed * dt);
+		if (distance > 1e-6f) companion += delta * (step / distance);
+		largestStep = std::max(largestStep, step);
+	}
+	void Run(float seconds, const glm::vec3& velocity = glm::vec3(0.0f), float dt = 1.0f / 60.0f)
+	{
+		for (float t = 0.0f; t < seconds; t += dt) Step(dt, velocity);
+	}
+};
+
+void CheckCompanionFollowing()
+{
+	using Mode = CompanionFollower::Mode;
+	{
+		FollowRig rig; rig.Start();
+		rig.Run(5.0f);
+		Require(rig.commands == 0 && rig.follower.CurrentMode() == Mode::Settled, "companions stay still while the leader stands");
+		rig.Run(0.7f, {0, 0, 2.0f}); rig.Run(2.0f);
+		Require(rig.commands == 0 && !rig.anchor.Following(), "a walk shorter than followStartDistance does not start the group");
+		const glm::vec3 slot = rig.Target();
+		rig.leaderHeading = 180.0f; rig.anchor.Update(rig.leader, 1.0f / 60, rig.settings);
+		Require(glm::distance(rig.Target(), slot) < 1e-5f && rig.commands == 0, "turning on the spot does not move the formation slots");
+	}
+	{
+		FollowRig rig; rig.Start();
+		rig.Run(3.0f, {0, 0, 2.0f});
+		Require(rig.anchor.Following() && rig.commands > 0 && rig.starts == 1, "walking beyond followStartDistance starts the companion");
+		const float trailing = glm::distance(rig.companion, rig.leader);
+		Require(trailing > rig.settings.stopDistance && trailing < rig.settings.catchUpDistance + 1.0f, "a following companion keeps a reasonable distance");
+		rig.Run(4.0f);
+		Require(!rig.anchor.Following() && rig.follower.CurrentMode() == Mode::Settled
+			&& glm::distance(rig.companion, rig.Target()) <= rig.settings.arrivalTolerance + 1e-4f, "after the leader stops the companion reaches its slot and settles");
+		const int before = rig.commands; const glm::vec3 rest = rig.companion;
+		rig.Run(5.0f);
+		Require(rig.commands == before && rig.companion == rest, "a settled companion issues no further movement");
+		Require(rig.largestStep <= rig.settings.catchUpSpeed / 60.0f + 1e-4f, "companions never jump faster than catchUpSpeed");
+	}
+	{
+		FollowRig rig; rig.Start();
+		rig.Run(1.5f, {0, 0, 2.0f});
+		for (int i = 0; i < 30; ++i) { rig.Run(0.12f, {0, 0, 2.0f}); rig.Run(0.15f); } // start-stop taps
+		rig.Run(5.0f);
+		Require(rig.starts <= 3 && rig.follower.CurrentMode() == Mode::Settled, "repeated start-stop taps do not make the companion oscillate");
+		float lastSpeed = 0.0f; int reversals = 0;
+		for (int i = 0; i < 600; ++i) { rig.Step(1.0f / 60); if (rig.follower.Speed() > lastSpeed + 1e-4f) ++reversals; lastSpeed = rig.follower.Speed(); }
+		Require(reversals == 0, "a settled companion does not speed up again while the leader stands");
+	}
+	{
+		FollowRig rig; rig.Start();
+		rig.Run(3.0f, {0, 0, 2.0f}); rig.Run(3.0f);
+		rig.Run(4.0f, {0, 0, -2.0f}); // turn round and walk back past the group
+		rig.Run(5.0f);
+		const glm::vec3 behind = rig.leader + glm::vec3(0, 0, 1.7f); // she walked toward -Z: behind her is +Z
+		Require(glm::distance(rig.Target(), behind + glm::vec3(-0.95f, 0, 0)) < 0.05f && rig.follower.CurrentMode() == Mode::Settled,
+			"the formation turns with the leader's direction of travel");
+		Require(rig.largestStep <= rig.settings.catchUpSpeed / 60.0f + 1e-4f, "turning the formation round never teleports the companion");
+	}
+	{
+		// Variable frame rate: 30, 144 and 60 Hz frames mixed.
+		FollowRig rig; rig.Start();
+		const float rates[] = {1.0f / 30, 1.0f / 144, 1.0f / 60};
+		for (int i = 0; i < 600; ++i) rig.Step(rates[i % 3], i < 300 ? glm::vec3(2.0f, 0, 0) : glm::vec3(0.0f));
+		for (int i = 0; i < 600; ++i) rig.Step(rates[i % 3]);
+		Require(rig.follower.CurrentMode() == Mode::Settled && glm::distance(rig.companion, rig.Target()) <= rig.settings.arrivalTolerance + 1e-4f,
+			"following settles the same way at variable frame rates");
+	}
+	{
+		FollowRig rig; rig.Start();
+		rig.Run(3.0f, {0, 0, 2.0f});
+		rig.blocked = true; rig.Run(rig.settings.leaderIdleTime + rig.settings.stallTime + 0.5f);
+		Require(rig.follower.CurrentMode() == Mode::Settled, "a companion blocked short of its slot settles instead of pushing on");
+		FollowRig detour; detour.Start();
+		detour.Run(3.0f, {0, 0, 2.0f});
+		detour.blocked = true; detour.direct = false; detour.Run(5.0f);
+		Require(detour.follower.CurrentMode() == Mode::Approaching, "a companion on a route through another room keeps going");
+		CompanionFollower released;
+		released.Rejoin(rig.settings.followStartDistance + 3.0f, rig.settings);
+		Require(released.CurrentMode() == Mode::Approaching, "a toy released far from the group walks back to it");
+		released.Rejoin(rig.settings.followStartDistance - 0.5f, rig.settings);
+		Require(released.CurrentMode() == Mode::Settled, "a toy released close to the group stays where it is");
+	}
+	{
+		// Penny walks back into the standing group: nobody walks into her.
+		FollowRig rig; rig.Start();
+		rig.companion = rig.leader + glm::vec3(0.5f, 0, 0.5f);
+		rig.follower.Rejoin(5.0f, rig.settings);
+		rig.Step(1.0f / 60);
+		Require(rig.follower.CurrentMode() == Mode::Settled, "a companion within stopDistance of the standing leader stops");
+	}
+}
+
 int main()
 {
 	if (!glfwInit()) return 1;
@@ -333,7 +458,7 @@ int main()
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL()) { glfwDestroyWindow(window); glfwTerminate(); return 1; }
 	int result = 0;
-	try { Run(); CheckConnectedHouse(); CheckBuzzRoom(); CheckSpinesAndCrowds();
+	try { Run(); CheckConnectedHouse(); CheckBuzzRoom(); CheckSpinesAndCrowds(); CheckCompanionFollowing();
 std::cout << checks << " physics checks passed.\n"; }
 	catch (const std::exception& e) { std::cerr << "FAIL " << e.what() << '\n'; result = 1; }
 	glfwDestroyWindow(window); glfwTerminate(); return result;

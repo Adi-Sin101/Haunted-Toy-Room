@@ -18,6 +18,8 @@ struct HudInfo {
 	bool pennyButton = true;      // the "take / release Penny" control is offered
 	bool pennyControlled = false; // the player is driving Penny right now
 	bool pennyLocked = false;     // the story keeps Penny selected (before the toys are alive)
+	bool skyNight = true;         // the environment shows night (the day / night button offers day)
+	bool skyOverride = false;     // the day / night look is the player's, not the story clock's
 	float fps = 0.0f;
 };
 
@@ -28,8 +30,9 @@ public:
 	void Init();
 	~Hud();
 	void Render(int width, int height, const HudInfo& info);
-	// 0..8 selection buttons, 100 settings, 101..104 render toggles, PennyButton the Penny control.
-	static constexpr int PennyButton = 105;
+	// 0..8 selection buttons, 100 settings, 101..104 render toggles, PennyButton the Penny control,
+	// DayNightButton the manual day / night switch beside the settings button.
+	static constexpr int PennyButton = 105, DayNightButton = 106;
 	int HitTest(glm::vec2 mouse, int windowWidth, int windowHeight, bool settingsOpen) const;
 	bool Covers(glm::vec2 mouse, int windowWidth, int windowHeight, bool help, bool settingsOpen) const;
 private:

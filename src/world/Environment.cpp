@@ -22,6 +22,7 @@ float Smooth(float e0, float e1, float x)
 void Environment::Init(const RoomRig& roomRig)
 {
 	rig = roomRig;
+	skyHour = skyFrom = hour;
 	UpdateSky();
 }
 
@@ -30,12 +31,37 @@ void Environment::Scrub(float hours)
 	hour = std::fmod(hour + hours + 24.0f, 24.0f);
 }
 
+void Environment::SetSkyOverride(SkyOverride mode)
+{
+	if (mode == skyOverride) return;
+	// Start from what is on screen now, so switching again mid-blend never jumps.
+	skyOverride = mode; skyFrom = skyHour; skyBlend = 0.0f;
+}
+
+bool Environment::ClockIsNight() const
+{
+	return Smooth(-0.1f, 0.25f, std::sin((hour - 6.0f) / 12.0f * glm::pi<float>())) < 0.5f; // UpdateSky's daylight
+}
+
+void Environment::UpdateSkyHour(float dt)
+{
+	const float target = skyOverride == SkyOverride::Day ? 12.0f : skyOverride == SkyOverride::Night ? 0.0f : hour;
+	if (skyBlend >= 1.0f) { skyHour = target; return; } // no blend running: the sky is the clock (or the override)
+	skyBlend = std::min(1.0f, skyBlend + dt / SkyBlendSeconds);
+	// The shorter way round the clock face, so the sun and moon sweep across the sky for a moment
+	// (sunrise / sunset on the way) instead of the lighting jumping. The target is re-read every frame:
+	// returning to a running story clock lands exactly on it.
+	float span = std::fmod(target - skyFrom + 36.0f, 24.0f) - 12.0f;
+	if (span <= -12.0f) span = 12.0f;
+	skyHour = std::fmod(skyFrom + span * Smooth(0.0f, 1.0f, skyBlend) + 24.0f, 24.0f);
+}
+
 std::string Environment::ClockText() const
 {
 	const int h = static_cast<int>(hour);
 	const int m = static_cast<int>((hour - static_cast<float>(h)) * 60.0f);
 	char buf[32];
-	std::snprintf(buf, sizeof(buf), "%02d:%02d %s", h, m, IsNight() ? "Night" : "Day");
+	std::snprintf(buf, sizeof(buf), "%02d:%02d %s", h, m, ClockIsNight() ? "Night" : "Day"); // the clock; the HUD button shows the look
 	return buf;
 }
 
@@ -46,12 +72,12 @@ glm::vec3 Environment::AmbientLight() const
 
 float Environment::SunHeight() const
 {
-	return std::sin((hour - 6.0f) / 12.0f * glm::pi<float>());
+	return std::sin((skyHour - 6.0f) / 12.0f * glm::pi<float>());
 }
 
 glm::vec3 Environment::OutdoorSunPosition() const
 {
-	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	const float a = (skyHour - 6.0f) / 12.0f * glm::pi<float>();
 	return {-std::cos(a) * 60.0f, 4.0f + std::sin(a) * 55.0f, -37.0f};
 }
 
@@ -64,13 +90,13 @@ glm::vec3 Environment::ClearColor() const
 // +Z component tilts the arc over the garden: the front of the house faces the sun and the moon.
 glm::vec3 Environment::SunDirection() const
 {
-	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	const float a = (skyHour - 6.0f) / 12.0f * glm::pi<float>();
 	return glm::normalize(glm::vec3(-std::cos(a) * 60.0f, std::sin(a) * 55.0f, 30.0f));
 }
 
 glm::vec3 Environment::MoonDirection() const
 {
-	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	const float a = (skyHour - 6.0f) / 12.0f * glm::pi<float>();
 	return glm::normalize(glm::vec3(std::cos(a) * 60.0f, -std::sin(a) * 55.0f, 30.0f));
 }
 
@@ -104,6 +130,7 @@ void Environment::Update(float dt, float time, bool lampSelected, bool ballSelec
 {
 	if (!paused)
 		Scrub(dt * timeScale * 24.0f / dayLengthSeconds);
+	UpdateSkyHour(dt);
 	UpdateSky();
 	UpdateLamp(dt, time, lampSelected);
 	if (rig.clockHour) rig.clockHour->local.rotation.z = -30.0f * std::fmod(hour,12.0f);
@@ -113,10 +140,11 @@ void Environment::Update(float dt, float time, bool lampSelected, bool ballSelec
 }
 
 // The sun follows a half ellipse behind the window: angle a = 0 at 06:00 (rising), PI at 18:00.
+// Everything here follows skyHour (the clock, unless the manual day / night override is on).
 // The moon is on the opposite side of the same ellipse.
 void Environment::UpdateSky()
 {
-	const float a = (hour - 6.0f) / 12.0f * glm::pi<float>();
+	const float a = (skyHour - 6.0f) / 12.0f * glm::pi<float>();
 	const float sunHeight = std::sin(a);
 	auto orbit = [&](float angle) {
 		return rig.skyCenter + glm::vec3(-std::cos(angle) * 3.2f, std::sin(angle) * 3.1f, 0.0f);

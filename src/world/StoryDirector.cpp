@@ -132,6 +132,7 @@ void StoryDirector::Restart(bool story)
 	doorTried = buzzReady = doorBroken = false;
 	rescue = Rescue::Waiting; buzzLeg = 0;
 	emergences.clear(); nav.clear(); waitSlot.clear(); controlled = attached = nullptr;
+	companions.clear(); formationSerial = -1;
 	doorLeaf->visible = doorLeaf->solid = true;
 	house.frontDoor->visible = true;
 	for (SceneNode* board : debris) board->visible = false;
@@ -295,7 +296,7 @@ bool StoryDirector::Busy(const Character* actor) const
 
 bool StoryDirector::FollowersActive() const
 {
-	return enabled && !sandbox && state >= GameplayState::BUZZ_ROOM;
+	return enabled && !sandbox && (state >= GameplayState::BUZZ_ROOM || (state == GameplayState::TOY_CHEST && toysFreed));
 }
 
 void StoryDirector::Pause()
@@ -560,7 +561,9 @@ void StoryDirector::UpdateChest(float dt)
 		landed = landed && e.phase == 3;
 	}
 	if (landed && !toysFreed) { toysFreed = true; rescueTime = 0.0f; std::cout << "STORY the toys are alive\n"; }
-	if (toysFreed && (rescueTime += dt) > 2.8f) Advance(Transition::TOYS_ALIVE);
+	if (!toysFreed) return;
+	UpdateFollowers(dt, {}); // they settle where they landed and follow once Penny walks off
+	if ((rescueTime += dt) > 2.8f) Advance(Transition::TOYS_ALIVE);
 }
 
 void StoryDirector::UpdateRescue(float dt)
@@ -695,37 +698,68 @@ void StoryDirector::Gather(float dt, bool withPenny)
 void StoryDirector::UpdateFollowers(float dt, const std::vector<Character*>& exclude)
 {
 	Character* lead = Leader();
-	// Each toy owns a fixed formation slot, so taking one toy over never reshuffles the others.
-	std::vector<std::pair<Character*, int>> group;
-	int slot = 0;
+	// Each toy owns a fixed formation slot, so taking one toy over never reshuffles the others. The toy
+	// the player drives (and Jessie riding Bullseye) is left out: player input and following never mix.
+	std::vector<Character*> group;
 	for (Character* actor : std::vector<Character*>{woody, jessie, horse, buzz}) {
-		const int mine = slot++;
 		if (actor == lead || Controls(actor) || Hidden(actor) || Scripted(actor) || actor->InTransition()) continue;
 		if (std::find(exclude.begin(), exclude.end(), actor) != exclude.end()) continue;
 		if ((actor == jessie && Mounted()) || (actor == buzz && !buzzFreed) || !toysFreed) continue;
-		group.push_back({actor, mine});
+		group.push_back(actor);
 	}
+	const FollowSettings& s = followSettings;
 	const glm::vec3 lp = lead->Root()->WorldPosition();
-	const glm::vec3 back = -lead->Forward();
-	const glm::vec3 side(back.z, 0.0f, -back.x);
-	const int leadZone = Zone(lp);
-	for (const auto& [actor, i] : group) {
-		// Formation slots: pairs behind the leader, alternating left and right. When the space behind
-		// her is another room (she stands in a doorway), the formation turns to her side or front.
-		glm::vec3 target = lp;
-		for (const glm::vec3& d : {back, side, -side, -back}) {
-			const glm::vec3 across(d.z, 0.0f, -d.x);
-			const glm::vec3 spot = lp + d * (1.7f + 1.3f * static_cast<float>(i / 2)) + across * (i % 2 == 0 ? -0.9f : 0.9f);
-			if (Zone(spot) == leadZone) { target = spot; break; }
+	// The formation is laid out along Penny's path from a stable anchor, not from her pose this frame
+	// (CompanionFollow.h). After a gap (a story task moved everyone) it restarts where she stands now,
+	// and every toy settles where it is until she walks off.
+	++followSerial;
+	if (formationSerial != followSerial - 1 || !formation.Valid()) {
+		formation.Reset(lp, lead->Heading());
+		companions.clear();
+	}
+	formationSerial = followSerial;
+	formation.Update(lp, dt, s);
+	// Slots (metres to the right of Penny's path, metres back along it): Woody and Jessie either side of
+	// her, Bullseye's long body centred farther back between them, Buzz out to one side with room to
+	// spread his wings.
+	auto slot = [&](const Character* actor) -> glm::vec2 {
+		const float d = s.preferredFollowDistance;
+		if (actor == woody) return {-0.95f, d};
+		if (actor == jessie) return {0.95f, d};
+		if (actor == horse) return {0.0f, d + 2.5f};
+		return {-1.5f, d + 1.6f};
+	};
+	for (Character* actor : group) {
+		// The point on her path is walkable; in a narrow place (stairs, doorway) the step to the side can
+		// leave its zone, so it is pulled in toward the path.
+		const glm::vec2 offset = slot(actor);
+		glm::vec3 onPath;
+		formation.Slot(0.0f, offset.y, &onPath);
+		glm::vec3 target = onPath;
+		for (float squeeze : {1.0f, 0.5f}) {
+			const glm::vec3 spot = formation.Slot(offset.x * squeeze, offset.y);
+			if (Zone({spot.x, onPath.y, spot.z}) == Zone(onPath)) { target = spot; break; }
 		}
-		target.y = PhysicsWorld::FloorHeight({target.x, lp.y, target.z});
-		if (actor == buzz && state == GameplayState::MORNING) target.y += 1.4f; // Buzz flies out into the morning
-		Nav& n = nav[actor];
+		target.y = PhysicsWorld::FloorHeight({target.x, onPath.y, target.z});
+
 		const glm::vec3 p = actor->Root()->local.position;
-		const float d = actor->CanFly() ? glm::distance(p, target) : DistanceXZ(p, target);
-		n.moving = n.moving ? d > 0.3f : d > 1.3f;
-		if (!n.moving) { actor->Stop(); continue; }
-		Navigate(actor, target, dt, std::clamp(d * 0.9f, 1.8f, 3.6f), 0.3f);
+		const float slotDistance = actor->CanFly() ? glm::distance(p, target) : DistanceXZ(p, target);
+		auto [entry, fresh] = companions.try_emplace(actor);
+		Companion& c = entry->second;
+		// Missed the previous update: the player (or a story task) had this toy. It rejoins only if it was
+		// left farther than followStartDistance from its slot.
+		if (!fresh && c.serial != followSerial - 1) { c.follower.Rejoin(slotDistance, s); c.facing = true; }
+		c.serial = followSerial;
+		const auto command = c.follower.Update(slotDistance, DistanceXZ(p, lp), formation.Following(), Zone(p) == Zone(target), dt, s);
+		if (command.move) {
+			c.facing = false;
+			Navigate(actor, target, dt, command.speed, 0.5f * s.arrivalTolerance);
+			continue;
+		}
+		actor->Stop();
+		// Arrived with the group standing: turn once to face the way Penny was going, then stay still.
+		if (!c.facing && c.follower.CurrentMode() == CompanionFollower::Mode::Settled)
+			c.facing = actor->TurnTowardsHeading(formation.Heading(), dt);
 	}
 }
 
@@ -803,7 +837,11 @@ bool StoryDirector::Navigate(Character* actor, const glm::vec3& target, float dt
 	const int goal = NearestNode(target, to);
 	if (goal < 0) return MoveTo(actor, target, dt, speed, arrive);
 	if (n.node < 0 || n.goal != goal) {
-		// Enter the graph at the node of this zone with the cheapest total route.
+		// Enter the graph at the node of this zone with the cheapest total route. A walker already heading
+		// for a node keeps it while that is nearly as good: a goal that flips between two nodes of the
+		// leader's room must not swing it onto a new straight line (from the stair landing that one cuts
+		// the corner of the stair divider).
+		const int current = n.node;
 		n.goal = goal; n.node = -1;
 		float best = std::numeric_limits<float>::max();
 		for (size_t i = 0; i < nodes.size(); ++i) {
@@ -811,6 +849,8 @@ bool StoryDirector::Navigate(Character* actor, const glm::vec3& target, float dt
 			const float cost = DistanceXZ(p, nodes[i]) + pathCost[i][static_cast<size_t>(goal)];
 			if (cost < best) { best = cost; n.node = static_cast<int>(i); }
 		}
+		if (current >= 0 && DistanceXZ(p, nodes[static_cast<size_t>(current)]) + pathCost[static_cast<size_t>(current)][static_cast<size_t>(goal)] < best + 2.0f)
+			n.node = current;
 		if (n.node < 0) return MoveTo(actor, target, dt, speed, arrive);
 	}
 	// A doorway node counts as passed within reach of the body's centre. Bullseye's centre sits 1.7 behind

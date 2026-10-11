@@ -24,6 +24,17 @@ public:
 	bool paused = false;
 	void Scrub(float hours);
 
+	// ---- manual day / night override (visual only) ----
+	// The sky, sun, moon, stars, lights and the night-time props follow skyHour. Without an override
+	// skyHour is the clock itself; with one it eases (SkyBlendSeconds) to noon or midnight while the
+	// clock, and the story that owns it, carry on untouched. Clearing it eases back to the clock.
+	enum class SkyOverride { None, Day, Night };
+	void SetSkyOverride(SkyOverride mode);
+	SkyOverride CurrentSkyOverride() const { return skyOverride; }
+	float SkyHour() const { return skyHour; }
+	bool ClockIsNight() const; // what the clock alone would show (IsNight() is what is on screen)
+	static constexpr float SkyBlendSeconds = 1.5f;
+
 	float Daylight() const { return daylight; }    // 0 night .. 1 day
 	float Night() const { return 1.0f - daylight; }
 	bool IsNight() const { return daylight < 0.5f; }
@@ -75,12 +86,15 @@ public:
 
 private:
 	void UpdateSky();
+	void UpdateSkyHour(float dt);
 	void UpdateLamp(float dt, float time, bool selected);
 	void UpdateBall(float dt, float time, bool selected);
 	void UpdateGhost(float dt, float time, bool selected);
 
 	RoomRig rig;
 	float daylight = 0.0f;
+	SkyOverride skyOverride = SkyOverride::None;
+	float skyHour = 20.5f, skyFrom = 20.5f, skyBlend = 1.0f; // blend 0..1 from skyFrom to the current target
 	float lampBaseYaw = 20.0f;
 	float lampBaseTilt = -70.0f;
 	glm::vec3 ballVelocity{ 0.0f };

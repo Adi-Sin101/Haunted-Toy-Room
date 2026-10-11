@@ -33,6 +33,7 @@
     <ClCompile Include="PhysicsChecks.cpp" />
     <ClCompile Include="..\src\world\PuzzleCode.cpp" />
     <ClCompile Include="..\src\world\PhysicsWorld.cpp" />
+    <ClCompile Include="..\src\world\CompanionFollow.cpp" />
     <ClCompile Include="..\src\scene\SceneNode.cpp" />
     <ClCompile Include="..\src\math\Ray.cpp" />
     <ClCompile Include="..\src\math\Transform3D.cpp" />

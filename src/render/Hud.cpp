@@ -18,6 +18,8 @@ constexpr float Margin = 24.0f;
 // Panel layout (unscaled pixels from the panel's top-left corner at 16, 16).
 constexpr float PanelHeight = 290.0f, HelpPanelHeight = 535.0f;
 constexpr float PennyRowY = 252.0f, PennyRowHeight = 26.0f, PennyRowWidth = 362.0f;
+// Day / night switch: top-right corner, left of the settings button (offsets from the right edge).
+constexpr float SkyButtonRight = 136.0f, SkyButtonWidth = 262.0f, SkyButtonTop = 16.0f, SkyButtonHeight = 28.0f;
 const char* Toys[8] = {"Woody", "Jessie", "Bullseye", "Buzz", "RC Car", "Ball", "Lamp", "Ghost"};
 }
 
@@ -170,7 +172,7 @@ void Hud::Render(int width, int height, const HudInfo& info)
    "B rebuild blocks / P pause story / G hide all text",
    "F1 wireframe / F2 model / F3 textures / F4 rays",
    "Tab edit / T operation / J-L, U-O, I-K axes",
-   "F12 screenshot / H close this guide",
+   "F12 screenshot / '/' day-night / H close guide",
    "` settings / Scroll zoom / Shift+F2 shading on-off"
   };
   float lineY=y+PanelHeight;
@@ -191,6 +193,14 @@ void Hud::Render(int width, int height, const HudInfo& info)
    Text(values[i] ? "ON" : "OFF",settingsX+159,rowY+4,0.55f,values[i] ? Gold : Muted);
   }
   Text("Click to toggle / G hides everything",settingsX+12,204,0.44f,Muted,186);
+ }
+ {
+  // Day / night: the look on screen now, MANUAL while the player overrides the story clock, and the action.
+  const float bx=w-SkyButtonRight-SkyButtonWidth;
+  Rect(bx,SkyButtonTop,SkyButtonWidth,SkyButtonHeight,info.skyOverride ? glm::vec4(0.38f,0.29f,0.16f,0.97f) : Ink);
+  Text(info.skyNight ? "NIGHT" : "DAY",bx+10,SkyButtonTop+6,0.56f,Gold);
+  if (info.skyOverride) Text("MANUAL",bx+64,SkyButtonTop+7,0.46f,Cream);
+  Text(info.skyNight ? "Switch to Day (/)" : "Switch to Night (/)",bx+128,SkyButtonTop+6,0.52f,Cream);
  }
  if (info.mouseLook) {
   Rect(w*0.5f-5,h*0.5f-0.75f,10,1.5f,Gold);
@@ -213,6 +223,8 @@ int Hud::HitTest(glm::vec2 mouse,int width,int height,bool settingsOpen) const
  const float w=width/Scale(width,height);
  mouse/=Scale(width,height);
  if (mouse.x>=w-128 && mouse.x<=w-16 && mouse.y>=16 && mouse.y<=44) return 100;
+ if (mouse.x>=w-SkyButtonRight-SkyButtonWidth && mouse.x<=w-SkyButtonRight && mouse.y>=SkyButtonTop && mouse.y<=SkyButtonTop+SkyButtonHeight)
+  return DayNightButton;
  if (settingsOpen && mouse.x>=w-218 && mouse.x<=w-24 && mouse.y>=84 && mouse.y<200) {
   const int row=static_cast<int>((mouse.y-84)/29);
   if (mouse.y<=84+row*29+25) return 101+row;
@@ -228,6 +240,7 @@ bool Hud::Covers(glm::vec2 mouse,int width,int height,bool help,bool settingsOpe
  const float w=width/Scale(width,height);
  mouse/=Scale(width,height);
  if (mouse.x>=w-128 && mouse.x<=w-16 && mouse.y>=16 && mouse.y<=44) return true;
+ if (mouse.x>=w-SkyButtonRight-SkyButtonWidth && mouse.x<=w-SkyButtonRight && mouse.y>=SkyButtonTop && mouse.y<=SkyButtonTop+SkyButtonHeight) return true;
  if (settingsOpen && mouse.x>=w-226 && mouse.x<=w-16 && mouse.y>=50 && mouse.y<=226) return true;
  return mouse.x>=16 && mouse.x<=406 && mouse.y>=16 && mouse.y<=16+(help ? HelpPanelHeight : PanelHeight);
 }
