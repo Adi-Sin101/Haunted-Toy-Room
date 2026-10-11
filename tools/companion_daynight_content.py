@@ -41,8 +41,7 @@ v_{\rm cap}=2.1+1.9\min(1,d/4.5),\qquad v^\ast=\operatorname{clamp}\big(\sqrt{6\
 v\leftarrow v+\operatorname{clamp}(v^\ast-v,\pm4\Delta t),\quad\text{start: }d>1.2,\quad\text{settle: }d\le0.3\lor\|\mathbf p_P-\mathbf c\|<1\lor\text{stall}"""),
     ("paragraph",
      "A settled toy issues no movement; separate start and stop distances stop it twitching. It also stops "
-     "within 1.0 of a standing Penny, or after a second blocked near its slot. Values live in "
-     "StoryDirector::followSettings and movement uses the existing autopilot and collision pass. The driven "
+     "within 1.0 of a standing Penny, or after a second blocked near its slot. The driven "
      "toy and a mounted Jessie are left out, so input and following never mix; a released toy rejoins only "
      "if more than 2.0 from its slot. Each toy changes mode at most once per stage; free exploration is "
      "reached at 73.4 s (70.2 s before)."),
@@ -52,14 +51,14 @@ DAYNIGHT_SECTION = [
     ("heading", "4.10 Manual day/night override", 2),
     ("paragraph",
      "The story owns the clock, so a player switch must not change it. Environment keeps two hours: hour, "
-     "the clock the story sets and the clock hands show, and skyHour, read by every sky and lighting "
-     "function (sun, moon, daylight, ambient, sky and fog colours, stars, sky light, neighbouring houses "
-     "and the lamp automation). Without an override skyHour equals hour, so sunset and sunrise are "
-     "unchanged; an override eases it to 12:00 or 00:00 over 1.5 s the shorter way round. Both renderers "
-     "read the same functions. The / key or the DAY / NIGHT button beside the settings button switches; the "
-     "button shows the look, a MANUAL tag and the action, and fires only on a press and release inside it. "
-     "Asking for what the clock shows clears the override. The rehearsal gives identical stages, timings "
-     "and positions with and without the switch."),
+     "the clock the story sets, and skyHour, read by every sky and lighting function (sun, moon, light, "
+     "sky, fog, stars, lamp automation) in both renderers. Without an override skyHour equals hour; an "
+     "override eases it to 12:00 or 00:00 over 1.5 s the shorter way round. The / key or the DAY / NIGHT "
+     "button beside the settings button switches, and asking for what the clock shows clears the override; "
+     "the rehearsal is identical with and without it. By day the toys keep still and only Penny moves, "
+     "except in the morning escape: the story issues no toy commands, a selected toy ignores its keys and "
+     "contact puts the toys first. With Day pressed mid-rescue the toys held still for 14 s; at night the "
+     "story completed."),
     ("equation",
      "target = 12 (Day), 0 (Night) or hour (no override); span = ((target - h0 + 36) mod 24) - 12\n"
      "skyHour = (h0 + span smoothstep(min(1, t/1.5))) mod 24; daylight = smoothstep(-0.1, 0.25, sin((skyHour - 6) pi/12))",

@@ -253,6 +253,7 @@ def expanded_blocks():
                 ["Geometry / transforms / contacts","tests/PhysicsChecks.cpp, incl. spines, divider, crowd priorities, orthographic projection, companion following","92 checks passed"],
                 ["Companion following","Fixed-step story rehearsal with a per-companion mode and distance trace","At most one mode switch per stage; free exploration at 73.4 s"],
                 ["Day/night override","Same rehearsal with and without --sky-toggle; raster and ray-traced captures","Identical story output; cleared override lands on the clock"],
+                ["Daylight freeze","Day mid-rescue; noon drive","Toys still 14 s; story completed"],
                 ["Solid crowd + stair camera","Scripted story with solid characters; per-frame camera log on stairs","Free exploration at 70 s; pitch jolts 82 -> 1"],
                 ["Outdoor sky","Matched raster / ray-traced captures by day and night","Same sky, sun/moon light and shadows in both"],
                 ["Manual + mounted + live input","Actual Windows key messages into GLFW callbacks","All three scenarios passed"],

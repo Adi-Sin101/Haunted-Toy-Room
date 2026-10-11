@@ -32,6 +32,7 @@ public:
 	const Material* material = nullptr;
 	bool visible = true;
 	bool solid = false; // physical furniture; thin decoration and light effects stay non-solid
+	bool cameraSolid = false; // floor/tread bounds stop cameras; actors use PhysicsWorld floor support
 	int ownerId = -1; // id of the selectable object this node belongs to (-1 = static scenery)
 
 	SceneNode* Parent() const { return parent; }

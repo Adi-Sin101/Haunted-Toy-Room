@@ -731,11 +731,11 @@ slot q_i = T(b_i) + s_i r(b_i); the anchor follows once |Penny - anchor| > 2.0 a
 v_cap = 2.1 + 1.9 min(1, d/4.5); v* = clamp(sqrt(2*3*max(0, d - 0.3)), 0.35, v_cap); v += clamp(v* - v, -4 dt, 4 dt)
 Settled -> Approaching: following and d > 1.2; Approaching -> Settled: standing and (d <= 0.3 or |Penny - c| < 1.0 or 1 s without progress)
 
-A settled toy issues no movement; separate start and stop distances stop it twitching. It also stops within 1.0 of a standing Penny, or after a second blocked near its slot. Values live in StoryDirector::followSettings and movement uses the existing autopilot and collision pass. The driven toy and a mounted Jessie are left out, so input and following never mix; a released toy rejoins only if more than 2.0 from its slot. Each toy changes mode at most once per stage; free exploration is reached at 73.4 s (70.2 s before).
+A settled toy issues no movement; separate start and stop distances stop it twitching. It also stops within 1.0 of a standing Penny, or after a second blocked near its slot. The driven toy and a mounted Jessie are left out, so input and following never mix; a released toy rejoins only if more than 2.0 from its slot. Each toy changes mode at most once per stage; free exploration is reached at 73.4 s (70.2 s before).
 
 ## 4.10 Manual day/night override
 
-The story owns the clock, so a player switch must not change it. Environment keeps two hours: hour, the clock the story sets and the clock hands show, and skyHour, read by every sky and lighting function (sun, moon, daylight, ambient, sky and fog colours, stars, sky light, neighbouring houses and the lamp automation). Without an override skyHour equals hour, so sunset and sunrise are unchanged; an override eases it to 12:00 or 00:00 over 1.5 s the shorter way round. Both renderers read the same functions. The / key or the DAY / NIGHT button beside the settings button switches; the button shows the look, a MANUAL tag and the action, and fires only on a press and release inside it. Asking for what the clock shows clears the override. The rehearsal gives identical stages, timings and positions with and without the switch.
+The story owns the clock, so a player switch must not change it. Environment keeps two hours: hour, the clock the story sets, and skyHour, read by every sky and lighting function (sun, moon, light, sky, fog, stars, lamp automation) in both renderers. Without an override skyHour equals hour; an override eases it to 12:00 or 00:00 over 1.5 s the shorter way round. The / key or the DAY / NIGHT button beside the settings button switches, and asking for what the clock shows clears the override; the rehearsal is identical with and without it. By day the toys keep still and only Penny moves, except in the morning escape: the story issues no toy commands, a selected toy ignores its keys and contact puts the toys first. With Day pressed mid-rescue the toys held still for 14 s; at night the story completed.
 
 target = 12 (Day), 0 (Night) or hour (no override); span = ((target - h0 + 36) mod 24) - 12
 skyHour = (h0 + span smoothstep(min(1, t/1.5))) mod 24; daylight = smoothstep(-0.1, 0.25, sin((skyHour - 6) pi/12))
@@ -770,6 +770,7 @@ Verification evidence
 | Geometry / transforms / contacts | tests/PhysicsChecks.cpp, incl. spines, divider, crowd priorities, orthographic projection, companion following | 92 checks passed |
 | Companion following | Fixed-step story rehearsal with a per-companion mode and distance trace | At most one mode switch per stage; free exploration at 73.4 s |
 | Day/night override | Same rehearsal with and without --sky-toggle; raster and ray-traced captures | Identical story output; cleared override lands on the clock |
+| Daylight freeze | Day mid-rescue; noon drive | Toys still 14 s; story completed |
 | Solid crowd + stair camera | Scripted story with solid characters; per-frame camera log on stairs | Free exploration at 70 s; pitch jolts 82 -> 1 |
 | Outdoor sky | Matched raster / ray-traced captures by day and night | Same sky, sun/moon light and shadows in both |
 | Manual + mounted + live input | Actual Windows key messages into GLFW callbacks | All three scenarios passed |

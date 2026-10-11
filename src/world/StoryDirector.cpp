@@ -305,6 +305,15 @@ void StoryDirector::Pause()
 	if (buzz->LaserOn() && !Controls(buzz)) buzz->Special();
 }
 
+void StoryDirector::FreezeToys(bool on)
+{
+	toysFrozen = on;
+	if (!on) return;
+	// Hold still now: no speed left over to coast on, and Buzz's laser goes out.
+	for (Character* actor : std::vector<Character*>{woody, jessie, horse, buzz, car}) actor->Stop();
+	if (buzz->LaserOn()) buzz->Special();
+}
+
 void StoryDirector::SetControlled(Character* actor, Character* passenger)
 {
 	if (controlled == actor && attached == passenger) return;
@@ -358,6 +367,7 @@ std::string StoryDirector::Interact(Character* actor)
 		if (chestPressed) return {};
 		if (!downstairs && DistanceXZ(p, props.chestCentre) < 3.2f) {
 			PressChest();
+			if (toysFrozen) return "Penny presses the big red wind-up button. Nothing stirs by day: the chest waits for the night.";
 			return "Penny presses the big red wind-up button. The chest springs open!";
 		}
 		return "The glowing toy chest stands in the middle of the Toy Room.";
@@ -393,7 +403,7 @@ std::string StoryDirector::Interact(Character* actor)
 
 bool StoryDirector::RequestLaser()
 {
-	if (state != GameplayState::FINAL_ESCAPE || !doorTried || doorBroken || !buzzReady || Controls(buzz)) return false;
+	if (state != GameplayState::FINAL_ESCAPE || !doorTried || doorBroken || !buzzReady || Controls(buzz) || toysFrozen) return false;
 	if (!buzz->LaserOn()) buzz->Special();
 	std::cout << "ESCAPE laser fired at the entrance\n";
 	return true;
@@ -501,14 +511,15 @@ void StoryDirector::Update(float dt)
 	}
 	case GameplayState::PUZZLE:
 		break;
+	// By day (toysFrozen) every toy task below waits; Penny's own conditions still advance the story.
 	case GameplayState::TOY_CHEST:
-		UpdateChest(dt);
+		if (!toysFrozen) UpdateChest(dt); // the chest only comes alive at night
 		break;
 	case GameplayState::BUZZ_ROOM:
-		UpdateFollowers(dt, {});
+		if (!toysFrozen) UpdateFollowers(dt, {});
 		break;
 	case GameplayState::WARDROBE:
-		UpdateRescue(dt);
+		if (!toysFrozen) UpdateRescue(dt);
 		break;
 	case GameplayState::FINAL_ESCAPE:
 		UpdateEntrance(dt);
@@ -531,7 +542,7 @@ void StoryDirector::Update(float dt)
 	}
 	case GameplayState::FREE_EXPLORE:
 		hour = Ease(hour, 8.0f, 0.05f, dt); // the morning carries on slowly
-		Gather(dt);
+		if (!toysFrozen) Gather(dt);
 		break;
 	}
 }
@@ -658,19 +669,20 @@ void StoryDirector::UpdateEntrance(float dt)
 		if (firing > 0.65f) BreakDoor();
 	}
 	if (doorBroken) {
-		UpdateFollowers(dt, {});
+		if (!toysFrozen) UpdateFollowers(dt, {});
 		const glm::vec3 p = Leader()->Root()->WorldPosition();
 		if (p.z > HouseFront + 0.4f && p.y < Slab) Advance(Transition::LEFT_HOUSE);
 		return;
 	}
 	if (!doorTried) {
-		UpdateFollowers(dt, {});
+		if (!toysFrozen) UpdateFollowers(dt, {});
 		// Penny tries the door when she stands at it (Enter does the same at once).
 		tryTimer = DistanceXZ(Leader()->Root()->WorldPosition(), InsideEntrance) < 1.6f ? tryTimer + dt : 0.0f;
 		if (tryTimer > 1.0f) TryDoor();
 		return;
 	}
 	// The door is locked: everyone waits beside the walls while Buzz flies into position and aims.
+	if (toysFrozen) return; // by day the toys wait where they stand
 	for (Character* actor : std::vector<Character*>{woody, horse, jessie, penny}) {
 		if (Controls(actor) || (actor == jessie && Mounted())) continue;
 		const auto slot = waitSlot.find(actor);

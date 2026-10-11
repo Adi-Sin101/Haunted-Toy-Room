@@ -192,7 +192,8 @@ void ToyRoomApp::BuildScene()
 	// Spines (see PhysicsWorld::Actor): Penny reaches from her tail at -0.8 to her nose at +1.0, Bullseye from
 	// his rump at -0.9 to his muzzle at +1.7. Square segments cover that length at any heading.
 	physics.SetActorSpine(penny->Root(), {-0.46f, 0.10f, 0.64f});
-	physics.SetActorSpine(bullseye->Root(), {-0.35f, 0.45f, 1.15f});
+	// Rear hoof reach includes the backward gait swing, not only the barrel's extent.
+	physics.SetActorSpine(bullseye->Root(), {-0.60f, 0.45f, 1.15f});
 	physics.EnableActor(penny->Root(), false); // Arrival controls her route until Stage 1 begins.
  story.Restart(true);
  environment.hauntingEnabled=false;
@@ -231,6 +232,8 @@ void ToyRoomApp::StepScene(float dt)
 	HandleGlobalKeys();
 	for (float at : launch.skyToggles) if (scriptClock < at && scriptClock + dt >= at) ToggleDayNight();
 	scriptClock += dt;
+	toysFrozen = ToysFrozenByDay();
+	story.FreezeToys(toysFrozen);
  if (missionRestarted) {
   previousCamera=camera.position;
   previousPenny=penny->Root()->WorldPosition();
@@ -385,11 +388,18 @@ void ToyRoomApp::StepScene(float dt)
 		auto add = [&](Character* c) {
 			if (c && eligible(c) && std::find(bodies.begin(), bodies.end(), c->Root()) == bodies.end()) bodies.push_back(c->Root());
 		};
-		add(anchor);
-		for (Character* c : order) if (story.Busy(c)) add(c);
-		add(penny.get());
-		for (Character* c : order) add(c);
-		physics.SeparateActors(bodies, anchor ? anchor->Root() : nullptr);
+		if (toysFrozen) {
+			// By day the toys are immovable: they come first and Penny, the only one moving, steps round them.
+			for (Character* c : order) add(c);
+			add(penny.get());
+			physics.SeparateActors(bodies, nullptr);
+		} else {
+			add(anchor);
+			for (Character* c : order) if (story.Busy(c)) add(c);
+			add(penny.get());
+			for (Character* c : order) add(c);
+			physics.SeparateActors(bodies, anchor ? anchor->Root() : nullptr);
+		}
 	}
 	physics.ConstrainActor(environment.Rig().ball, previousBall);
 	physics.ConstrainActor(environment.Rig().ghost, previousGhost);
@@ -628,6 +638,12 @@ void ToyRoomApp::ToggleDayNight()
 	statusText = std::string(toNight ? "Night" : "Day") + (manual ? " (manual override; the story clock runs on)" : " (back to the story clock)");
 	statusTimer = 3.0f;
 	std::cout << "Day/night: " << statusText << " / clock " << environment.ClockText() << "\n";
+}
+
+bool ToyRoomApp::ToysFrozenByDay() const
+{
+	if (arrival.Active() || environment.IsNight()) return false;
+	return !(story.enabled && !story.Sandbox() && story.CurrentState() == StoryDirector::GameplayState::MORNING);
 }
 
 void ToyRoomApp::HandlePuzzleInteraction()
@@ -1054,6 +1070,12 @@ void ToyRoomApp::HandleObjectControl(float dt)
 	// ---- Characters ---------------------------------------------------------------------
 	if (!sel->character)
 		return;
+	// Daylight rule: a toy can be selected and inspected, but it does not move, mount, fly or fire.
+	if (toysFrozen && sel->character != penny.get()) {
+		if (Character* held = DrivenCharacter()) held->Stop();
+		statusText = "Daytime: the toys keep still. Only Penny can move (/ for night)"; statusTimer = 0.5f;
+		return;
+	}
 	if ((sel->character == jessie || sel->character == bullseye) && input.Pressed(GLFW_KEY_R))
 		ToggleMount();
 
@@ -1361,6 +1383,7 @@ void ToyRoomApp::DrawHud()
  const auto gameplayState = story.CurrentState();
  if (story.enabled && !story.Sandbox()) {
   info.selection="STAGE "+std::to_string(static_cast<int>(gameplayState))+" / "; info.description=story.Objective();
+  if (toysFrozen && gameplayState>=StoryDirector::GameplayState::TOY_CHEST) info.description+=" (Daytime: the toys keep still, only Penny moves; / for night)";
   if (const auto* actor=Selected()) info.selection+=actor->name;
   if (gameplayState!=StoryDirector::GameplayState::PUZZLE) info.controls+=story.BuzzReady() ? " / L fire Buzz's laser / Enter interact" : " / Enter interact / 0 release / N manual";
   if (gameplayState == StoryDirector::GameplayState::PUZZLE) {
@@ -1576,7 +1599,10 @@ void ToyRoomApp::ApplyLaunchOptions()
     StepScene(0);
     launch.storyStep=savedStep;launch.scriptedDrive=savedDrive;launch.scriptedTurn=savedTurn;launch.scriptedFly=savedFly;
  }
-	if (launch.hour >= 0.0f) environment.hour = launch.hour;
+	if (launch.hour >= 0.0f) {
+		environment.hour = launch.hour;
+		environment.Update(0.0f, 0.0f, false, false, false); // daylight for the first frame (the daylight rule reads it)
+	}
 	if (launch.pauseClock || (scripted && !launch.story)) environment.paused = true;
 	if (scripted && !launch.story) { story.enabled=false; story.Pause(); }
 	if (launch.manual) { story.enabled=false; story.Pause(); }

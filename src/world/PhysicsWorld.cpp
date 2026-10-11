@@ -68,14 +68,21 @@ PhysicsWorld::Bounds PhysicsWorld::ShapeBounds(SceneNode* node)
 
 void PhysicsWorld::Init(SceneNode& scene, const std::vector<SceneNode*>& blocks)
 {
-	scenery.clear(); bodies.clear(); actors.clear(); accumulator = 0.0f;
+	scenery.clear(); cameraScenery.clear(); bodies.clear(); actors.clear(); accumulator = 0.0f;
 	for (SceneNode* n : blocks) bodies.push_back({n, n->local});
 	scene.ForEach([&](SceneNode& n) { if (n.solid && n.mesh && !IsBlock(&n)) scenery.push_back(&n); });
+	scene.ForEach([&](SceneNode& n) { if (n.cameraSolid && !n.solid && n.mesh) cameraScenery.push_back(&n); });
 	RefreshScenery();
 }
 
 void PhysicsWorld::RefreshScenery()
 {
+    cameraBounds.clear();
+    for (SceneNode* n : cameraScenery) {
+        bool visible = n->cameraSolid;
+        for (auto* parent = n; parent && visible; parent = parent->Parent()) visible = parent->visible;
+        if (visible) cameraBounds.push_back(ShapeBounds(n));
+    }
     sceneryBounds.clear();
     for (SceneNode* n : scenery) {
         bool visible=n->solid;
@@ -88,8 +95,8 @@ float PhysicsWorld::FloorHeight(const glm::vec3& feet)
 {
     using namespace RoomSize;
     if (feet.x>=StairLeft && feet.x<=StairRight && feet.z<StairTopZ && feet.z>=StairBottomZ) {
-        const float cell=(feet.z-StairBottomZ)/(StairTopZ-StairBottomZ)*18.0f;
-        return Ground+(-Ground/18.0f)*std::clamp(std::floor(cell)+1.0f,1.0f,18.0f);
+        const float cell=(feet.z-StairBottomZ)/(StairTopZ-StairBottomZ)*StairSteps;
+        return Ground+(-Ground/StairSteps)*std::clamp(std::floor(cell)+1.0f,1.0f,static_cast<float>(StairSteps));
     }
     if (feet.z>HouseFront) {
         // Front porch deck and its three steps; the rest of the garden is lawn level.
@@ -141,16 +148,33 @@ glm::vec3 PhysicsWorld::SlideActor(const Actor& a, const glm::vec3& from, const 
 	const glm::mat4 m = a.node->local.Matrix();
 	const glm::vec3 half = Extent(m, a.half);
 	glm::vec3 target = to;
+	auto support = [&](glm::vec3 p) {
+		if (!houseSpace || !a.grounded) return p;
+		// A swung paw/hoof reaches past a segment centre. Support the full footprint so
+		// its leading edge cannot enter the next riser while the root is on a lower tread.
+		auto segment = [&](float z) {
+			const glm::vec3 offset(m * glm::vec4(a.offset + glm::vec3(0, 0, z), 0));
+			for (float dx : {-half.x, 0.0f, half.x}) for (float dz : {-half.z, 0.0f, half.z}) {
+				const glm::vec3 foot = p + offset + glm::vec3(dx, -half.y, dz);
+				if (foot.x < RoomSize::StairLeft || foot.x > RoomSize::StairRight ||
+					foot.z < RoomSize::StairBottomZ || foot.z > RoomSize::DoorHigh) continue;
+				const float floor = foot.z >= RoomSize::StairTopZ ? 0.0f : FloorHeight(foot);
+				p.y = std::max(p.y, floor + Skin - offset.y + half.y);
+			}
+		};
+		if (a.spine.empty()) segment(0); else for (float z : a.spine) segment(z);
+		return p;
+	};
 	if (a.spine.empty()) {
 		const glm::vec3 offset = glm::vec3(m * glm::vec4(a.offset, 0.0f));
-		return Move(from + offset, target + offset, half, a.node, withActors) - offset;
+		return support(Move(from + offset, target + offset, half, a.node, withActors) - offset);
 	}
 	for (int pass = 0; pass < 2; ++pass)
 		for (float z : a.spine) {
 			const glm::vec3 offset = glm::vec3(m * glm::vec4(a.offset + glm::vec3(0.0f, 0.0f, z), 0.0f));
 			target = Move(from + offset, target + offset, half, a.node, withActors) - offset;
 		}
-	return target;
+	return support(target);
 }
 bool PhysicsWorld::IsBlock(SceneNode* node) const
 {
@@ -176,11 +200,12 @@ std::vector<PhysicsWorld::Bounds> PhysicsWorld::Obstacles(SceneNode* ignore,bool
 	return list;
 }
 
-glm::vec3 PhysicsWorld::Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore, bool withActors) const
+glm::vec3 PhysicsWorld::Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore, bool withActors, bool cameraContacts) const
 {
 	// While the story's followers are active nobody is blocked by another character's body, so the
 	// group can never jam in a doorway; the house, furniture and blocks still stop everyone.
-	const auto obstacles = Obstacles(ignore,withActors && !(scriptedActors && ignore));
+	auto obstacles = Obstacles(ignore,withActors && !(scriptedActors && ignore));
+	if (cameraContacts) obstacles.insert(obstacles.end(), cameraBounds.begin(), cameraBounds.end());
  const auto clamp = [&](glm::vec3 p, const glm::vec3& extent) {
   if (houseSpace) {
    using namespace RoomSize;
@@ -355,12 +380,14 @@ void PhysicsWorld::SeparateActors(const std::vector<SceneNode*>& byPriority, Sce
 glm::vec3 PhysicsWorld::MoveCamera(const glm::vec3& previous, const glm::vec3& desired) const
 {
 	// The camera passes through characters (they never hide the view); only the house stops it.
-	return Move(previous, desired, glm::vec3(0.20f), nullptr, false);
+	return Move(previous, desired, glm::vec3(0.20f), nullptr, false, true);
 }
 glm::vec3 PhysicsWorld::CameraSightline(const glm::vec3& target, const glm::vec3& desired, SceneNode* ignored) const
 {
 	glm::vec3 delta = desired - target; float best = 1.0f;
-	for (const Bounds& b : Obstacles(ignored, false)) {
+	auto obstacles = Obstacles(ignored, false);
+	obstacles.insert(obstacles.end(), cameraBounds.begin(), cameraBounds.end());
+	for (const Bounds& b : obstacles) {
 		float t; glm::vec3 n;
 		if (Sweep(target, delta, b.low - 0.22f, b.high + 0.22f, t, n)) best = std::min(best, t);
 	}

@@ -49,7 +49,7 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	// ---- Floor and ceiling ------------------------------------------------------------------
 	Material& floorMat = Textured(a, "floor", glm::vec3(1.0f), Assets::FloorSlot, { 8.0f, 4.0f }, 0.35f, 48.0f);
 	floorMat.reflectivity = 0.18f; // polished wood: visible reflections in ray-traced mode
-	room->AddShape("Floor", &plane, &floorMat, { 0, 0, 0 }, { 2 * HalfWidth, 1, 2 * HalfDepth });
+	room->AddShape("Floor", &cube, &floorMat, { 0, Slab * 0.5f, 0 }, { 2 * HalfWidth, -Slab, 2 * HalfDepth })->cameraSolid = true;
 
 	Material& ceilingMat = a.Mat("ceiling", { 0.85f, 0.83f, 0.78f }, 0.0f);
 	room->AddShape("Ceiling", &plane, &ceilingMat, { 0, Height, 0 }, { 2 * HalfWidth, 1, 2 * HalfDepth }, { 180, 0, 0 });
@@ -69,7 +69,7 @@ RoomRig BuildRoom(SceneNode& root, Assets& a)
 	solid(AddWall(*room, "DoorLintel", plane, wallMat("door-lintel", {DoorHigh-DoorLow, Height-DoorHeight}),
 		{HalfWidth, (DoorHeight+Height)*0.5f, (DoorLow+DoorHigh)*0.5f}, -90, {DoorHigh-DoorLow,Height-DoorHeight}));
 	Material& hallMat = Textured(a, "hall-floor", {0.72f,0.68f,0.59f}, Assets::FloorSlot, {3,3});
-	room->AddShape("HallFloor", &plane, &hallMat, {(HalfWidth+HallEnd)*0.5f,0,4}, {HallEnd-HalfWidth,1,DoorHigh-DoorLow});
+	room->AddShape("HallFloor", &cube, &hallMat, {(HalfWidth+HallEnd)*0.5f,Slab*0.5f,4}, {HallEnd-HalfWidth,-Slab,DoorHigh-DoorLow})->cameraSolid = true;
 	Material& hallWall = a.Mat("hall-wall", {0.34f,0.37f,0.42f}, 0.04f);
 	// Hall side walls; the z = DoorLow wall has an opening where the stairs arrive from the ground floor.
 	solid(room->AddShape("HallSide", &cube, &hallWall, {(HalfWidth+HallEnd)*0.5f,DoorHeight*0.5f,DoorHigh}, {HallEnd-HalfWidth,DoorHeight,0.16f}));

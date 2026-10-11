@@ -12,6 +12,8 @@
 #include "world/PuzzleCode.h"
 #include "math/Ray.h"
 #include "scene/Transform.h"
+#include "render/Assets.h"
+#include "world/House.h"
 
 namespace {
 int checks = 0;
@@ -236,6 +238,101 @@ void CheckConnectedHouse()
     Require(cat->local.position.y<RoomSize::Slab,"ground-floor overlap recovery cannot move an actor through the upper slab");
 }
 }
+void CheckStairFloorContact()
+{
+    // The app gives Penny a multi-segment proxy. Exercise the same proxy over the actual
+    // house support function, including the top threshold, rather than a single-point walker.
+    SceneNode scene("StairContact");
+    SceneNode* penny = scene.AddChild("PennySpine");
+    scene.UpdateWorld(glm::mat4(1));
+    PhysicsWorld physics; physics.Init(scene, {});
+    physics.EnableHouse(true); physics.EnableHallway(true);
+    physics.AddActor(penny, {0.34f, 0.48f, 0.34f}, {0, 0.48f, 0});
+    physics.SetActorSpine(penny, {-0.46f, 0.10f, 0.64f});
+    for (float heading : {0.0f, 45.0f, 90.0f, 180.0f}) for (float direction : {1.0f, -1.0f}) {
+        penny->local.rotation.y = heading;
+        penny->local.position = direction > 0 ? glm::vec3(15, RoomSize::Ground + 0.02f, -7.7f) : glm::vec3(15, 0.012f, 2.3f);
+        bool clear = true;
+        float deepest = 0.0f;
+        for (int step = 0; step < 200; ++step) {
+            const glm::vec3 previous = penny->local.position;
+            penny->local.position.z += direction * 0.05f;
+            physics.ConstrainActor(penny, previous);
+            const glm::mat4 model = penny->local.Matrix();
+            // Include the reach of a swung paw, not just the collision-segment centres.
+            for (float footZ : {-0.80f, 0.80f}) {
+                glm::vec3 foot(model * glm::vec4(0, 0, footZ, 1));
+                // Select the visible upper floor when a foot crosses the stair-head threshold.
+                const float surface = PhysicsWorld::FloorHeight({foot.x, 0.0f, foot.z});
+                deepest = std::max(deepest, surface - foot.y);
+                clear = clear && foot.y >= surface - 0.002f;
+            }
+        }
+        if (!clear) std::cerr << "Stair foot penetration: " << deepest << " world units, heading " << heading << '\n';
+        Require(clear, "Penny's front and rear feet stay above every rendered tread and upper hallway floor");
+    }
+}
+void CheckRenderedHouseFloors()
+{
+    Assets assets; assets.Load();
+    SceneNode scene("FloorRegression");
+    BuildRoom(scene, assets); BuildHouse(scene, assets);
+    scene.UpdateWorld(glm::mat4(1));
+    PhysicsWorld physics; physics.Init(scene, {});
+    physics.EnableHouse(true); physics.EnableHallway(true);
+    // The target is upstairs while the desired follow-camera position is in the stairwell.
+    // An unobstructed segment crosses the landing floor at z=1.5 before reaching the steps.
+    const glm::vec3 target(15, 0.5f, 2), desired(15, -1, 0.5f);
+    const glm::vec3 safe = physics.CameraSightline(target, desired, nullptr);
+    Require(safe.y > 0.2f, "actual upper hallway floor stops the follow camera before it passes underneath");
+    // Tread tops are drawn cubes, not a ramp. A camera must stop on the top tread,
+    // while a player can still walk down the flight through the normal support function.
+    const glm::vec3 stairSafe = physics.CameraSightline({15, 0.5f, 0.6f}, {15, -1, 0.6f}, nullptr);
+    Require(stairSafe.y > 0.2f, "actual stair treads stop the camera entering their rendered geometry");
+    const auto swept = physics.MoveCamera(target, desired);
+    Require(swept.y > 0.2f, "camera sweep cannot tunnel through the actual hallway slab");
+    int treads = 0;
+    scene.ForEach([&](SceneNode& node) { if (node.name == "Step" && node.visible && node.cameraSolid) ++treads; });
+    Require(treads == RoomSize::StairSteps, "all rendered stair treads register their camera bounds");
+    for (const char* name : {"Floor", "HallFloor", "CorridorFloor", "LandingFloor"}) {
+        SceneNode* floor = scene.Find(name);
+        Require(floor && floor->visible && floor->mesh->Type() == PrimitiveType::Cube && floor->cameraSolid,
+            "walkable floor is visible slab geometry shared by raster and analytic rendering");
+        const auto bounds = PhysicsWorld::ShapeBounds(floor);
+        const glm::vec3 centre = floor->WorldPosition();
+        const auto inverse = glm::inverse(floor->World());
+        const auto top = RayIntersect::Object(floor->mesh->Type(), inverse, {{centre.x, bounds.high.y + 1, centre.z}, {0,-1,0}});
+        const auto bottom = RayIntersect::Object(floor->mesh->Type(), inverse, {{centre.x, bounds.low.y - 1, centre.z}, {0,1,0}});
+        Require(std::abs(top.t - 1) < 0.001f && std::abs(bottom.t - 1) < 0.001f,
+            "floor top and underside both produce analytic hits at the rendered surface");
+    }
+    const auto corridor = PhysicsWorld::ShapeBounds(scene.Find("CorridorFloor"));
+    Require(corridor.high.z >= RoomSize::HouseFront - 0.001f, "corridor floor reaches the main entrance without a threshold gap");
+}
+void CheckToyStairFeet()
+{
+    for (bool horse : {false, true}) for (float heading : {0.0f, 180.0f}) {
+        SceneNode scene("ToyFeet"); SceneNode* actor = scene.AddChild("Walker");
+        PhysicsWorld physics; physics.Init(scene, {}); physics.EnableHouse(true); physics.EnableHallway(true);
+        physics.AddActor(actor, horse ? glm::vec3(0.55f,1.30f,0.55f) : glm::vec3(0.40f,1.08f,0.60f),
+            horse ? glm::vec3(0,1.30f,0) : glm::vec3(0,1.08f,0));
+        if (horse) physics.SetActorSpine(actor, {-0.60f, 0.45f, 1.15f});
+        actor->local.rotation.y = heading;
+        actor->local.position = {15, RoomSize::Ground + 0.02f, -7.7f};
+        bool clear = true;
+        for (int step = 0; step < 200; ++step) {
+            const glm::vec3 previous = actor->local.position; actor->local.position.z += 0.05f;
+            physics.ConstrainActor(actor, previous);
+            const float reach = horse ? 1.10f : 0.55f;
+            for (float z : {-reach, reach}) {
+                const glm::vec3 foot(actor->local.Matrix() * glm::vec4(0,0,z,1));
+                clear = clear && foot.y >= PhysicsWorld::FloorHeight({foot.x,0,foot.z}) - 0.002f;
+            }
+        }
+        Require(clear, horse ? "Bullseye's swinging hooves clear every tread in either heading" :
+            "humanoid boot clearance is supported over every stair tread");
+    }
+}
 void CheckBuzzRoom()
 {
     // Buzz's bedroom: reachable only through its doorway in the corridor's solid divider.
@@ -458,7 +555,7 @@ int main()
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL()) { glfwDestroyWindow(window); glfwTerminate(); return 1; }
 	int result = 0;
-	try { Run(); CheckConnectedHouse(); CheckBuzzRoom(); CheckSpinesAndCrowds(); CheckCompanionFollowing();
+	try { Run(); CheckConnectedHouse(); CheckStairFloorContact(); CheckToyStairFeet(); CheckRenderedHouseFloors(); CheckBuzzRoom(); CheckSpinesAndCrowds(); CheckCompanionFollowing();
 std::cout << checks << " physics checks passed.\n"; }
 	catch (const std::exception& e) { std::cerr << "FAIL " << e.what() << '\n'; result = 1; }
 	glfwDestroyWindow(window); glfwTerminate(); return result;

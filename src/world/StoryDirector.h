@@ -57,6 +57,10 @@ public:
 	bool Advance(Transition transition);
 	void SetControlled(Character* actor, Character* passenger = nullptr);
 	bool Controls(const Character* actor) const { return actor && (actor == controlled || actor == attached); }
+	// Daylight rule (set by the app every frame): while on, the toys hold still and only Penny moves.
+	// The story keeps its stage and progress; every toy task waits and resumes when the toys may move.
+	void FreezeToys(bool on);
+	bool ToysFrozen() const { return toysFrozen; }
 
 	std::string Title() const;
 	std::string Caption() const;
@@ -162,4 +166,5 @@ private:
 
 	Character* controlled = nullptr;
 	Character* attached = nullptr;
+	bool toysFrozen = false;
 };

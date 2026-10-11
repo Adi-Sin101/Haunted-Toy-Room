@@ -31,6 +31,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="PhysicsChecks.cpp" />
+    <ClCompile Include="..\src\world\House.cpp" />
+    <ClCompile Include="..\src\world\Room.cpp" />
+    <ClCompile Include="..\src\render\Assets.cpp" />
+    <ClCompile Include="..\src\render\BmpLoader.cpp" />
+    <ClCompile Include="..\src\render\ProceduralTextures.cpp" />
+    <ClCompile Include="..\src\core\Paths.cpp" />
+    <ClCompile Include="..\src\gl\Texture.cpp" />
     <ClCompile Include="..\src\world\PuzzleCode.cpp" />
     <ClCompile Include="..\src\world\PhysicsWorld.cpp" />
     <ClCompile Include="..\src\world\CompanionFollow.cpp" />

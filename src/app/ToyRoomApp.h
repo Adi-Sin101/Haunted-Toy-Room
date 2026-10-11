@@ -120,6 +120,10 @@ private:
 	// '/' and the HUD's day / night button: show the opposite of what is on screen. Asking for what the
 	// story clock shows anyway clears the override instead, so the sky eases back to the clock.
 	void ToggleDayNight();
+	// Daylight rule: by day the toys hold still and only Penny moves (not during the morning escape,
+	// which needs everyone to walk outside). Refreshed at the start of every step.
+	bool ToysFrozenByDay() const;
+	bool toysFrozen = false;
 	Selectable* Selected();
 	Character* DrivenCharacter(); // character WASD controls (Jessie mounted -> Bullseye)
 	int Pick(const glm::vec2& mouse) const;

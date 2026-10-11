@@ -56,6 +56,7 @@ constexpr float Slab = -0.3f;                            // underside of the upp
 constexpr float CorridorLeft = 10.5f, CorridorRight = 13.5f;
 constexpr float StairLeft = 13.5f, StairRight = 16.5f;
 constexpr float StairBottomZ = -7.0f, StairTopZ = 1.0f;  // the flight rises 4.5 over a run of 8
+constexpr int StairSteps = 18; // shared by rendered treads and collision support
 constexpr float HouseBack = -9.35f, HouseFront = 9.35f;  // outer faces of the exterior walls
 constexpr float HouseLeft = -10.45f, HouseRight = 17.45f;
 constexpr float FrontDoorLeft = 10.9f, FrontDoorRight = 13.1f, FrontDoorHeight = 3.6f;

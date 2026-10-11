@@ -6,6 +6,8 @@ Adiba Tahsin | Roll 2107031 | CSE-4102
 
 | File | Purpose |
 | --- | --- |
+| [Teacher-Evaluation-QA.md](Teacher-Evaluation-QA.md) | 130 viva questions with answers, equations, current story logic and exact source locations |
+| [Teacher-Evaluation-QA.pdf](Teacher-Evaluation-QA.pdf) / [Word](Teacher-Evaluation-QA.docx) | Printable and editable versions of the complete evaluation questionnaire |
 | [Project-Report.pdf](Project-Report.pdf) | Finished illustrated academic report: 38-page LaTeX report with one combined cover, a separate complete contents, four chapters starting on new pages, references and object/material summaries |
 | [Project-Report.tex](Project-Report.tex) | Editable LaTeX report source |
 | [Comprehensive-Implementation-Notes.md](Comprehensive-Implementation-Notes.md) | Complete theory and implementation notes, with every scene node and material |

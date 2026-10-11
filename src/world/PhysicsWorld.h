@@ -54,13 +54,15 @@ public:
 	const std::vector<Body>& Bodies() const { return bodies; }
 	SceneNode* LastLaserHit() const { return lastLaserHit; }
 private:
-	glm::vec3 Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore, bool withActors = true) const;
+	glm::vec3 Move(const glm::vec3& from, const glm::vec3& to, const glm::vec3& half, SceneNode* ignore, bool withActors = true, bool cameraContacts = false) const;
 	std::vector<Bounds> Obstacles(SceneNode* ignore, bool actorContacts=true) const;
 	void AppendActorBounds(const Actor& actor, std::vector<Bounds>& out) const; // one box per spine segment
 	glm::vec3 SlideActor(const Actor& actor, const glm::vec3& from, const glm::vec3& to, bool withActors) const;
 	void RefreshScenery();
 	std::vector<SceneNode*> scenery;
 	std::vector<Bounds> sceneryBounds; // world boxes of `scenery`, recomputed once per Update
+	std::vector<SceneNode*> cameraScenery;
+	std::vector<Bounds> cameraBounds; // uses the same sweep solver; excluded from actor/block contacts
 	std::vector<std::vector<const Bounds*>> nearby; // broad phase: scenery close to each block, per step
 	std::vector<Actor> actors;
 	std::vector<Body> bodies;

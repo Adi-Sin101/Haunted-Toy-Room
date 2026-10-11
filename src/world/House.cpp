@@ -127,8 +127,12 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	const float cz = (StairBottomZ - 9.05f) * 0.5f;
 
 	// Corridor (front door -> back of the house) and the stair landing at its far end.
-	inside->AddShape("CorridorFloor", &plane, &woodFloor, {(CorridorLeft + CorridorRight) * 0.5f, floorY, 0}, {CorridorRight - CorridorLeft, 1, 18.1f});
-	inside->AddShape("LandingFloor", &plane, &woodFloor, {(StairLeft + StairRight) * 0.5f, floorY, cz}, {StairRight - StairLeft, 1, StairBottomZ + 9.05f});
+	// Give walkable surfaces an underside. A one-sided plane vanished whenever the follow
+	// camera slipped below it; camera-only bounds preserve the existing stair traversal.
+	inside->AddShape("CorridorFloor", &cube, &woodFloor, {(CorridorLeft + CorridorRight) * 0.5f, floorY - 0.10f, (HouseFront - 9.05f) * 0.5f},
+		{CorridorRight - CorridorLeft, 0.20f, HouseFront + 9.05f})->cameraSolid = true;
+	inside->AddShape("LandingFloor", &cube, &woodFloor, {(StairLeft + StairRight) * 0.5f, floorY - 0.10f, cz},
+		{StairRight - StairLeft, 0.20f, StairBottomZ + 9.05f})->cameraSolid = true;
 	inside->AddShape("CorridorCeiling", &plane, &ceiling, {(CorridorLeft + CorridorRight) * 0.5f, Slab, 0}, {CorridorRight - CorridorLeft, 1, 18.1f}, {180, 0, 0});
 	Material& runner = a.Mat("corridor-runner", {0.55f, 0.20f, 0.18f}, 0.0f);
 	runner.texture = a.SlotTexture(Assets::RugSlot); runner.rtTextureSlot = Assets::RugSlot; runner.uvScale = {1, 4};
@@ -168,13 +172,13 @@ HouseRig BuildHouse(SceneNode& root, Assets& a)
 	// The flight: 18 solid steps, rise 0.25 and tread 8/18, from the landing (y = Ground) to the hallway (y = 0).
 	Material& treads = a.Mat("stair-wood", {0.80f, 0.62f, 0.46f}, 0.3f, 32.0f);
 	treads.texture = a.SlotTexture(Assets::FloorSlot); treads.rtTextureSlot = Assets::FloorSlot; treads.uvScale = {0.6f, 0.2f};
-	constexpr int steps = 18;
+	constexpr int steps = StairSteps;
 	const float rise = -Ground / steps, tread = (StairTopZ - StairBottomZ) / steps;
 	for (int i = 0; i < steps; ++i) {
 		const float top = Ground + rise * static_cast<float>(i + 1);
 		const float z0 = StairBottomZ + tread * static_cast<float>(i);
 		// inset 2 cm from the side walls so the step faces never coincide with the wall planes (z-fighting)
-		Box(*inside, "Step", cube, treads, {StairLeft + 0.02f, Ground, z0}, {StairRight - 0.02f, top, z0 + tread});
+		Box(*inside, "Step", cube, treads, {StairLeft + 0.02f, Ground, z0}, {StairRight - 0.02f, top, z0 + tread})->cameraSolid = true;
 	}
 	// Handrail along the slope: a cylinder (axis = local Y) tipped forward by 90 - atan(rise / run).
 	Material& brass = a.Mat("brass", {0.85f, 0.65f, 0.25f}, 0.8f, 64.0f);
