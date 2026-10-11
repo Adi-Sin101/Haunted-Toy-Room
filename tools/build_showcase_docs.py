@@ -1,4 +1,4 @@
-"""Build the report (PDF/DOCX), ten-slide deck (PPTX/PDF), and learning guide.
+"""Build the report (PDF/DOCX), illustrated deck (PPTX/PDF), and learning guide.
 
 Requirements: Pillow, python-docx, python-pptx, reportlab, pymupdf.
 Run tools/make_showcase.py --capture --video first.
@@ -435,12 +435,49 @@ SLIDES = [
     ("THANK YOU", "10  THE TOYS ARE SAFE", "All five escape into the morning. The world stays open.", ["Adiba Tahsin · Roll 2107031", "CSE-4102", "Geometry · hierarchy · motion · interaction", "Lighting · shading · textures · ray tracing"], ["story-end"], "Invite questions. Be ready to change shininess, light attenuation, lamp cone, movement speed, scale, or ray bounce count and explain the observed effect."),
 ]
 
+# Feature overview stays near the introduction; the playable recording closes the deck.
+SLIDES[1] = (SLIDES[1][0], "02  PROJECT FEATURES", *SLIDES[1][2:5],
+             "Introduce the completed story and rendering features. The recorded walkthrough is on the final slide.")
+SLIDES[3] = (SLIDES[3][0], "04  ENVIRONMENT", "A connected house, garden, hallway, stairs and furnished room.",
+             ["Room furniture, curtains, shelves and wall art", "Garden, porch and the complete house exterior", "Connected floors, stairs and hinged doors", "Night-to-morning sky, lighting and shadows"], SLIDES[3][4], SLIDES[3][5])
+SLIDES.insert(4, ("COLOUR AND DETAIL FROM UVs", "05  TEXTURE MAPPING",
+    "Surface maps add material detail while the primitive geometry stays shared.",
+    ["Primitive UVs and per-material repeats", "Wood, fabric, lunar craters and fence cutouts",
+     "Bilinear filtering and mipmaps", "27 maps + white; the same array serves ray tracing"],
+    ["texture:wood-floor", "texture:shirt-plaid", "texture:lunar-surface", "texture:pickets"],
+    "Use F3 to compare textured and plain materials. Identify the four actual exported maps. UVs place their detail on the primitives; texture colour becomes albedo before lighting."))
+SLIDES.append(("PROJECT DEMONSTRATION", "12  RECORDED WALKTHROUGH",
+    "The complete recorded walkthrough with the project's controls and graphics features.", [], [],
+    "Click the embedded video to play in PowerPoint. The standalone Presentation-Demo.mp4 is supplied for other players. The preceding Thank You slide remains available for questions after playback."))
+from presentation_assets import EQUATIONS, NOTES as MATH_NOTES, math_rows, movie_assets
+
+
 
 def slides():
     prs=Presentation();prs.slide_width=Inches(16);prs.slide_height=Inches(9)
     previews=OUT/"slides";previews.mkdir(exist_ok=True)
     background=Image.open(OUT/"haunted-background.png")
+    equations = math_rows(previews)
+    movie_path, movie_poster = movie_assets(OUT)
+    total = len(SLIDES)
     for number,(title,tag,subtitle,bullets,pictures,notes) in enumerate(SLIDES,1):
+        key = re.sub(r"^\d+\s*", "", tag)
+        tag = f"{number:02d}  {key}"
+        has_math = key in equations
+        is_video = number == total
+        if has_math:
+            if key == "TRANSFORMS + INTERACTION":
+                subtitle = "World transforms propagate from parent to child."
+                bullets = ["Local translation, rotation and scale", "Mounting uses parent-child transforms", "Drive one actor while the others continue", "Inverse-transpose normals under scale and shear"]
+            elif key == "ANIMATION + CONTACT":
+                bullets = ["Gait and joint animation follow travelled distance", "Wheel and ball rotation follow arc length", "Hinged chest, doors and wardrobe", "Camera easing uses frame-independent response"]
+            elif key == "LIGHTING":
+                bullets = ["Directional sun/moon: attenuation = 1", "Point bulb: distance attenuation", "Spotlight: smooth inner and outer cones", "Ambient, diffuse, specular and emission"]
+            elif key == "SHADING":
+                bullets = ["Flat: one normal per triangle", "Gouraud: interpolate vertex illumination", "Phong: light the interpolated normal per pixel", "Blinn: a half-vector specular highlight"]
+            elif key == "RAY TRACING + SHADOWS":
+                bullets = ["BVH selects the nearest analytic hit", "Shadow rays test light visibility", "Two continuations by default; three surface hits", "Mirror reflection and straight transmission"]
+            notes += "\n\nEquation explanation: " + MATH_NOTES[key]
         slide=prs.slides.add_slide(prs.slide_layouts[6]);slide.shapes.add_picture(str(OUT/"haunted-background.png"),0,0,width=prs.slide_width,height=prs.slide_height)
         pic=background.copy();draw=ImageDraw.Draw(pic)
         def panel(x,y,w,h,fill=NAVY):
@@ -466,47 +503,64 @@ def slides():
         text(75,40,1250,40,tag,21,colour=GOLD,bold=True)
         text(75,102,1430,90,title,43,colour=GOLD,bold=True,serif=True)
         text(75,187,1430,80,subtitle,26)
-        panel(60,280,525,478)
+        if not is_video: panel(60,280,525,335 if has_math else 478)
         y=308
         for bullet in bullets:
             height=72 if len(bullet)>35 else 42
             text(85,y,465,height,bullet,25,colour=GOLD if bullet.startswith("PLAY") else CREAM)
             y+=height+7
-        # Distinct images use consistent gutters; pictures are embedded and cropped to the panel.
-        if len(pictures)==1:rects=[(620,280,915,478)]
+        # Fit embedded pictures within consistent gutters without cutting off their contents.
+        if has_math:
+            if len(pictures)==1:rects=[(620,280,915,350)]
+            elif len(pictures)==2:rects=[(620,280,915,165),(620,465,915,165)]
+            elif len(pictures)==3:rects=[(620,280,590,350),(1230,280,305,165),(1230,465,305,165)]
+            else:rects=[(620,280,445,165),(1090,280,445,165),(620,465,445,165),(1090,465,445,165)]
+        elif len(pictures)==1:rects=[(620,280,915,478)]
         elif len(pictures)==2:rects=[(620,280,915,228),(620,530,915,228)]
         elif len(pictures)==3:rects=[(620,280,590,330),(1230,280,305,228),(1230,530,305,228)]
         else:rects=[(620,280,445,228),(1090,280,445,228),(620,530,445,228),(1090,530,445,228)]
         for name,(x,y,w,h) in zip(pictures,rects):
-            source=Image.open(path_for(name)).convert("RGB")
-            scale=max(w/source.width,(h-30)/source.height)
+            texture = name.startswith("texture:")
+            label = name.split(":",1)[-1]
+            source=Image.open(path_for(label, texture)).convert("RGB")
+            scale=min(w/source.width,(h-30)/source.height)
             resized=source.resize((int(source.width*scale),int(source.height*scale)),Image.Resampling.LANCZOS)
-            left=(resized.width-w)//2;top=(resized.height-h+30)//2;resized=resized.crop((left,top,left+w,top+h-30))
-            cached=previews/f"slide-{number:02d}-{name}.png";resized.save(cached)
+            fitted=Image.new("RGB",(w,h-30),NAVY)
+            fitted.paste(resized,((w-resized.width)//2,(h-30-resized.height)//2));resized=fitted
+            cached=previews/f"slide-{number:02d}-{label}.png";resized.save(cached)
             pic.paste(resized,(x,y));slide.shapes.add_picture(str(cached),Inches(x/100),Inches(y/100),width=Inches(w/100),height=Inches((h-30)/100))
-            panel(x,y+h-30,w,30,(31,45,67));text(x+10,y+h-27,w-20,30,name.replace("-"," ").upper(),17,colour=GOLD)
-        text(75,808,1200,32,"Adiba Tahsin · 2107031 · CSE-4102 · KUET",18)
-        text(1430,808,100,32,f"{number:02d} / 10",18,colour=GOLD)
-        if number in [1,10]:
+            panel(x,y+h-30,w,30,(31,45,67));text(x+10,y+h-27,w-20,30,label.replace("-"," ").upper(),17,colour=GOLD)
+        if has_math:
+            panel(60,640,1475,165)
+            text(85,645,1400,24,"IMPLEMENTATION EQUATIONS",17,colour=GOLD,bold=True)
+            for row, path in enumerate(equations[key]):
+                equation=Image.open(path).convert("RGBA")
+                equation.thumbnail((1410,64),Image.Resampling.LANCZOS)
+                x=85+(1410-equation.width)//2; y=672+row*65
+                pic.paste(equation,(x,y),equation)
+                slide.shapes.add_picture(str(path),Inches(x/100),Inches(y/100),width=Inches(equation.width/100),height=Inches(equation.height/100))
+        if is_video:
+            poster=Image.open(movie_poster).convert("RGB").resize((1000,563),Image.Resampling.LANCZOS)
+            pic.paste(poster,(300,250))
+            slide.shapes.add_movie(str(movie_path),Inches(3),Inches(2.5),Inches(10),Inches(5.63),poster_frame_image=str(movie_poster),mime_type="video/mp4")
+            text(300,819,1050,25,"Play in PowerPoint | Standalone: Presentation-Demo.mp4",19,colour=GOLD)
+        text(75,850 if is_video else 818,1200,32,"Adiba Tahsin · 2107031 · CSE-4102 · KUET",18)
+        text(1430,850 if is_video else 818,100,32,f"{number:02d} / {total}",18,colour=GOLD)
+        if number==1 or title=="THANK YOU":
             badge=Image.open(OUT/"KUET-LOGO.png").convert("RGBA");badge.thumbnail((75,86))
             pic.paste(badge,(1450,55),badge)
             slide.shapes.add_picture(str(OUT/"KUET-LOGO.png"),Inches(14.5),Inches(.55),width=Inches(.75))
         slide.notes_slide.notes_text_frame.text=notes
-        if number==2:
-            # A visible playable movie object is embedded, rather than a machine-local hyperlink.
-            movie=slide.shapes.add_movie(str(OUT/"Project-Demo.mp4"),Inches(.85),Inches(6.4),Inches(4.6),Inches(.65),poster_frame_image=str(OUT/"video/caption-00.png"),mime_type="video/mp4")
-            # PowerPoint can open the embedded movie; label remains legible above its poster.
-            text(97,653,440,40,"PLAY PROJECT DEMO",23,colour=GOLD,bold=True)
         pic.save(previews/f"Slide-{number:02d}.png")
     prs.save(OUT/"Project-Presentation.pptx")
     c=pdfcanvas.Canvas(str(OUT/"Project-Presentation.pdf"),pagesize=(1152,648));c.setTitle(TITLE);c.setAuthor(AUTHOR)
-    for number in range(1,11):c.drawImage(str(previews/f"Slide-{number:02d}.png"),0,0,width=1152,height=648);c.showPage()
+    for number in range(1,total+1):c.drawImage(str(previews/f"Slide-{number:02d}.png"),0,0,width=1152,height=648);c.showPage()
     c.save()
 
 
 def study_guide():
     cues=json.loads((OUT/"video/narration.json").read_text())
-    lines=["# Demonstration and Viva Guide","",TITLE,"",AUTHOR+" | Roll "+ROLL,"", "## Start and rehearse", "", "Run `bin/Release/HauntedToyRoom.exe` from the project folder. The story opens with a crane shot over the street; Y skips it. You then control Penny in the garden. Shift+N replays the story and G hides the interface. Press H for help. Keep the report PDF, slide deck and Project-Demo.mp4 together for the showcase.", "", "## Two-minute video narration", "", "The video has visual captions and no recorded voice. Explain the following points live. The deck embeds the video on slide 2; the standalone MP4 works independently of slide playback support.", "", "| Time | Explain |", "| --- | --- |"]
+    lines=["# Demonstration and Viva Guide","",TITLE,"",AUTHOR+" | Roll "+ROLL,"", "## Start and rehearse", "", "Run `bin/Release/HauntedToyRoom.exe` from the project folder. The story opens with a crane shot over the street; Y skips it. You then control Penny in the garden. Shift+N replays the story and G hides the interface. Press H for help. Keep the report PDF, slide deck and Project-Demo.mp4 together for the showcase.", "", "## Two-minute video narration", "", "The separate Project-Demo.mp4 has visual captions and no recorded voice. Explain the following points live. Presentation-Demo.mp4 is a silent, full-HD playback copy for live explanation. The final slide embeds Presentation-Demo.mp4. These timed cues refer to the separate two-minute Project-Demo.mp4; the supplied recorded walkthrough can have different timing. Standalone playback is available for either file.", "", "| Time | Explain |", "| --- | --- |"]
     for cue in cues:
         stamp=lambda sec:f"{sec//60}:{sec%60:02d}"
         lines.append(f"| {stamp(cue['start'])}–{stamp(cue['end'])} | {cue['title']}: {cue['narration']} |")
@@ -603,11 +657,11 @@ def validate(summary):
     for token in ["Acknowledgment","Acknowledgement","CHAPTER V ","CHAPTER VI ","template","prepare according to","hardware specifications"]:assert token.lower() not in text.lower(),token
     assert "Appendix A" in text and "Appendix B" in text
     assert not any(token in text for token in ["Ã", "Â", "â†", "â€"]), "UTF-8 text corruption"
-    deck=Presentation(OUT/"Project-Presentation.pptx");assert len(deck.slides)==10
+    deck=Presentation(OUT/"Project-Presentation.pptx");assert len(deck.slides)==len(SLIDES)
     import zipfile
     with zipfile.ZipFile(OUT/"Project-Presentation.pptx") as z:
         assert any(n.startswith("ppt/media/") and n.endswith(".mp4") for n in z.namelist())
-    summary.update({"report_pages":len(pdf),"slides":10,"embedded_video":True,"identity":True,"content_scan":"passed"})
+    summary.update({"report_pages":len(pdf),"slides":len(SLIDES),"embedded_video":True,"identity":True,"content_scan":"passed"})
     (OUT/"validation/documents.json").write_text(json.dumps(summary,indent=2))
     for num in [0,1,10,20,len(pdf)-1]:
         if num<len(pdf):pdf[num].get_pixmap(matrix=pymupdf.Matrix(1.2,1.2)).save(str(OUT/f"validation/report-page-{num+1}.png"))

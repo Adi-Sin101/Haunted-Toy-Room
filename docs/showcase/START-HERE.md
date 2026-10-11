@@ -12,14 +12,17 @@ Adiba Tahsin | Roll 2107031 | CSE-4102
 | [Project-Report.tex](Project-Report.tex) | Editable LaTeX report source |
 | [Comprehensive-Implementation-Notes.md](Comprehensive-Implementation-Notes.md) | Complete theory and implementation notes, with every scene node and material |
 | [Requirements-Coverage.md](Requirements-Coverage.md) | Teacher requirement mapping to implementations and demonstration evidence |
-| [Project-Presentation.pptx](Project-Presentation.pptx) | Editable ten-slide haunted-house deck with speaker notes and the embedded demo on slide 2 |
+| [Project-Presentation.pptx](Project-Presentation.pptx) | Editable twelve-slide haunted-house deck with a dedicated texture slide, typeset equations, speaker notes and the recorded walkthrough embedded on the final slide |
 | [Project-Presentation.pdf](Project-Presentation.pdf) | Portable slide copy |
+| [Presentation-Demo.mp4](Presentation-Demo.mp4) | Silent full-HD playback copy of the supplied recording, embedded on slide 12; the original recording is preserved |
 | [Project-Demo.mp4](Project-Demo.mp4) | Two-minute, 24 fps demonstration recorded from the application |
 | [Demonstration-Study-Guide.pdf](Demonstration-Study-Guide.pdf) | Printable narration, rehearsal sequence, viva answers and parameter-change practice |
 | [Demonstration-Study-Guide.md](Demonstration-Study-Guide.md) | Searchable/editable learning guide |
 | [Submission-Package.zip](Submission-Package.zip) | Runnable application, source, documents, media and validation evidence |
 
-The video has explanatory captions; its timed narration is supplied for the presenter to explain live. The standalone MP4 accompanies the embedded copy.
+The video has explanatory captions; its timed narration is supplied for the presenter to explain live. The final slide embeds Presentation-Demo.mp4, a balanced, silent full-HD copy of the supplied recording. The original two-minute Project-Demo.mp4 and its timed narration guide remain available separately.
+
+Presentation playback uses H.264 at 1920 × 1080, with balanced CRF 21 compression and no audio. The supplied walkthrough runs for 2 minutes 17 seconds. The PowerPoint contains the video internally; the PDF shows its poster frame, with the standalone MP4 available for playback.
 
 ## Run and demonstrate
 
@@ -43,6 +46,8 @@ The report contains 35 numbered figures, 12 tables and 31 numbered equation grou
 
 Both Release and Debug builds pass. The 74 geometry/physics checks pass. Real Windows key-callback tests exercise full manual, mounted and live takeover controls. Two-second fixed-step comparisons for ownership of all five toys show the owned pose responding to input while the other toy positions match baseline. The complete story rehearsal reaches free exploration in all four raster shading modes, ray tracing and Debug, with every character outside. 58 rendered captures and the complete 120-second video decode also pass. Evidence is retained in [validation](validation/final-validation.json).
 
+The updated presentation passes [separate artifact checks](validation/presentation.json): twelve PDF/deck pages, twelve typeset equation rows, slide bounds, the texture slide, final-slide video embedding, matching embedded/standalone bytes, original recording integrity, full-HD resolution, no audio and complete video decoding.
+
 ```powershell
 .\tools\build.ps1 -Configuration Release
 .\tools\build.ps1 -Configuration Debug
@@ -52,6 +57,7 @@ python tools/check_showcase_live.py
 python tools/check_escape_rendering.py
 python tools/make_showcase.py --capture --video
 python tools/build_showcase_docs.py
+python tools/check_presentation.py
 python tools/package_showcase.py
 ```
 

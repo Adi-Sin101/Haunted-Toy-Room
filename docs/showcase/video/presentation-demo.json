@@ -1,0 +1,9 @@
+{
+  "source": "Haunted-Toy-Room-demo.mp4",
+  "source_sha256": "7a040fcca5e3a86fec3e7d711d601b4e3f3b9658665d5ebd4e432007ea0af4fd",
+  "settings": "h264-crf21-original-resolution-silent-v3",
+  "playback_copy": "Presentation-Demo.mp4",
+  "bytes": 59138795,
+  "sha256": "d4faa3c7f5128a7e53eb469380ea2b1a36440213a726d376ffa7703cdbd03db8",
+  "source_preserved": true
+}

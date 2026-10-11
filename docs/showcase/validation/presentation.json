@@ -1,0 +1,25 @@
+{
+  "slides": 12,
+  "pdf_pages": 12,
+  "texture_slide": 5,
+  "thank_you_slide": 11,
+  "video_slide": 12,
+  "equation_slides": [
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "typeset_equations": 12,
+  "shape_bounds": "passed",
+  "embedded_video_matches_standalone": true,
+  "full_video_decode": "passed",
+  "video_resolution": "1920x1080",
+  "audio_streams": 0,
+  "video_seconds": 136.67000000000002,
+  "video_bytes": 59138795,
+  "original_preserved": true,
+  "sha256": "d4faa3c7f5128a7e53eb469380ea2b1a36440213a726d376ffa7703cdbd03db8"
+}

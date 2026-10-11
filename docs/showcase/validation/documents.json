@@ -18,7 +18,9 @@
   "contents_start_page": 3,
   "contents_includes_sections": true,
   "contents_section_entries": 35,
-  "slides": 10,
+  "slides": 12,
   "embedded_video": true,
-  "identity": true
+  "identity": true,
+  "video_slide": 12,
+  "typeset_slide_equations": 12
 }

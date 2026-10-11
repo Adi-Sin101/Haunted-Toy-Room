@@ -10,7 +10,7 @@ Run `bin/Release/HauntedToyRoom.exe` from the project folder. The story opens wi
 
 ## Two-minute video narration
 
-The video has visual captions and no recorded voice. Explain the following points live. The deck embeds the video on slide 2; the standalone MP4 works independently of slide playback support.
+The separate Project-Demo.mp4 has visual captions and no recorded voice. Explain the following points live. Presentation-Demo.mp4 is a silent, full-HD playback copy for live explanation. The final slide embeds Presentation-Demo.mp4. These timed cues refer to the separate two-minute Project-Demo.mp4; the supplied recorded walkthrough can have different timing. Standalone playback is available for either file.
 
 | Time | Explain |
 | --- | --- |

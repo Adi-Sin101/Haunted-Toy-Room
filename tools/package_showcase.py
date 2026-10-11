@@ -10,7 +10,7 @@ OUT = ROOT / "docs/showcase"
 
 def package():
     documents = ["START-HERE.md", "Project-Report.pdf", "Project-Report.tex", "Comprehensive-Implementation-Notes.md", "Requirements-Coverage.md", "KUET-LOGO.png", "Project-Report.md",
-                 "Project-Presentation.pptx", "Project-Presentation.pdf", "Project-Demo.mp4", "Project-Demo.srt",
+                 "Project-Presentation.pptx", "Project-Presentation.pdf", "Presentation-Demo.mp4", "Project-Demo.mp4", "Project-Demo.srt",
                  "Demonstration-Study-Guide.pdf", "Demonstration-Study-Guide.docx", "Demonstration-Study-Guide.md"]
     dest = OUT / "Submission-Package.zip"
     entries = {}
@@ -45,6 +45,7 @@ def package():
         assert archive.testzip() is None
         assert "Project/bin/Release/HauntedToyRoom.exe" in archive.namelist()
         assert "Showcase/Project-Demo.mp4" in archive.namelist()
+        assert "Showcase/Presentation-Demo.mp4" in archive.namelist()
     manifest = {"archive": dest.name, "files": len(entries)+2, "bytes": dest.stat().st_size,
                 "sha256": hashlib.sha256(dest.read_bytes()).hexdigest(), "integrity": "passed"}
     (OUT / "validation/package.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
