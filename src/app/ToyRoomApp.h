@@ -59,6 +59,7 @@ struct LaunchOptions {
 	bool noHud = false;
 	bool laserDemo = false;
 	bool guide = false;
+	bool cameraTrace = false; // optional deterministic follow-camera regression output
 	int windowWidth = 1600, windowHeight = 900;
 	bool pauseClock = false;
 	bool story = false;     // keep the story running during a capture
@@ -170,6 +171,8 @@ private:
 	// Follow-camera smoothing: the focus eases after the driven character (stair treads lift her in
 	// steps), and the wall clamp pulls in at once but lets the camera back out gradually.
 	glm::vec3 followFocus{0.0f};
+	glm::vec3 followEye{0.0f}; // unconstrained boom; collision output must not feed back into it
+	float followAvoidanceYaw = 0.0f;
 	bool followFocusValid = false;
 	float sightReach = -1.0f;
 	// 0 indoors .. 1 outdoors, eased over about a second: blends the sun / moon light from the

@@ -1,0 +1,10 @@
+MSBuild version 18.10.1-1.26427.6+3cd27c13e for .NET Framework
+
+  ToyRoomApp.cpp
+  Generating code
+  1 of 5930 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    18 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  HauntedToyRoom.vcxproj -> F:\CODE\Graphics-Project\Haunted-Toy-Room\bin\Release\HauntedToyRoom.exe
+  Copying shaders and assets to output folder

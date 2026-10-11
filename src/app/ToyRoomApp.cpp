@@ -436,8 +436,32 @@ void ToyRoomApp::StepScene(float dt)
 			// Pull in at once when a wall cuts the view, but move back out gradually: in the stairwell
 			// the railings and the landing wall block and clear the view on alternate frames, and
 			// taking each answer as-is made the camera jump in and out.
-			const glm::vec3 offset = camera.position - camera.target;
-			const float full = glm::length(offset), allowed = glm::distance(sight, camera.target);
+			glm::vec3 offset = camera.position - camera.target;
+			float full = glm::length(offset), allowed = glm::distance(sight, camera.target);
+			// A swinging entrance door can block the rear boom in the narrow lower corridor.
+			// Find a clear heading before accepting an eye position inside the character.
+			const bool corridorFollow = camera.mode == CameraMode::Follow && DrivenCharacter() == penny.get()
+				&& camera.target.y < RoomSize::Slab && camera.target.x >= RoomSize::CorridorLeft
+				&& camera.target.x <= RoomSize::CorridorRight && camera.target.z < RoomSize::HouseFront
+				&& !cursorCaptured && !input.MouseDown(GLFW_MOUSE_BUTTON_MIDDLE)
+				&& !input.Down(GLFW_KEY_LEFT) && !input.Down(GLFW_KEY_RIGHT)
+				&& !input.Down(GLFW_KEY_UP) && !input.Down(GLFW_KEY_DOWN) && glm::length(cameraPan) < 0.01f;
+			if (corridorFollow && allowed < 1.4f) {
+				float best = allowed, turn = 0;
+				glm::vec3 bestOffset = offset;
+				for (float yaw : {45.0f, -45.0f, 90.0f, -90.0f, 180.0f}) {
+					const float a = glm::radians(yaw);
+					const glm::vec3 candidate(offset.x * std::cos(a) + offset.z * std::sin(a), offset.y,
+						offset.z * std::cos(a) - offset.x * std::sin(a));
+					const float clear = glm::distance(camera.target, physics.CameraSightline(camera.target, camera.target + candidate, ignored));
+					if (clear > best + 0.25f) { best = clear; turn = yaw; bestOffset = candidate; }
+				}
+				if (turn != 0) {
+					followAvoidanceYaw = WrapDegrees(followAvoidanceYaw + turn);
+					offset = bestOffset; allowed = best; sightReach = -1;
+					followEye = camera.target + offset;
+				}
+			}
 			if (full > 1e-3f) {
 				if (sightReach < 0.0f || allowed < sightReach || camera.mode != CameraMode::Follow) sightReach = allowed;
 				else sightReach += (allowed - sightReach) * (1.0f - std::exp(-dt * 2.5f));
@@ -468,6 +492,14 @@ void ToyRoomApp::StepScene(float dt)
 		camera.mode = CameraMode::Follow;
 	}
 	UpdateLights();
+	if (launch.cameraTrace && camera.mode == CameraMode::Follow) {
+		const auto p = penny->Root()->WorldPosition();
+		const auto sight = physics.CameraSightline(camera.target, camera.position, penny->Root());
+		std::cout << "CAMERA_TRACE " << time << ' ' << p.x << ' ' << p.y << ' ' << p.z << ' '
+			<< camera.position.x << ' ' << camera.position.y << ' ' << camera.position.z << ' '
+			<< camera.target.x << ' ' << camera.target.y << ' ' << camera.target.z << ' '
+			<< glm::distance(sight, camera.position) << ' ' << camera.orbitYaw << '\n';
+	}
 
 	// Console feedback only when the driven character starts / stops.
 	if (Character* driven = DrivenCharacter()) {
@@ -730,6 +762,9 @@ void ToyRoomApp::Select(int id)
 	if (Character* c = DrivenCharacter())
 		c->Stop();
 	selectedId = id;
+	followFocusValid = false;
+	followAvoidanceYaw = 0;
+	sightReach = -1;
 	if (id>=0 && story.enabled) {
 		// A rider and horse must detach before either receives independent ownership.
 		const Character* actor=selectables[static_cast<size_t>(id)].character;
@@ -870,7 +905,9 @@ void ToyRoomApp::HandleCamera(float dt)
 	const Selectable* sel = Selected();
 	const glm::vec3 focus = sel ? sel->node->WorldPosition() + glm::vec3(0.0f, sel->focusHeight, 0.0f) : glm::vec3(0.0f, 1.5f, 0.0f);
 	if (story.CurrentState() == StoryDirector::GameplayState::PUZZLE && camera.mode == CameraMode::Follow
-		&& DrivenCharacter() == penny.get()) {
+		&& DrivenCharacter() == penny.get() && penny->Root()->WorldPosition().y >= -0.05f
+		&& penny->Root()->WorldPosition().x > RoomSize::HalfWidth
+		&& penny->Root()->WorldPosition().z >= RoomSize::DoorLow) {
 		const glm::vec3 p = penny->Root()->WorldPosition();
 		const bool userOrbiting = cursorCaptured || input.Down(GLFW_KEY_LEFT) || input.Down(GLFW_KEY_RIGHT)
 			|| input.Down(GLFW_KEY_UP) || input.Down(GLFW_KEY_DOWN);
@@ -999,10 +1036,20 @@ void ToyRoomApp::HandleCamera(float dt)
 		const float angle = glm::radians(camera.orbitYaw), pitch = glm::radians(camera.orbitPitch);
 		if (panning) cameraPan += (-camera.Right() * md.x + camera.Up() * md.y) * 0.004f * camera.orbitDistance * zoomSpeed;
 		back = glm::vec3(back.x * std::cos(angle) + back.z * std::sin(angle), 0, back.z * std::cos(angle) - back.x * std::sin(angle));
+		const bool lowerCorridor = focus.y < RoomSize::Slab && focus.x >= RoomSize::CorridorLeft
+			&& focus.x <= RoomSize::CorridorRight && focus.z > RoomSize::StairBottomZ
+			&& focus.z < RoomSize::HouseFront;
+		if (!lowerCorridor || rotating || panning || input.Down(GLFW_KEY_LEFT) || input.Down(GLFW_KEY_RIGHT)
+			|| input.Down(GLFW_KEY_UP) || input.Down(GLFW_KEY_DOWN))
+			followAvoidanceYaw *= std::exp(-dt * 5.0f);
+		const float avoid = glm::radians(followAvoidanceYaw);
+		back = {back.x * std::cos(avoid) + back.z * std::sin(avoid), 0,
+			back.z * std::cos(avoid) - back.x * std::sin(avoid)};
 		// Ease the focus after the character. Height eases slowest: stair and porch treads lift the
 		// body 0.17 units at a time, and aiming at the raw position jerked the view on every step.
 		// A large jump (new selection, restart, teleport) snaps instead of sweeping across the house.
-		if (!followFocusValid || glm::distance(followFocus, focus) > 2.5f) followFocus = focus;
+		const bool resetFollow = !followFocusValid || glm::distance(followFocus, focus) > 2.5f;
+		if (resetFollow) { followFocus = focus; sightReach = -1.0f; }
 		else {
 			const float across = 1.0f - std::exp(-dt * 14.0f), up = 1.0f - std::exp(-dt * 5.0f);
 			followFocus.x += (focus.x - followFocus.x) * across;
@@ -1011,13 +1058,14 @@ void ToyRoomApp::HandleCamera(float dt)
 		}
 		followFocusValid = true;
 		const glm::vec3 desired = followFocus + cameraPan + back * std::cos(pitch) * camera.orbitDistance + glm::vec3(0, std::sin(pitch) * camera.orbitDistance, 0);
-		camera.position = glm::mix(camera.position, desired, 1.0f - std::exp(-dt * 4.0f));
+		followEye = resetFollow ? desired : glm::mix(followEye, desired, 1.0f - std::exp(-dt * 4.0f));
+		camera.position = followEye;
 		camera.target = followFocus + cameraPan;
 		camera.LookAt(camera.target);
 		break;
 	}
 	}
-	if (camera.mode != CameraMode::Follow) followFocusValid = false;
+	if (camera.mode != CameraMode::Follow) { followFocusValid = false; followAvoidanceYaw = 0; }
 }
 
 void ToyRoomApp::HandleObjectControl(float dt)
@@ -1520,6 +1568,7 @@ LaunchOptions LaunchOptions::Parse(int argc, char* argv[])
 	};
 	for (int i = 1; i < argc; ++i) {
 		const std::string a = argv[i];
+		if (a == "--camera-trace") { o.cameraTrace = true; continue; }
 		const bool hasValue = i + 1 < argc;
 		if (a == "--hour" && hasValue) o.hour = std::stof(argv[++i]);
 		else if (a == "--select" && hasValue) o.select = std::stoi(argv[++i]);

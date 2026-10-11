@@ -1,0 +1,18 @@
+{
+  "configuration": "Debug",
+  "status": "passed",
+  "checks": [
+    {
+      "step": 0.05,
+      "closest_corridor_reach": 1.5555347872998533,
+      "closest_stair_reach": 3.0734125198872997,
+      "clear_sightline": true
+    },
+    {
+      "step": 0.016666666666666666,
+      "closest_corridor_reach": 1.5576110089813824,
+      "closest_stair_reach": 3.24689339493923,
+      "clear_sightline": true
+    }
+  ]
+}

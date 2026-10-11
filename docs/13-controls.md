@@ -76,6 +76,23 @@ pausing the mission. **G** hides the interface and center aiming marker.
 | Shift | 3× faster | | |
 | Numpad 1 / 3 / 7 or Ctrl+1 / 3 / 7 | front / side / top view (switches to Orbit) | | |
 
+### Follow camera at the house entrance
+
+The follow view tracks an unconstrained, smoothed boom separately from the final collision-corrected
+eye. Wall compression therefore does not feed back into the next frame's desired distance. The
+upstairs clue-hallway steering runs only after Penny reaches that floor; it cannot apply the upper
+hall's bounds to the downstairs corridor.
+
+If a swinging entrance door leaves less than 1.4 units along the rear boom, the camera tests five
+alternative angles against the current scenery and uses a clearer view. This correction operates
+only while automatically following Penny in the lower corridor. Mouse orbit and panning remain
+available; the avoidance angle eases away when she reaches the landing or stairs. Changing selection
+clears the old target, clearance and avoidance state.
+
+Reproduce the doorway and corridor regression with `python tools/check_follow_camera.py`. It drives
+the actual mission entrance at two fixed time steps, checks usable eye-to-target distance and wall
+visibility, and records the optional `--camera-trace` output in `docs/showcase/validation/`.
+
 ## Edit mode (inspector) — works on every selectable object
 
 | Key | Action |
